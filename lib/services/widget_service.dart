@@ -3,36 +3,30 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
-import 'package:drift/drift.dart' hide Column;
 import 'package:kmemo/database/database.dart';
 
 class WidgetService {
   static const String _androidWidgetName = 'KMemoWidgetProvider';
 
-  /// Atualiza os dados partilhados com o Widget nativo do Home Screen
+  /// Sincroniza as notas ativas com o armazenamento partilhado do Android
   static Future<void> updateWidgetData({required AppDatabase db}) async {
     try {
-      // 1. Ir buscar as últimas notas ordenadas por atualização
-      final memos =
-          await (db.select(db.memos)
-                ..orderBy([
-                  (t) => OrderingTerm(
-                    expression: t.updatedAt,
-                    mode: OrderingMode.desc,
-                  ),
-                ])
-                ..limit(5))
-              .get();
+      // Obtém todas as notas ativas diretamente da base de dados
+      final memos = await (db.select(db.memos)).get();
 
-      final List<String> titlesList = [];
       final List<String> idsList = [];
+      final List<String> titlesList = [];
       final List<String> previewsList = [];
+      final List<int> colorsList = [];
+      final List<int> bgImagesList = [];
 
       for (var memo in memos) {
         idsList.add(memo.uuid);
         titlesList.add(memo.title.trim().isEmpty ? 'Sem título' : memo.title);
+        colorsList.add(memo.colorIndex);
+        bgImagesList.add(memo.bgImageIndex);
 
-        // 2. Procurar os blocos desta nota para criar uma pré-visualização de texto limpa
+        // Extrai texto limpo dos blocos para a pré-visualização
         final blocks = await db.getBlocksForMemo(memo.uuid);
         String previewText = '';
 
@@ -47,7 +41,7 @@ class WidgetService {
         previewsList.add(previewText.isEmpty ? 'Nota vazia' : previewText);
       }
 
-      // 3. Gravar os dados como Strings JSON estáveis (evita falhas de tipagem no canal nativo)
+      // Persiste os arrays em formato JSON nas preferências partilhadas
       await HomeWidget.saveWidgetData<String>('notes_ids', jsonEncode(idsList));
       await HomeWidget.saveWidgetData<String>(
         'notes_titles',
@@ -57,18 +51,26 @@ class WidgetService {
         'notes_previews',
         jsonEncode(previewsList),
       );
+      await HomeWidget.saveWidgetData<String>(
+        'notes_colors',
+        jsonEncode(colorsList),
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'notes_bg_images',
+        jsonEncode(bgImagesList),
+      );
 
-      // 4. Notificar o sistema operativo para redesenhar o Widget de imediato
+      // 4. Emite o sinal de broadcast para o gestor nativo de widgets
       await HomeWidget.updateWidget(
         androidName: _androidWidgetName,
         iOSName: _androidWidgetName,
       );
 
       debugPrint(
-        '[WidgetService] Dados enviados para o ecrã principal com sucesso.',
+        '[WidgetService] Sincronização do widget concluída com sucesso.',
       );
     } catch (e) {
-      debugPrint('[WidgetService] Erro ao sincronizar dados com o Widget: $e');
+      debugPrint('[WidgetService] Falha ao sincronizar dados com o widget: $e');
     }
   }
 }

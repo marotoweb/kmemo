@@ -75,6 +75,96 @@ class $MemosTable extends Memos with TableInfo<$MemosTable, Memo> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _colorIndexMeta = const VerificationMeta(
+    'colorIndex',
+  );
+  @override
+  late final GeneratedColumn<int> colorIndex = GeneratedColumn<int>(
+    'color_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _bgImageIndexMeta = const VerificationMeta(
+    'bgImageIndex',
+  );
+  @override
+  late final GeneratedColumn<int> bgImageIndex = GeneratedColumn<int>(
+    'bg_image_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(-1),
+  );
+  static const VerificationMeta _imageAttachmentsMeta = const VerificationMeta(
+    'imageAttachments',
+  );
+  @override
+  late final GeneratedColumn<String> imageAttachments = GeneratedColumn<String>(
+    'image_attachments',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _audioAttachmentsMeta = const VerificationMeta(
+    'audioAttachments',
+  );
+  @override
+  late final GeneratedColumn<String> audioAttachments = GeneratedColumn<String>(
+    'audio_attachments',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _linkAttachmentsMeta = const VerificationMeta(
+    'linkAttachments',
+  );
+  @override
+  late final GeneratedColumn<String> linkAttachments = GeneratedColumn<String>(
+    'link_attachments',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('[]'),
+  );
+  static const VerificationMeta _isArchivedMeta = const VerificationMeta(
+    'isArchived',
+  );
+  @override
+  late final GeneratedColumn<bool> isArchived = GeneratedColumn<bool>(
+    'is_archived',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_archived" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _isDeletedMeta = const VerificationMeta(
+    'isDeleted',
+  );
+  @override
+  late final GeneratedColumn<bool> isDeleted = GeneratedColumn<bool>(
+    'is_deleted',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_deleted" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     uuid,
@@ -83,6 +173,13 @@ class $MemosTable extends Memos with TableInfo<$MemosTable, Memo> {
     updatedAt,
     isSynced,
     remoteFileId,
+    colorIndex,
+    bgImageIndex,
+    imageAttachments,
+    audioAttachments,
+    linkAttachments,
+    isArchived,
+    isDeleted,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -141,6 +238,60 @@ class $MemosTable extends Memos with TableInfo<$MemosTable, Memo> {
         ),
       );
     }
+    if (data.containsKey('color_index')) {
+      context.handle(
+        _colorIndexMeta,
+        colorIndex.isAcceptableOrUnknown(data['color_index']!, _colorIndexMeta),
+      );
+    }
+    if (data.containsKey('bg_image_index')) {
+      context.handle(
+        _bgImageIndexMeta,
+        bgImageIndex.isAcceptableOrUnknown(
+          data['bg_image_index']!,
+          _bgImageIndexMeta,
+        ),
+      );
+    }
+    if (data.containsKey('image_attachments')) {
+      context.handle(
+        _imageAttachmentsMeta,
+        imageAttachments.isAcceptableOrUnknown(
+          data['image_attachments']!,
+          _imageAttachmentsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('audio_attachments')) {
+      context.handle(
+        _audioAttachmentsMeta,
+        audioAttachments.isAcceptableOrUnknown(
+          data['audio_attachments']!,
+          _audioAttachmentsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('link_attachments')) {
+      context.handle(
+        _linkAttachmentsMeta,
+        linkAttachments.isAcceptableOrUnknown(
+          data['link_attachments']!,
+          _linkAttachmentsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_archived')) {
+      context.handle(
+        _isArchivedMeta,
+        isArchived.isAcceptableOrUnknown(data['is_archived']!, _isArchivedMeta),
+      );
+    }
+    if (data.containsKey('is_deleted')) {
+      context.handle(
+        _isDeletedMeta,
+        isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
+      );
+    }
     return context;
   }
 
@@ -174,6 +325,34 @@ class $MemosTable extends Memos with TableInfo<$MemosTable, Memo> {
         DriftSqlType.string,
         data['${effectivePrefix}remote_file_id'],
       ),
+      colorIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}color_index'],
+      )!,
+      bgImageIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}bg_image_index'],
+      )!,
+      imageAttachments: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}image_attachments'],
+      )!,
+      audioAttachments: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}audio_attachments'],
+      )!,
+      linkAttachments: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}link_attachments'],
+      )!,
+      isArchived: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_archived'],
+      )!,
+      isDeleted: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_deleted'],
+      )!,
     );
   }
 
@@ -190,6 +369,13 @@ class Memo extends DataClass implements Insertable<Memo> {
   final DateTime updatedAt;
   final bool isSynced;
   final String? remoteFileId;
+  final int colorIndex;
+  final int bgImageIndex;
+  final String imageAttachments;
+  final String audioAttachments;
+  final String linkAttachments;
+  final bool isArchived;
+  final bool isDeleted;
   const Memo({
     required this.uuid,
     required this.title,
@@ -197,6 +383,13 @@ class Memo extends DataClass implements Insertable<Memo> {
     required this.updatedAt,
     required this.isSynced,
     this.remoteFileId,
+    required this.colorIndex,
+    required this.bgImageIndex,
+    required this.imageAttachments,
+    required this.audioAttachments,
+    required this.linkAttachments,
+    required this.isArchived,
+    required this.isDeleted,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -209,6 +402,13 @@ class Memo extends DataClass implements Insertable<Memo> {
     if (!nullToAbsent || remoteFileId != null) {
       map['remote_file_id'] = Variable<String>(remoteFileId);
     }
+    map['color_index'] = Variable<int>(colorIndex);
+    map['bg_image_index'] = Variable<int>(bgImageIndex);
+    map['image_attachments'] = Variable<String>(imageAttachments);
+    map['audio_attachments'] = Variable<String>(audioAttachments);
+    map['link_attachments'] = Variable<String>(linkAttachments);
+    map['is_archived'] = Variable<bool>(isArchived);
+    map['is_deleted'] = Variable<bool>(isDeleted);
     return map;
   }
 
@@ -222,6 +422,13 @@ class Memo extends DataClass implements Insertable<Memo> {
       remoteFileId: remoteFileId == null && nullToAbsent
           ? const Value.absent()
           : Value(remoteFileId),
+      colorIndex: Value(colorIndex),
+      bgImageIndex: Value(bgImageIndex),
+      imageAttachments: Value(imageAttachments),
+      audioAttachments: Value(audioAttachments),
+      linkAttachments: Value(linkAttachments),
+      isArchived: Value(isArchived),
+      isDeleted: Value(isDeleted),
     );
   }
 
@@ -237,6 +444,13 @@ class Memo extends DataClass implements Insertable<Memo> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       isSynced: serializer.fromJson<bool>(json['isSynced']),
       remoteFileId: serializer.fromJson<String?>(json['remoteFileId']),
+      colorIndex: serializer.fromJson<int>(json['colorIndex']),
+      bgImageIndex: serializer.fromJson<int>(json['bgImageIndex']),
+      imageAttachments: serializer.fromJson<String>(json['imageAttachments']),
+      audioAttachments: serializer.fromJson<String>(json['audioAttachments']),
+      linkAttachments: serializer.fromJson<String>(json['linkAttachments']),
+      isArchived: serializer.fromJson<bool>(json['isArchived']),
+      isDeleted: serializer.fromJson<bool>(json['isDeleted']),
     );
   }
   @override
@@ -249,6 +463,13 @@ class Memo extends DataClass implements Insertable<Memo> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'isSynced': serializer.toJson<bool>(isSynced),
       'remoteFileId': serializer.toJson<String?>(remoteFileId),
+      'colorIndex': serializer.toJson<int>(colorIndex),
+      'bgImageIndex': serializer.toJson<int>(bgImageIndex),
+      'imageAttachments': serializer.toJson<String>(imageAttachments),
+      'audioAttachments': serializer.toJson<String>(audioAttachments),
+      'linkAttachments': serializer.toJson<String>(linkAttachments),
+      'isArchived': serializer.toJson<bool>(isArchived),
+      'isDeleted': serializer.toJson<bool>(isDeleted),
     };
   }
 
@@ -259,6 +480,13 @@ class Memo extends DataClass implements Insertable<Memo> {
     DateTime? updatedAt,
     bool? isSynced,
     Value<String?> remoteFileId = const Value.absent(),
+    int? colorIndex,
+    int? bgImageIndex,
+    String? imageAttachments,
+    String? audioAttachments,
+    String? linkAttachments,
+    bool? isArchived,
+    bool? isDeleted,
   }) => Memo(
     uuid: uuid ?? this.uuid,
     title: title ?? this.title,
@@ -266,6 +494,13 @@ class Memo extends DataClass implements Insertable<Memo> {
     updatedAt: updatedAt ?? this.updatedAt,
     isSynced: isSynced ?? this.isSynced,
     remoteFileId: remoteFileId.present ? remoteFileId.value : this.remoteFileId,
+    colorIndex: colorIndex ?? this.colorIndex,
+    bgImageIndex: bgImageIndex ?? this.bgImageIndex,
+    imageAttachments: imageAttachments ?? this.imageAttachments,
+    audioAttachments: audioAttachments ?? this.audioAttachments,
+    linkAttachments: linkAttachments ?? this.linkAttachments,
+    isArchived: isArchived ?? this.isArchived,
+    isDeleted: isDeleted ?? this.isDeleted,
   );
   Memo copyWithCompanion(MemosCompanion data) {
     return Memo(
@@ -277,6 +512,25 @@ class Memo extends DataClass implements Insertable<Memo> {
       remoteFileId: data.remoteFileId.present
           ? data.remoteFileId.value
           : this.remoteFileId,
+      colorIndex: data.colorIndex.present
+          ? data.colorIndex.value
+          : this.colorIndex,
+      bgImageIndex: data.bgImageIndex.present
+          ? data.bgImageIndex.value
+          : this.bgImageIndex,
+      imageAttachments: data.imageAttachments.present
+          ? data.imageAttachments.value
+          : this.imageAttachments,
+      audioAttachments: data.audioAttachments.present
+          ? data.audioAttachments.value
+          : this.audioAttachments,
+      linkAttachments: data.linkAttachments.present
+          ? data.linkAttachments.value
+          : this.linkAttachments,
+      isArchived: data.isArchived.present
+          ? data.isArchived.value
+          : this.isArchived,
+      isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
     );
   }
 
@@ -288,14 +542,34 @@ class Memo extends DataClass implements Insertable<Memo> {
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isSynced: $isSynced, ')
-          ..write('remoteFileId: $remoteFileId')
+          ..write('remoteFileId: $remoteFileId, ')
+          ..write('colorIndex: $colorIndex, ')
+          ..write('bgImageIndex: $bgImageIndex, ')
+          ..write('imageAttachments: $imageAttachments, ')
+          ..write('audioAttachments: $audioAttachments, ')
+          ..write('linkAttachments: $linkAttachments, ')
+          ..write('isArchived: $isArchived, ')
+          ..write('isDeleted: $isDeleted')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(uuid, title, createdAt, updatedAt, isSynced, remoteFileId);
+  int get hashCode => Object.hash(
+    uuid,
+    title,
+    createdAt,
+    updatedAt,
+    isSynced,
+    remoteFileId,
+    colorIndex,
+    bgImageIndex,
+    imageAttachments,
+    audioAttachments,
+    linkAttachments,
+    isArchived,
+    isDeleted,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -305,7 +579,14 @@ class Memo extends DataClass implements Insertable<Memo> {
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.isSynced == this.isSynced &&
-          other.remoteFileId == this.remoteFileId);
+          other.remoteFileId == this.remoteFileId &&
+          other.colorIndex == this.colorIndex &&
+          other.bgImageIndex == this.bgImageIndex &&
+          other.imageAttachments == this.imageAttachments &&
+          other.audioAttachments == this.audioAttachments &&
+          other.linkAttachments == this.linkAttachments &&
+          other.isArchived == this.isArchived &&
+          other.isDeleted == this.isDeleted);
 }
 
 class MemosCompanion extends UpdateCompanion<Memo> {
@@ -315,6 +596,13 @@ class MemosCompanion extends UpdateCompanion<Memo> {
   final Value<DateTime> updatedAt;
   final Value<bool> isSynced;
   final Value<String?> remoteFileId;
+  final Value<int> colorIndex;
+  final Value<int> bgImageIndex;
+  final Value<String> imageAttachments;
+  final Value<String> audioAttachments;
+  final Value<String> linkAttachments;
+  final Value<bool> isArchived;
+  final Value<bool> isDeleted;
   final Value<int> rowid;
   const MemosCompanion({
     this.uuid = const Value.absent(),
@@ -323,6 +611,13 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     this.updatedAt = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.remoteFileId = const Value.absent(),
+    this.colorIndex = const Value.absent(),
+    this.bgImageIndex = const Value.absent(),
+    this.imageAttachments = const Value.absent(),
+    this.audioAttachments = const Value.absent(),
+    this.linkAttachments = const Value.absent(),
+    this.isArchived = const Value.absent(),
+    this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   MemosCompanion.insert({
@@ -332,6 +627,13 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     required DateTime updatedAt,
     this.isSynced = const Value.absent(),
     this.remoteFileId = const Value.absent(),
+    this.colorIndex = const Value.absent(),
+    this.bgImageIndex = const Value.absent(),
+    this.imageAttachments = const Value.absent(),
+    this.audioAttachments = const Value.absent(),
+    this.linkAttachments = const Value.absent(),
+    this.isArchived = const Value.absent(),
+    this.isDeleted = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : uuid = Value(uuid),
        createdAt = Value(createdAt),
@@ -343,6 +645,13 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? isSynced,
     Expression<String>? remoteFileId,
+    Expression<int>? colorIndex,
+    Expression<int>? bgImageIndex,
+    Expression<String>? imageAttachments,
+    Expression<String>? audioAttachments,
+    Expression<String>? linkAttachments,
+    Expression<bool>? isArchived,
+    Expression<bool>? isDeleted,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -352,6 +661,13 @@ class MemosCompanion extends UpdateCompanion<Memo> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (isSynced != null) 'is_synced': isSynced,
       if (remoteFileId != null) 'remote_file_id': remoteFileId,
+      if (colorIndex != null) 'color_index': colorIndex,
+      if (bgImageIndex != null) 'bg_image_index': bgImageIndex,
+      if (imageAttachments != null) 'image_attachments': imageAttachments,
+      if (audioAttachments != null) 'audio_attachments': audioAttachments,
+      if (linkAttachments != null) 'link_attachments': linkAttachments,
+      if (isArchived != null) 'is_archived': isArchived,
+      if (isDeleted != null) 'is_deleted': isDeleted,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -363,6 +679,13 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     Value<DateTime>? updatedAt,
     Value<bool>? isSynced,
     Value<String?>? remoteFileId,
+    Value<int>? colorIndex,
+    Value<int>? bgImageIndex,
+    Value<String>? imageAttachments,
+    Value<String>? audioAttachments,
+    Value<String>? linkAttachments,
+    Value<bool>? isArchived,
+    Value<bool>? isDeleted,
     Value<int>? rowid,
   }) {
     return MemosCompanion(
@@ -372,6 +695,13 @@ class MemosCompanion extends UpdateCompanion<Memo> {
       updatedAt: updatedAt ?? this.updatedAt,
       isSynced: isSynced ?? this.isSynced,
       remoteFileId: remoteFileId ?? this.remoteFileId,
+      colorIndex: colorIndex ?? this.colorIndex,
+      bgImageIndex: bgImageIndex ?? this.bgImageIndex,
+      imageAttachments: imageAttachments ?? this.imageAttachments,
+      audioAttachments: audioAttachments ?? this.audioAttachments,
+      linkAttachments: linkAttachments ?? this.linkAttachments,
+      isArchived: isArchived ?? this.isArchived,
+      isDeleted: isDeleted ?? this.isDeleted,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -397,6 +727,27 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     if (remoteFileId.present) {
       map['remote_file_id'] = Variable<String>(remoteFileId.value);
     }
+    if (colorIndex.present) {
+      map['color_index'] = Variable<int>(colorIndex.value);
+    }
+    if (bgImageIndex.present) {
+      map['bg_image_index'] = Variable<int>(bgImageIndex.value);
+    }
+    if (imageAttachments.present) {
+      map['image_attachments'] = Variable<String>(imageAttachments.value);
+    }
+    if (audioAttachments.present) {
+      map['audio_attachments'] = Variable<String>(audioAttachments.value);
+    }
+    if (linkAttachments.present) {
+      map['link_attachments'] = Variable<String>(linkAttachments.value);
+    }
+    if (isArchived.present) {
+      map['is_archived'] = Variable<bool>(isArchived.value);
+    }
+    if (isDeleted.present) {
+      map['is_deleted'] = Variable<bool>(isDeleted.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -412,6 +763,13 @@ class MemosCompanion extends UpdateCompanion<Memo> {
           ..write('updatedAt: $updatedAt, ')
           ..write('isSynced: $isSynced, ')
           ..write('remoteFileId: $remoteFileId, ')
+          ..write('colorIndex: $colorIndex, ')
+          ..write('bgImageIndex: $bgImageIndex, ')
+          ..write('imageAttachments: $imageAttachments, ')
+          ..write('audioAttachments: $audioAttachments, ')
+          ..write('linkAttachments: $linkAttachments, ')
+          ..write('isArchived: $isArchived, ')
+          ..write('isDeleted: $isDeleted, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -893,6 +1251,13 @@ typedef $$MemosTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> isSynced,
       Value<String?> remoteFileId,
+      Value<int> colorIndex,
+      Value<int> bgImageIndex,
+      Value<String> imageAttachments,
+      Value<String> audioAttachments,
+      Value<String> linkAttachments,
+      Value<bool> isArchived,
+      Value<bool> isDeleted,
       Value<int> rowid,
     });
 typedef $$MemosTableUpdateCompanionBuilder =
@@ -903,6 +1268,13 @@ typedef $$MemosTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> isSynced,
       Value<String?> remoteFileId,
+      Value<int> colorIndex,
+      Value<int> bgImageIndex,
+      Value<String> imageAttachments,
+      Value<String> audioAttachments,
+      Value<String> linkAttachments,
+      Value<bool> isArchived,
+      Value<bool> isDeleted,
       Value<int> rowid,
     });
 
@@ -965,6 +1337,41 @@ class $$MemosTableFilterComposer extends Composer<_$AppDatabase, $MemosTable> {
 
   ColumnFilters<String> get remoteFileId => $composableBuilder(
     column: $table.remoteFileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get colorIndex => $composableBuilder(
+    column: $table.colorIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get bgImageIndex => $composableBuilder(
+    column: $table.bgImageIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get imageAttachments => $composableBuilder(
+    column: $table.imageAttachments,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get audioAttachments => $composableBuilder(
+    column: $table.audioAttachments,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get linkAttachments => $composableBuilder(
+    column: $table.linkAttachments,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isArchived => $composableBuilder(
+    column: $table.isArchived,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1032,6 +1439,41 @@ class $$MemosTableOrderingComposer
     column: $table.remoteFileId,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get colorIndex => $composableBuilder(
+    column: $table.colorIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get bgImageIndex => $composableBuilder(
+    column: $table.bgImageIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get imageAttachments => $composableBuilder(
+    column: $table.imageAttachments,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get audioAttachments => $composableBuilder(
+    column: $table.audioAttachments,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get linkAttachments => $composableBuilder(
+    column: $table.linkAttachments,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isArchived => $composableBuilder(
+    column: $table.isArchived,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isDeleted => $composableBuilder(
+    column: $table.isDeleted,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$MemosTableAnnotationComposer
@@ -1062,6 +1504,39 @@ class $$MemosTableAnnotationComposer
     column: $table.remoteFileId,
     builder: (column) => column,
   );
+
+  GeneratedColumn<int> get colorIndex => $composableBuilder(
+    column: $table.colorIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get bgImageIndex => $composableBuilder(
+    column: $table.bgImageIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get imageAttachments => $composableBuilder(
+    column: $table.imageAttachments,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get audioAttachments => $composableBuilder(
+    column: $table.audioAttachments,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get linkAttachments => $composableBuilder(
+    column: $table.linkAttachments,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isArchived => $composableBuilder(
+    column: $table.isArchived,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isDeleted =>
+      $composableBuilder(column: $table.isDeleted, builder: (column) => column);
 
   Expression<T> blocksRefs<T extends Object>(
     Expression<T> Function($$BlocksTableAnnotationComposer a) f,
@@ -1123,6 +1598,13 @@ class $$MemosTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<String?> remoteFileId = const Value.absent(),
+                Value<int> colorIndex = const Value.absent(),
+                Value<int> bgImageIndex = const Value.absent(),
+                Value<String> imageAttachments = const Value.absent(),
+                Value<String> audioAttachments = const Value.absent(),
+                Value<String> linkAttachments = const Value.absent(),
+                Value<bool> isArchived = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MemosCompanion(
                 uuid: uuid,
@@ -1131,6 +1613,13 @@ class $$MemosTableTableManager
                 updatedAt: updatedAt,
                 isSynced: isSynced,
                 remoteFileId: remoteFileId,
+                colorIndex: colorIndex,
+                bgImageIndex: bgImageIndex,
+                imageAttachments: imageAttachments,
+                audioAttachments: audioAttachments,
+                linkAttachments: linkAttachments,
+                isArchived: isArchived,
+                isDeleted: isDeleted,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1141,6 +1630,13 @@ class $$MemosTableTableManager
                 required DateTime updatedAt,
                 Value<bool> isSynced = const Value.absent(),
                 Value<String?> remoteFileId = const Value.absent(),
+                Value<int> colorIndex = const Value.absent(),
+                Value<int> bgImageIndex = const Value.absent(),
+                Value<String> imageAttachments = const Value.absent(),
+                Value<String> audioAttachments = const Value.absent(),
+                Value<String> linkAttachments = const Value.absent(),
+                Value<bool> isArchived = const Value.absent(),
+                Value<bool> isDeleted = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MemosCompanion.insert(
                 uuid: uuid,
@@ -1149,6 +1645,13 @@ class $$MemosTableTableManager
                 updatedAt: updatedAt,
                 isSynced: isSynced,
                 remoteFileId: remoteFileId,
+                colorIndex: colorIndex,
+                bgImageIndex: bgImageIndex,
+                imageAttachments: imageAttachments,
+                audioAttachments: audioAttachments,
+                linkAttachments: linkAttachments,
+                isArchived: isArchived,
+                isDeleted: isDeleted,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

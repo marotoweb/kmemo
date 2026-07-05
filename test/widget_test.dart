@@ -22,7 +22,7 @@ void main() {
           ),
         ],
         child:
-            const MyApp(), // Correção: Uso da classe correta definida no main.dart
+            const KMemoApp(), // Correção: Uso da classe correta definida no main.dart
       ),
     );
 

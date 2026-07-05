@@ -1,18 +1,25 @@
 // lib/models/block.dart
-import 'package:drift/drift.dart';
-import 'package:kmemo/database/database.dart'; // Importa o enum BlockType do ficheiro central
 
-class Blocks extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get uuid => text()();
+import '../../database/database.dart';
 
-  // Chave estrangeira explícita ligando ao Memo correspondente
-  TextColumn get memoUuid =>
-      text().references(Memos, #uuid, onDelete: KeyAction.cascade)();
-
-  TextColumn get type => text().map(const BlockTypeConverter())();
-  TextColumn get content =>
-      text().map(const MapConverter()).withDefault(const Constant('{}'))();
-  IntColumn get sortOrder => integer().withDefault(const Constant(0))();
-  BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
+extension BlockExtension on Block {
+  Block copyWith({
+    int? id,
+    String? uuid,
+    String? memoUuid,
+    BlockType? type,
+    Map<String, dynamic>? content,
+    int? sortOrder,
+    bool? isDeleted,
+  }) {
+    return Block(
+      id: id ?? this.id,
+      uuid: uuid ?? this.uuid,
+      memoUuid: memoUuid ?? this.memoUuid,
+      type: type ?? this.type,
+      content: content ?? this.content,
+      sortOrder: sortOrder ?? this.sortOrder,
+      isDeleted: isDeleted ?? this.isDeleted,
+    );
+  }
 }
