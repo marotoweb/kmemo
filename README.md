@@ -1,6 +1,6 @@
 # kMemo
 
-O **kMemo** é uma aplicação móvel de notas minimalista e ultra-focada na produtividade, desenvolvida em Flutter. A sua interface afasta-se dos editores de texto tradicionais, adotando uma estrutura inteiramente orientada a blocos dinâmicos (estilo Notion), permitindo mutar e reordenar conteúdos de forma fluida e sem distrações visuais.
+O **kMemo** é uma aplicação móvel de notas minimalista e ultra-focada na produtividade, desenvolvida em Flutter. A sua interface afasta-se dos editores de texto tradicionais, adotando uma estrutura inteiramente orientada a blocos dinâmicos, permitindo mutar e reordenar conteúdos de forma fluida e sem distrações visuais.
 
 ---
 
@@ -9,8 +9,9 @@ O **kMemo** é uma aplicação móvel de notas minimalista e ultra-focada na pro
 - **Escrita Sem Distrações:** Interface limpa, contínua e sem bordas mecânicas. Cada elemento integra-se como se fosse uma folha de papel única.
 - **Estrutura Baseada em Blocos:** O conteúdo de cada nota é composto por blocos independentes (Texto, Listas de Tarefas, Cabeçalhos) que podem ser manipulados individualmente.
 - **Persistência Offline-First:** Toda a gestão de dados é feita localmente através do SQLite (via Drift), garantindo velocidade instantânea e privacidade absoluta.
+- **Tema Escuro Automático (Dark Mode):** Suporte completo e dinâmico adaptado às definições do sistema, incluindo paletas de cores escuras, profundas e dessaturadas para o fundo das notas e cartões em todas as vistas.
 - **Ecossistema Reativo:** Utilização do ecossistema `Provider` combinado com streams nativos do Drift para atualizações em tempo real na interface e no widget do ecrã principal.
-- **Integração com Home Screen Widget:** Sincronização automática com um widget nativo do sistema para visualização rápida das últimas notas diretamente no ambiente de trabalho do dispositivo.
+- **Integração com Home Screen Widget (muito verde em desenvolvimento):** Sincronização automática com um widget nativo do sistema para visualização rápida das últimas notas diretamente no ambiente de trabalho do dispositivo.
 
 ---
 
@@ -33,6 +34,14 @@ A aplicação organiza a persistência através de duas tabelas relacionais com 
    - `title` (Título da nota)
    - `createdAt` / `updatedAt` (Controlo temporal)
    - `isSynced` (Estado de sincronização remota)
+   - `remoteFileId` (Identificador de ficheiro remoto opcional)
+   - `colorIndex` (Índice numérico para a cor de fundo da nota)
+   - `bgImageIndex` (Índice numérico para imagens de fundo predefinidas)
+   - `imageAttachments` (Texto em formato JSON com os caminhos dos anexos de imagem)
+   - `audioAttachments` (Texto em formato JSON com os anexos de áudio)
+   - `linkAttachments` (Texto em formato JSON com os links associados)
+   - `isArchived` (Booleano para o estado de arquivamento)
+   - `isDeleted` (Booleano para o envio para a lixeira)
 
 2. **Blocks (Componentes Dinâmicos):**
    - `id` (Chave Primária com Auto-Incremento)
@@ -77,4 +86,4 @@ Como o projeto utiliza geração de código estática para as tabelas do SQLite,
     ```
 
 ## 📝 Licença
-Este projeto é de uso privado e o seu desenvolvimento segue princípios de código limpo e arquitetura desacoplada.
+Este projeto é distribuído sob a licença **GNU General Public License v3.0 (GPLv3)**. 

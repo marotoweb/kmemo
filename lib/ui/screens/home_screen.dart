@@ -36,7 +36,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showStyleMenu(BuildContext context) {
-    final List<Color> colorsPalette = [
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Paleta para o tema claro (tons suaves/pastel)
+    final List<Color> lightColorsPalette = [
       Colors.white,
       Colors.red.shade100,
       Colors.orange.shade100,
@@ -54,6 +57,28 @@ class _HomeScreenState extends State<HomeScreen> {
       Colors.cyan.shade100,
       const Color(0xFFF5F5F5),
     ];
+
+    // Paleta para o tema escuro (tons profundos e suaves) [2]
+    final List<Color> darkColorsPalette = [
+      const Color(0xFF1E1E1E),
+      const Color(0xFF3B1A1A),
+      const Color(0xFF3D2C1E),
+      const Color(0xFF3D361E),
+      const Color(0xFF1E3322),
+      const Color(0xFF1E3331),
+      const Color(0xFF1E2A3B),
+      const Color(0xFF261E3B),
+      const Color(0xFF331E3B),
+      const Color(0xFF3B1E32),
+      const Color(0xFF2E2621),
+      const Color(0xFF252B2E),
+      const Color(0xFF3B2E1E),
+      const Color(0xFF27331E),
+      const Color(0xFF1E3338),
+      const Color(0xFF2C2C2C),
+    ];
+
+    final colorsPalette = isDarkMode ? darkColorsPalette : lightColorsPalette;
 
     final List<String> bgImagesPalette = List.generate(
       16,
@@ -120,7 +145,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               border: Border.all(
                                 color: isSelected
                                     ? Colors.blue
-                                    : Colors.grey.shade300,
+                                    : (isDarkMode
+                                          ? Colors.grey.shade700
+                                          : Colors.grey.shade300),
                                 width: isSelected ? 3 : 1,
                               ),
                             ),
@@ -157,20 +184,26 @@ class _HomeScreenState extends State<HomeScreen> {
                               border: Border.all(
                                 color: isSelected
                                     ? Colors.blue
-                                    : Colors.grey.shade300,
+                                    : (isDarkMode
+                                          ? Colors.grey.shade700
+                                          : Colors.grey.shade300),
                                 width: isSelected ? 3 : 1,
                               ),
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(6),
                               child: Container(
-                                color: Colors.grey.shade200,
+                                color: isDarkMode
+                                    ? Colors.grey.shade800
+                                    : Colors.grey.shade200,
                                 child: Center(
                                   child: Text(
                                     'BG $i',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 11,
-                                      color: Colors.black54,
+                                      color: isDarkMode
+                                          ? Colors.white70
+                                          : Colors.black54,
                                     ),
                                   ),
                                 ),
@@ -195,41 +228,50 @@ class _HomeScreenState extends State<HomeScreen> {
     final provider = Provider.of<MemoProvider>(context);
     final isSelectionMode = _selectedUuids.isNotEmpty;
     final activeMemos = provider.activeMemos;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: isSelectionMode
           ? AppBar(
-              backgroundColor: Colors.amber.shade100,
+              backgroundColor: isDarkMode
+                  ? const Color(0xFF3B2E1E)
+                  : Colors.amber.shade100,
               leading: IconButton(
-                icon: const Icon(Icons.close, color: Colors.black87),
+                icon: Icon(
+                  Icons.close,
+                  color: isDarkMode ? Colors.white70 : Colors.black87,
+                ),
                 onPressed: _clearSelection,
               ),
               title: Text(
                 '${_selectedUuids.length}',
-                style: const TextStyle(
-                  color: Colors.black87,
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white70 : Colors.black87,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.push_pin_outlined,
-                    color: Colors.black87,
+                    color: isDarkMode ? Colors.white70 : Colors.black87,
                   ),
                   onPressed: () {
                     _clearSelection();
                   },
                 ),
                 IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.palette_outlined,
-                    color: Colors.black87,
+                    color: isDarkMode ? Colors.white70 : Colors.black87,
                   ),
                   onPressed: () => _showStyleMenu(context),
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Colors.black87),
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: isDarkMode ? Colors.white70 : Colors.black87,
+                  ),
                   onSelected: (value) async {
                     final memoProvider = context.read<MemoProvider>();
                     if (value == 'archive') {
@@ -348,12 +390,14 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
-            const DrawerHeader(
-              decoration: BoxDecoration(color: Colors.amber),
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: isDarkMode ? const Color(0xFF3B2E1E) : Colors.amber,
+              ),
               child: Text(
                 'kMemo',
                 style: TextStyle(
-                  color: Colors.black87,
+                  color: isDarkMode ? Colors.white70 : Colors.black87,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
@@ -399,10 +443,12 @@ class _HomeScreenState extends State<HomeScreen> {
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : activeMemos.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
                 'Nenhuma nota ativa',
-                style: TextStyle(color: Colors.black45),
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white38 : Colors.black45,
+                ),
               ),
             )
           : Padding(
@@ -426,12 +472,14 @@ class _HomeScreenState extends State<HomeScreen> {
                           alignment: Alignment.centerLeft,
                           padding: const EdgeInsets.only(left: 20),
                           decoration: BoxDecoration(
-                            color: Colors.amber,
+                            color: isDarkMode
+                                ? const Color(0xFF3B2E1E)
+                                : Colors.amber,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.archive,
-                            color: Colors.black87,
+                            color: isDarkMode ? Colors.white70 : Colors.black87,
                           ),
                         ),
                       ),
@@ -503,7 +551,9 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: isSelectionMode
           ? null
           : FloatingActionButton(
-              backgroundColor: Colors.amber,
+              backgroundColor: isDarkMode
+                  ? const Color(0xFF3B2E1E)
+                  : Colors.amber,
               onPressed: () async {
                 final newMemo = await provider.createNewMemo();
                 if (context.mounted) {
@@ -515,7 +565,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }
               },
-              child: const Icon(Icons.add, color: Colors.black87),
+              child: Icon(
+                Icons.add,
+                color: isDarkMode ? Colors.white70 : Colors.black87,
+              ),
             ),
     );
   }

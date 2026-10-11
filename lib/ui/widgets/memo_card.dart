@@ -22,7 +22,10 @@ class MemoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Color> colorsPalette = [
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Paleta de cores claras (tons suaves/pastel)
+    final List<Color> lightColorsPalette = [
       Colors.white,
       Colors.red.shade50,
       Colors.orange.shade50,
@@ -41,11 +44,37 @@ class MemoCard extends StatelessWidget {
       const Color(0xFFF5F5F5),
     ];
 
+    // Paleta de cores escuras (tons profundos, dessaturados e suaves para o Dark Mode)
+    final List<Color> darkColorsPalette = [
+      const Color(0xFF1E1E1E), // Fundo base escuro
+      const Color(0xFF3B1A1A), // Vermelho escuro suave
+      const Color(0xFF3D2C1E), // Laranja escuro suave
+      const Color(0xFF3D361E), // Amarelo/Âmbar escuro suave
+      const Color(0xFF1E3322), // Verde escuro suave
+      const Color(0xFF1E3331), // Teal escuro suave
+      const Color(0xFF1E2A3B), // Azul escuro suave
+      const Color(0xFF261E3B), // Índigo escuro suave
+      const Color(0xFF331E3B), // Roxo escuro suave
+      const Color(0xFF3B1E32), // Rosa escuro suave
+      const Color(0xFF2E2621), // Castanho escuro suave
+      const Color(0xFF252B2E), // Azul-acinzentado escuro suave
+      const Color(0xFF3B2E1E), // Âmbar profundo suave
+      const Color(0xFF27331E), // Verde-lima escuro suave
+      const Color(0xFF1E3338), // Ciano escuro suave
+      const Color(0xFF2C2C2C), // Cinzento escuro secundário
+    ];
+
+    final colorsPalette = isDarkMode ? darkColorsPalette : lightColorsPalette;
+
     final cardColor = isSelected
-        ? Colors.amber.shade50
+        ? (isDarkMode ? const Color(0xFF4A3810) : Colors.amber.shade50)
         : (memo.colorIndex < colorsPalette.length
               ? colorsPalette[memo.colorIndex]
-              : Colors.white);
+              : (isDarkMode ? const Color(0xFF1E1E1E) : Colors.white));
+
+    final textColor = isDarkMode ? Colors.white70 : Colors.black87;
+    final subtitleColor = isDarkMode ? Colors.white60 : Colors.black45;
+    final mutedTextColor = isDarkMode ? Colors.white38 : Colors.black38;
 
     List<String> images = [];
     try {
@@ -61,7 +90,9 @@ class MemoCard extends StatelessWidget {
           color: cardColor,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? Colors.amber.shade700 : Colors.grey.shade200,
+            color: isSelected
+                ? (isDarkMode ? Colors.amber.shade400 : Colors.amber.shade700)
+                : (isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200),
             width: isSelected ? 2.5 : 1,
           ),
         ),
@@ -79,7 +110,9 @@ class MemoCard extends StatelessWidget {
                     padding: const EdgeInsets.only(top: 2.0),
                     child: Icon(
                       Icons.check_circle,
-                      color: Colors.amber.shade800,
+                      color: isDarkMode
+                          ? Colors.amber.shade400
+                          : Colors.amber.shade800,
                       size: 22,
                     ),
                   ),
@@ -92,10 +125,10 @@ class MemoCard extends StatelessWidget {
                       if (memo.title.isNotEmpty) ...[
                         Text(
                           memo.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: textColor,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -114,7 +147,6 @@ class MemoCard extends StatelessWidget {
                           final isChecklist = blocks.any(
                             (b) => b.type == BlockType.checklist,
                           );
-
                           if (isChecklist) {
                             final sortedBlocks = List<Block>.from(blocks)
                               ..sort(
@@ -122,7 +154,6 @@ class MemoCard extends StatelessWidget {
                               );
                             final hasMoreThanEight = sortedBlocks.length > 8;
                             final visibleBlocks = sortedBlocks.take(8).toList();
-
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 6.0),
                               child: Column(
@@ -143,8 +174,8 @@ class MemoCard extends StatelessWidget {
                                               : Icons.check_box_outline_blank,
                                           size: 14,
                                           color: checked
-                                              ? Colors.black38
-                                              : Colors.black54,
+                                              ? mutedTextColor
+                                              : subtitleColor,
                                         ),
                                         const SizedBox(width: 6),
                                         Expanded(
@@ -155,8 +186,8 @@ class MemoCard extends StatelessWidget {
                                             style: TextStyle(
                                               fontSize: 13,
                                               color: checked
-                                                  ? Colors.black38
-                                                  : Colors.black87,
+                                                  ? mutedTextColor
+                                                  : textColor,
                                               decoration: checked
                                                   ? TextDecoration.lineThrough
                                                   : TextDecoration.none,
@@ -169,8 +200,8 @@ class MemoCard extends StatelessWidget {
                                     );
                                   }),
                                   if (hasMoreThanEight)
-                                    const Padding(
-                                      padding: EdgeInsets.only(
+                                    Padding(
+                                      padding: const EdgeInsets.only(
                                         left: 20.0,
                                         top: 2.0,
                                       ),
@@ -179,7 +210,7 @@ class MemoCard extends StatelessWidget {
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.bold,
-                                          color: Colors.black54,
+                                          color: subtitleColor,
                                         ),
                                       ),
                                     ),
@@ -202,9 +233,9 @@ class MemoCard extends StatelessWidget {
                               padding: const EdgeInsets.only(bottom: 6.0),
                               child: Text(
                                 visibleText,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
-                                  color: Colors.black87,
+                                  color: textColor,
                                   height: 1.3,
                                 ),
                                 maxLines: 9,
@@ -217,17 +248,13 @@ class MemoCard extends StatelessWidget {
                       if (images.isNotEmpty) ...[
                         Row(
                           children: [
-                            const Icon(
-                              Icons.image,
-                              size: 13,
-                              color: Colors.black45,
-                            ),
+                            Icon(Icons.image, size: 13, color: subtitleColor),
                             const SizedBox(width: 4),
                             Text(
                               'Anexos de imagem (${images.length})',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
-                                color: Colors.black45,
+                                color: subtitleColor,
                               ),
                             ),
                           ],
@@ -238,7 +265,9 @@ class MemoCard extends StatelessWidget {
                         'Atualizado: ${_formatDate(memo.updatedAt)}',
                         style: TextStyle(
                           fontSize: 10,
-                          color: Colors.grey.shade600,
+                          color: isDarkMode
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                         ),
                       ),
                     ],

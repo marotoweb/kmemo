@@ -37,25 +37,34 @@ class _TrashScreenState extends State<TrashScreen> {
     final provider = Provider.of<MemoProvider>(context);
     final isSelectionMode = _selectedUuids.isNotEmpty;
     final deletedMemos = provider.deletedMemos;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: isSelectionMode
           ? AppBar(
-              backgroundColor: Colors.amber.shade100,
+              backgroundColor: isDarkMode
+                  ? Colors.amber.shade900
+                  : Colors.amber.shade100,
               leading: IconButton(
-                icon: const Icon(Icons.close, color: Colors.black87),
+                icon: Icon(
+                  Icons.close,
+                  color: isDarkMode ? Colors.white70 : Colors.black87,
+                ),
                 onPressed: _clearSelection,
               ),
               title: Text(
                 '${_selectedUuids.length}',
-                style: const TextStyle(
-                  color: Colors.black87,
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white70 : Colors.black87,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.restore, color: Colors.black87),
+                  icon: Icon(
+                    Icons.restore,
+                    color: isDarkMode ? Colors.white70 : Colors.black87,
+                  ),
                   tooltip: 'Restaurar',
                   onPressed: () async {
                     final uuidsToRestore = List<String>.from(_selectedUuids);
@@ -76,7 +85,10 @@ class _TrashScreenState extends State<TrashScreen> {
                   },
                 ),
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: Colors.black87),
+                  icon: Icon(
+                    Icons.more_vert,
+                    color: isDarkMode ? Colors.white70 : Colors.black87,
+                  ),
                   onSelected: (value) async {
                     final memoProvider = context.read<MemoProvider>();
                     if (value == 'delete_permanent') {
@@ -100,14 +112,17 @@ class _TrashScreenState extends State<TrashScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               elevation: 0,
+              backgroundColor: Colors.transparent,
             ),
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())
           : deletedMemos.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
                 'A lixeira está vazia.',
-                style: TextStyle(color: Colors.black45),
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white38 : Colors.black45,
+                ),
               ),
             )
           : Padding(
@@ -131,12 +146,14 @@ class _TrashScreenState extends State<TrashScreen> {
                           alignment: Alignment.centerLeft,
                           padding: const EdgeInsets.only(left: 20),
                           decoration: BoxDecoration(
-                            color: Colors.amber,
+                            color: isDarkMode
+                                ? Colors.amber.shade900
+                                : Colors.amber,
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.restore,
-                            color: Colors.black87,
+                            color: isDarkMode ? Colors.white70 : Colors.black87,
                           ),
                         ),
                       ),

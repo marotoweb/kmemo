@@ -42,8 +42,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
 
   final _uuidGenerator = const Uuid();
 
-  // Palete completa de 16 cores para o fundo da nota
-  final List<Color> _colorsPalette = [
+  // Paleta de cores claras (tons suaves/pastel)
+  final List<Color> _lightColorsPalette = [
     Colors.white,
     Colors.red.shade100,
     Colors.orange.shade100,
@@ -60,6 +60,26 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     Colors.lightGreen.shade100,
     Colors.cyan.shade100,
     const Color(0xFFF5F5F5),
+  ];
+
+  // Paleta de cores escuras (tons profundos e suaves para o Dark Mode)
+  final List<Color> _darkColorsPalette = [
+    const Color(0xFF1E1E1E),
+    const Color(0xFF3B1A1A),
+    const Color(0xFF3D2C1E),
+    const Color(0xFF3D361E),
+    const Color(0xFF1E3322),
+    const Color(0xFF1E3331),
+    const Color(0xFF1E2A3B),
+    const Color(0xFF261E3B),
+    const Color(0xFF331E3B),
+    const Color(0xFF3B1E32),
+    const Color(0xFF2E2621),
+    const Color(0xFF252B2E),
+    const Color(0xFF3B2E1E),
+    const Color(0xFF27331E),
+    const Color(0xFF1E3338),
+    const Color(0xFF2C2C2C),
   ];
 
   // Lista de 16 caminhos de imagens predefinidas (assets da app)
@@ -371,6 +391,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   }
 
   void _showStyleMenu(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final colorsPalette = isDarkMode ? _darkColorsPalette : _lightColorsPalette;
+
     showModalBottomSheet(
       context: context,
       builder: (ctx) {
@@ -398,7 +421,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
                           ),
-                      itemCount: _colorsPalette.length,
+                      itemCount: colorsPalette.length,
                       itemBuilder: (context, i) {
                         return GestureDetector(
                           onTap: () {
@@ -418,14 +441,16 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                           },
                           child: Container(
                             decoration: BoxDecoration(
-                              color: _colorsPalette[i],
+                              color: colorsPalette[i],
                               shape: BoxShape.circle,
                               border: Border.all(
                                 color:
                                     _currentMemo.bgImageIndex == -1 &&
                                         _currentMemo.colorIndex == i
                                     ? Colors.blue
-                                    : Colors.grey.shade300,
+                                    : (isDarkMode
+                                          ? Colors.grey.shade700
+                                          : Colors.grey.shade300),
                                 width:
                                     _currentMemo.bgImageIndex == -1 &&
                                         _currentMemo.colorIndex == i
@@ -467,20 +492,26 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                               border: Border.all(
                                 color: _currentMemo.bgImageIndex == i
                                     ? Colors.blue
-                                    : Colors.grey.shade300,
+                                    : (isDarkMode
+                                          ? Colors.grey.shade700
+                                          : Colors.grey.shade300),
                                 width: _currentMemo.bgImageIndex == i ? 3 : 1,
                               ),
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(6),
                               child: Container(
-                                color: Colors.grey.shade200,
+                                color: isDarkMode
+                                    ? Colors.grey.shade800
+                                    : Colors.grey.shade200,
                                 child: Center(
                                   child: Text(
                                     'BG $i',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 11,
-                                      color: Colors.black54,
+                                      color: isDarkMode
+                                          ? Colors.white70
+                                          : Colors.black54,
                                     ),
                                   ),
                                 ),
@@ -506,6 +537,11 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final activeColorsPalette = isDarkMode
+        ? _darkColorsPalette
+        : _lightColorsPalette;
+
     final Decoration noteBackgroundDecoration = _currentMemo.bgImageIndex != -1
         ? BoxDecoration(
             image: DecorationImage(
@@ -513,7 +549,14 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
               fit: BoxFit.cover,
             ),
           )
-        : BoxDecoration(color: _colorsPalette[_currentMemo.colorIndex]);
+        : BoxDecoration(color: activeColorsPalette[_currentMemo.colorIndex]);
+
+    final textColor = isDarkMode ? Colors.white70 : Colors.black87;
+    final hintColor = isDarkMode ? Colors.white38 : Colors.black38;
+    final iconColor = isDarkMode ? Colors.white70 : Colors.black87;
+    final footerBgColor = isDarkMode
+        ? const Color(0xFF1E1E1E).withValues(alpha: 0.9)
+        : Colors.white.withValues(alpha: 0.9);
 
     return Container(
       decoration: noteBackgroundDecoration,
@@ -524,23 +567,20 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black87),
+            icon: Icon(Icons.arrow_back, color: iconColor),
             onPressed: () => Navigator.pop(context),
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.push_pin_outlined, color: Colors.black87),
+              icon: Icon(Icons.push_pin_outlined, color: iconColor),
               onPressed: () {},
             ),
             IconButton(
-              icon: const Icon(
-                Icons.notification_add_outlined,
-                color: Colors.black87,
-              ),
+              icon: Icon(Icons.notification_add_outlined, color: iconColor),
               onPressed: () {},
             ),
             IconButton(
-              icon: const Icon(Icons.archive_outlined, color: Colors.black87),
+              icon: Icon(Icons.archive_outlined, color: iconColor),
               onPressed: () {},
             ),
           ],
@@ -558,22 +598,22 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                     child: TextField(
                       controller: _titleController,
                       textCapitalization: TextCapitalization.sentences,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: textColor,
                       ),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'Título',
                         border: InputBorder.none,
-                        hintStyle: TextStyle(color: Colors.black38),
+                        hintStyle: TextStyle(color: hintColor),
                       ),
                       onChanged: (_) => _persistData(),
                     ),
                   ),
                   if (_isChecklistMode)
                     PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert, color: Colors.black87),
+                      icon: Icon(Icons.more_vert, color: iconColor),
                       onSelected: (value) {
                         if (value == 'clear_checklist') _switchMode(false);
                       },
@@ -591,8 +631,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: _isChecklistMode
-                    ? _buildChecklistLayout()
-                    : _buildTextLayout(),
+                    ? _buildChecklistLayout(textColor, hintColor, isDarkMode)
+                    : _buildTextLayout(textColor, hintColor),
               ),
             ),
             SafeArea(
@@ -601,31 +641,39 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                 height: 50,
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
+                  color: footerBgColor,
                   border: Border(
-                    top: BorderSide(color: Colors.grey.shade200, width: 1),
+                    top: BorderSide(
+                      color: isDarkMode
+                          ? Colors.grey.shade800
+                          : Colors.grey.shade200,
+                      width: 1,
+                    ),
                   ),
                 ),
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.add_box_outlined,
-                        color: Colors.black54,
+                        color: isDarkMode ? Colors.white60 : Colors.black54,
                       ),
                       onPressed: () => _showAttachmentMenu(context),
                     ),
                     IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.palette_outlined,
-                        color: Colors.black54,
+                        color: isDarkMode ? Colors.white60 : Colors.black54,
                       ),
                       onPressed: () => _showStyleMenu(context),
                     ),
                     const Spacer(),
-                    const Text(
+                    Text(
                       'Editado recentemente',
-                      style: TextStyle(fontSize: 12, color: Colors.black45),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDarkMode ? Colors.white38 : Colors.black45,
+                      ),
                     ),
                     const Spacer(),
                   ],
@@ -638,24 +686,28 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     );
   }
 
-  Widget _buildTextLayout() {
+  Widget _buildTextLayout(Color textColor, Color hintColor) {
     return TextField(
       key: ValueKey('text_input_${_textBlockId}_$_textBlockUuid'),
       textCapitalization: TextCapitalization.sentences,
       controller: _textNoteController,
       maxLines: null,
       keyboardType: TextInputType.multiline,
-      style: const TextStyle(fontSize: 16, color: Colors.black87),
-      decoration: const InputDecoration(
+      style: TextStyle(fontSize: 16, color: textColor),
+      decoration: InputDecoration(
         hintText: 'Nota',
         border: InputBorder.none,
-        hintStyle: TextStyle(color: Colors.black38),
+        hintStyle: TextStyle(color: hintColor),
       ),
       onChanged: (_) => _persistData(),
     );
   }
 
-  Widget _buildChecklistLayout() {
+  Widget _buildChecklistLayout(
+    Color textColor,
+    Color hintColor,
+    bool isDarkMode,
+  ) {
     return ListView.builder(
       itemCount: _listControllers.length,
       itemBuilder: (context, index) {
@@ -693,17 +745,19 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                   textInputAction: TextInputAction.next,
                   style: TextStyle(
                     fontSize: 16,
-                    color: isChecked ? Colors.black38 : Colors.black87,
+                    color: isChecked
+                        ? (isDarkMode ? Colors.white24 : Colors.black38)
+                        : textColor,
                     decoration: isChecked
                         ? TextDecoration.lineThrough
                         : TextDecoration.none,
                   ),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Item de lista',
                     border: InputBorder.none,
                     isDense: true,
-                    contentPadding: EdgeInsets.symmetric(vertical: 6.0),
-                    hintStyle: TextStyle(color: Colors.black38),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 6.0),
+                    hintStyle: TextStyle(color: hintColor),
                   ),
                   onSubmitted: (_) {
                     setState(
@@ -719,7 +773,11 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.clear, size: 18, color: Colors.black26),
+                icon: Icon(
+                  Icons.clear,
+                  size: 18,
+                  color: isDarkMode ? Colors.white38 : Colors.black26,
+                ),
                 onPressed: () => _removeChecklistItem(index),
               ),
             ],

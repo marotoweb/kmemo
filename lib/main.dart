@@ -28,6 +28,7 @@ class KMemoApp extends StatelessWidget {
     return MaterialApp(
       title: 'kmemo',
       debugShowCheckedModeBanner: false,
+      // Define o tema claro (Light Theme)
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -36,6 +37,18 @@ class KMemoApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: Colors.white,
       ),
+      // Define o tema escuro (Dark Theme)
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blueGrey,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor:
+            Colors.grey[900], // Exemplo de fundo escuro para notas
+      ),
+      // Faz com que o tema siga automaticamente as definições do sistema
+      themeMode: ThemeMode.system,
       home: const HomeScreen(),
     );
   }
