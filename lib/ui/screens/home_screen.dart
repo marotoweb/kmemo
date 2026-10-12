@@ -8,6 +8,7 @@ import '../widgets/memo_card.dart';
 import 'memo_detail_screen.dart';
 import 'archive_screen.dart';
 import 'trash_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -433,9 +434,18 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('Sobre'),
-              onTap: () => Navigator.pop(context),
+              leading: const Icon(Icons.settings_outlined),
+              title: const Text('Definições'),
+              // SettingsScreen
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
+                );
+              },
             ),
           ],
         ),

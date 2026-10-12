@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'database/database.dart';
 import 'providers/memo_provider.dart';
+import 'providers/theme_provider.dart';
 import 'ui/screens/home_screen.dart';
 
 void main() {
@@ -14,6 +15,7 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => MemoProvider(database)),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: const KMemoApp(),
     ),
@@ -25,6 +27,8 @@ class KMemoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return MaterialApp(
       title: 'kmemo',
       debugShowCheckedModeBanner: false,
@@ -44,11 +48,9 @@ class KMemoApp extends StatelessWidget {
           seedColor: Colors.blueGrey,
           brightness: Brightness.dark,
         ),
-        scaffoldBackgroundColor:
-            Colors.grey[900], // Exemplo de fundo escuro para notas
+        scaffoldBackgroundColor: Colors.grey[900],
       ),
-      // Faz com que o tema siga automaticamente as definições do sistema
-      themeMode: ThemeMode.system,
+      themeMode: themeProvider.themeMode,
       home: const HomeScreen(),
     );
   }
