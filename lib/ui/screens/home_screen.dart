@@ -1,7 +1,10 @@
 // lib/ui/screens/home_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
@@ -17,8 +20,104 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final List<String> _selectedUuids = [];
+  static const MethodChannel _widgetChannel = MethodChannel('com.marotoweb.kmemo/widget');
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkWidgetLaunch();
+    _setupWidgetChannel();
+  }
+
+  void _setupWidgetChannel() {
+    _widgetChannel.setMethodCallHandler((call) async {
+      if (call.method == 'openNote') {
+        final String? uuid = call.arguments as String?;
+        if (uuid != null && uuid.isNotEmpty) {
+          debugPrint('[HomeScreen] Widget channel: opening note $uuid');
+          await _openNoteFromWidget(uuid);
+        }
+      } else if (call.method == 'getPendingNoteUuid') {
+        // O Android consulta aqui se há um UUID pendente
+        final prefs = await SharedPreferences.getInstance();
+        final uuid = prefs.getString('flutter.clicked_note_uuid');
+        if (uuid != null && uuid.isNotEmpty) {
+          await prefs.setString('flutter.clicked_note_uuid', '');
+          debugPrint('[HomeScreen] Returning pending UUID: $uuid');
+          await _openNoteFromWidget(uuid);
+        }
+      }
+    });
+  }
+
+  Future<void> _openNoteFromWidget(String uuid) async {
+    final db = Provider.of<AppDatabase>(context, listen: false);
+    final memo = await (db.select(
+      db.memos,
+    )..where((t) => t.uuid.equals(uuid))).getSingleOrNull();
+
+    if (memo != null && mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MemoDetailScreen(memo: memo),
+        ),
+      );
+    }
+  }
+
+  Future<void> _checkWidgetLaunch() async {
+    try {
+      debugPrint('[HomeScreen] _checkWidgetLaunch called');
+      final prefs = await SharedPreferences.getInstance();
+      final clickedUuid = prefs.getString('flutter.clicked_note_uuid');
+      debugPrint('[HomeScreen] clickedUuid from prefs: $clickedUuid');
+      if (clickedUuid != null && clickedUuid.isNotEmpty) {
+        await prefs.setString('flutter.clicked_note_uuid', '');
+
+        if (!mounted) return;
+
+        final db = Provider.of<AppDatabase>(context, listen: false);
+        final memo = await (db.select(
+          db.memos,
+        )..where((t) => t.uuid.equals(clickedUuid))).getSingleOrNull();
+
+        if (memo != null && mounted) {
+          debugPrint('[HomeScreen] Opening note: $clickedUuid (${memo.title})');
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MemoDetailScreen(memo: memo),
+            ),
+          );
+        } else {
+          debugPrint('[HomeScreen] Memo not found for uuid: $clickedUuid');
+        }
+      } else {
+        debugPrint('[HomeScreen] No pending UUID in SharedPreferences');
+      }
+    } catch (e) {
+      debugPrint('[HomeScreen] Erro ao abrir nota via widget: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      // A app voltou ao foreground (ex.: ao clicar no widget enquanto já estava aberta)
+      _checkWidgetLaunch();
+    }
+  }
 
   void _toggleSelection(String uuid) {
     setState(() {
@@ -59,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
       const Color(0xFFF5F5F5),
     ];
 
-    // Paleta para o tema escuro (tons profundos e suaves) [2]
+    // Paleta para o tema escuro (tons profundos e suaves)
     final List<Color> darkColorsPalette = [
       const Color(0xFF1E1E1E),
       const Color(0xFF3B1A1A),

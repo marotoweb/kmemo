@@ -1,9 +1,8 @@
 // lib/providers/memo_provider.dart
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database.dart';
+import '../services/widget_service.dart';
 import 'package:drift/drift.dart';
 
 class MemoProvider extends ChangeNotifier {
@@ -138,36 +137,7 @@ class MemoProvider extends ChangeNotifier {
   }
 
   Future<void> _updateWidgetData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentMemos = List<Memo>.from(activeMemos).take(5).toList();
-
-    final List<String> titles = [];
-    final List<String> previews = [];
-
-    for (var m in currentMemos) {
-      titles.add(m.title.isEmpty ? 'Sem título' : m.title);
-
-      final blocks = await _db.getBlocksForMemo(m.uuid);
-      String textPreview = '';
-      if (blocks.isNotEmpty) {
-        final sorted = List<Block>.from(blocks)
-          ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
-        final firstBlock = sorted.first;
-        if (firstBlock.type == BlockType.checklist) {
-          textPreview = firstBlock.content['text']?.toString() ?? '';
-        } else {
-          final fullText = firstBlock.content['text']?.toString() ?? '';
-          textPreview = fullText.split('\n').first;
-        }
-        if (textPreview.length > 40) {
-          textPreview = '${textPreview.substring(0, 40)}...';
-        }
-      }
-      previews.add(textPreview);
-    }
-
-    await prefs.setString('notes_titles', jsonEncode(titles));
-    await prefs.setString('notes_previews', jsonEncode(previews));
+    await WidgetService.updateWidgetData(db: _db);
   }
 
   Future<void> archiveMemo(String memoUuid) async {

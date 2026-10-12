@@ -1,76 +1,142 @@
 // lib/services/widget_service.dart
-
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:drift/drift.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:kmemo/database/database.dart';
+import 'package:path_provider/path_provider.dart';
 
 class WidgetService {
   static const String _androidWidgetName = 'KMemoWidgetProvider';
 
-  /// Sincroniza as notas ativas com o armazenamento partilhado do Android
+  // Ficheiro JSON partilhado entre Dart e Kotlin (mesmo local para ambos)
+  static const String _widgetDataFile = 'widget_data.json';
+
+  // Paleta de cores claras correspondente às notas
+  static const List<int> _lightColorsHex = [
+    0xFFFFFFFF, // Branco
+    0xFFFFCDD2, // Vermelho claro
+    0xFFFFE0B2, // Laranja claro
+    0xFFFFF9C4, // Amarelo claro
+    0xFFC8E6C9, // Verde claro
+    0xFFB2DFDB, // Teal claro
+    0xFFBBDEFB, // Azul claro
+    0xFFC5CAE9, // Índigo claro
+    0xFFE1BEE7, // Roxo claro
+    0xFFF8BBD0, // Rosa claro
+    0xFFD7CCC8, // Castanho claro
+    0xFFCFD8DC, // Azul-acinzentado claro
+    0xFFFFECB3, // Âmbar claro
+    0xFFDCEDC8, // Verde-lima claro
+    0xFFB2EBF2, // Ciano claro
+    0xFFF5F5F5, // Cinzento muito claro
+  ];
+
+  /// Sincroniza as notas ativas com um ficheiro JSON partilhado com o lado nativo Android
   static Future<void> updateWidgetData({required AppDatabase db}) async {
     try {
-      // Obtém todas as notas ativas diretamente da base de dados
-      final memos = await (db.select(db.memos)).get();
+      final memos =
+          await (db.select(db.memos)
+                ..where((t) => t.isArchived.equals(false))
+                ..where((t) => t.isDeleted.equals(false))
+                ..orderBy([(t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc)]))
+              .get();
+
+      debugPrint('[WidgetService] Memos activos encontrados: ${memos.length}');
 
       final List<String> idsList = [];
       final List<String> titlesList = [];
       final List<String> previewsList = [];
       final List<int> colorsList = [];
-      final List<int> bgImagesList = [];
 
       for (var memo in memos) {
         idsList.add(memo.uuid);
-        titlesList.add(memo.title.trim().isEmpty ? 'Sem título' : memo.title);
-        colorsList.add(memo.colorIndex);
-        bgImagesList.add(memo.bgImageIndex);
 
-        // Extrai texto limpo dos blocos para a pré-visualização
+        final rawTitle = memo.title;
+        final displayTitle = rawTitle.trim().isEmpty ? 'Sem título' : rawTitle.trim();
+        titlesList.add(displayTitle);
+
+        final colorIndex = memo.colorIndex;
+        final hexColor =
+            (colorIndex >= 0 && colorIndex < _lightColorsHex.length)
+            ? _lightColorsHex[colorIndex]
+            : 0xFFFFFFFF;
+        colorsList.add(hexColor);
+
         final blocks = await db.getBlocksForMemo(memo.uuid);
         String previewText = '';
 
         if (blocks.isNotEmpty) {
-          final textBlocks = blocks
-              .map((b) => b.content['text']?.toString() ?? '')
-              .where((text) => text.isNotEmpty)
-              .take(2);
-          previewText = textBlocks.join(' / ');
+          final isChecklist = blocks.any((b) => b.type == BlockType.checklist);
+
+          if (isChecklist) {
+            // Checklist: mostra até 8 itens com checkbox, depois "..."
+            final sortedBlocks = List<Block>.from(blocks)
+              ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+            final hasMoreThanEight = sortedBlocks.length > 8;
+            final visibleBlocks = sortedBlocks.take(8).toList();
+
+            final lines = <String>[];
+            for (var block in visibleBlocks) {
+              final checked = block.content['checked'] as bool? ?? false;
+              final text = block.content['text']?.toString() ?? '';
+              final displayText = text.isEmpty ? 'Item de lista' : text;
+              final styledText = checked ? displayText.replaceAllMapped(RegExp(r'.'), (m) => '${m.group(0)!}\u0336') : displayText;
+              lines.add('${checked ? '☑' : '☐'} $styledText');
+            }
+            if (hasMoreThanEight) {
+              lines.add('...');
+            }
+            previewText = lines.join('\n');
+          } else {
+            // Texto: mostra até 7 linhas + "..." na linha 8 (bate com maxLines=8 do preview)
+            final contentText = blocks
+                .map((b) => b.content['text']?.toString() ?? '')
+                .join('\n');
+            if (contentText.trim().isEmpty) {
+              previewText = '';
+            } else {
+              final lines = contentText.split('\n');
+              final hasMoreThanSeven = lines.length > 7;
+              previewText = hasMoreThanSeven
+                  ? '${lines.take(7).join('\n')}\n...'
+                  : contentText;
+            }
+          }
         }
 
-        previewsList.add(previewText.isEmpty ? 'Nota vazia' : previewText);
+        final displayPreview = previewText.isEmpty ? 'Nota vazia' : previewText;
+        previewsList.add(displayPreview);
+
+        debugPrint(
+          '[WidgetService] Memo ${memo.uuid}: title="$displayTitle", preview="$displayPreview", color=0x${hexColor.toRadixString(16).padLeft(8, '0')}',
+        );
       }
 
-      // Persiste os arrays em formato JSON nas preferências partilhadas
-      await HomeWidget.saveWidgetData<String>('notes_ids', jsonEncode(idsList));
-      await HomeWidget.saveWidgetData<String>(
-        'notes_titles',
-        jsonEncode(titlesList),
-      );
-      await HomeWidget.saveWidgetData<String>(
-        'notes_previews',
-        jsonEncode(previewsList),
-      );
-      await HomeWidget.saveWidgetData<String>(
-        'notes_colors',
-        jsonEncode(colorsList),
-      );
-      await HomeWidget.saveWidgetData<String>(
-        'notes_bg_images',
-        jsonEncode(bgImagesList),
-      );
+      // Escreve ficheiro JSON no diretório de documentos da aplicação
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/$_widgetDataFile');
+      final widgetData = {
+        'ids': idsList,
+        'titles': titlesList,
+        'previews': previewsList,
+        'colors': colorsList,
+      };
+      await file.writeAsString(jsonEncode(widgetData));
 
-      // 4. Emite o sinal de broadcast para o gestor nativo de widgets
+      debugPrint('[WidgetService] Widget data written to: ${file.path}');
+      debugPrint('[WidgetService] Titles: $titlesList');
+
+      // Notifica o widget nativo para recarregar
       await HomeWidget.updateWidget(
         androidName: _androidWidgetName,
         iOSName: _androidWidgetName,
       );
 
-      debugPrint(
-        '[WidgetService] Sincronização do widget concluída com sucesso.',
-      );
+      debugPrint('[WidgetService] Dados do widget sincronizados com sucesso (${memos.length} notas).');
     } catch (e) {
-      debugPrint('[WidgetService] Falha ao sincronizar dados com o widget: $e');
+      debugPrint('[WidgetService] Erro ao sincronizar widget: $e');
     }
   }
 }
