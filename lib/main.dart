@@ -5,17 +5,24 @@ import 'package:provider/provider.dart';
 import 'database/database.dart';
 import 'providers/memo_provider.dart';
 import 'providers/theme_provider.dart';
+import 'services/kdrive_storage.dart';
 import 'ui/screens/home_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final database = AppDatabase();
+  final storage = KDriveStorage();
+  // Carrega configuração guardada (token, drive) antes de criar o provider
+  await storage.init();
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => MemoProvider(database)),
+        ChangeNotifierProvider(
+          create: (_) => MemoProvider(database, storage: storage),
+        ),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        Provider<KDriveStorage>.value(value: storage),
       ],
       child: const KMemoApp(),
     ),

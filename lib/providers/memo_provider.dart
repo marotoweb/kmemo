@@ -1,17 +1,22 @@
 // lib/providers/memo_provider.dart
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database.dart';
+import '../services/kdrive_storage.dart';
 import '../services/widget_service.dart';
 import 'package:drift/drift.dart';
 
 class MemoProvider extends ChangeNotifier {
   final AppDatabase _db;
+  final KDriveStorage? _storage;
   List<Memo> _memos = [];
   bool _isLoading = true;
   final _uuid = const Uuid();
+  Timer? _syncDebounce;
 
-  MemoProvider(this._db) {
+  MemoProvider(this._db, {KDriveStorage? storage}) : _storage = storage {
     _listenToMemos();
   }
 
@@ -82,7 +87,8 @@ class MemoProvider extends ChangeNotifier {
   }
 
   Future<List<Block>> saveMemo(Memo memo, List<Block> blocks) async {
-    final updatedMemo = memo.copyWith(updatedAt: DateTime.now());
+    // Alterações locais marcam a nota como não sincronizada (precisa de upload)
+    final updatedMemo = memo.copyWith(updatedAt: DateTime.now(), isSynced: false);
     final List<Block> updatedBlocksList = List.from(blocks);
 
     await _db.transaction(() async {
@@ -133,11 +139,84 @@ class MemoProvider extends ChangeNotifier {
       }
     });
 
+    _scheduleSync();
     return updatedBlocksList;
   }
 
   Future<void> _updateWidgetData() async {
     await WidgetService.updateWidgetData(db: _db);
+  }
+
+  /// Agenda uma sincronização remota com debounce (evita chamar a API a cada tecla).
+  void _scheduleSync() {
+    if (_storage == null || !_storage!.isConfigured) return;
+    _syncDebounce?.cancel();
+    _syncDebounce = Timer(const Duration(seconds: 3), () async {
+      try {
+        await performSync();
+      } catch (_) {
+        // Falhas de sync não bloqueiam a UI
+      }
+    });
+  }
+
+  /// Executa sincronização completa: push (upload de locais não sincronizados)
+  /// e pull (download de remotos inexistentes localmente).
+  Future<void> performSync() async {
+    final storage = _storage;
+    if (storage == null || !storage.isConfigured) return;
+
+    // Guarda de rate-limit
+    if (!storage.syncAllowed) return;
+
+    final localMemos = List<Memo>.from(_memos);
+
+    // ---------------------------------------------------------------
+    // PUSH: envia notas locais não sincronizadas e associa remoteFileId
+    // ---------------------------------------------------------------
+    final unsynced = localMemos.where((m) => !m.isSynced).toList();
+    for (var memo in unsynced) {
+      try {
+        final blocks = await _db.getBlocksForMemo(memo.uuid);
+        final remoteId = await storage.uploadMemo(memo, blocks);
+        final updated = memo.copyWith(
+          isSynced: true,
+          remoteFileId: Value(remoteId ?? memo.remoteFileId),
+        );
+        await _db.saveMemoWithBlocks(updated, blocks);
+        if (remoteId != null) {
+          print('[MemoProvider] Push OK: ${memo.uuid} → kDrive id $remoteId');
+        }
+      } catch (e) {
+        print('[MemoProvider] Push falhou para ${memo.uuid}: $e');
+      }
+    }
+
+    // ---------------------------------------------------------------
+    // PULL: baixar notas remotas que não existem localmente
+    // ---------------------------------------------------------------
+    try {
+      final remoteMemos = await storage.listRemoteMemos();
+      final localUuids = localMemos.map((m) => m.uuid).toSet();
+
+      for (var remote in remoteMemos) {
+        final memoUuid = remote.name.replaceAll('.json', '');
+        if (localUuids.contains(memoUuid)) continue;
+
+        try {
+          final remoteMemo = await storage.downloadMemo(remote.remoteFileId);
+          final patched = remoteMemo.memo.copyWith(isSynced: true);
+          await _db.saveMemoWithBlocks(patched, remoteMemo.blocks);
+          print('[MemoProvider] Pull OK: $memoUuid baixada do kDrive');
+        } catch (e) {
+          print('[MemoProvider] Erro ao baixar memo $memoUuid: $e');
+        }
+      }
+    } catch (e) {
+      print('[MemoProvider] Erro ao listar remotos: $e');
+    }
+
+    storage.markSyncedNow();
   }
 
   Future<void> archiveMemo(String memoUuid) async {
@@ -148,10 +227,12 @@ class MemoProvider extends ChangeNotifier {
     for (var id in uuids) {
       await _db.updateMemoArchiveStatus(id, true);
     }
+    _scheduleSync();
   }
 
   Future<void> archiveMemoStatus(String memoUuid, bool isArchived) async {
     await _db.updateMemoArchiveStatus(memoUuid, isArchived);
+    _scheduleSync();
   }
 
   // Marcar como eliminado (Enviar para a Lixeira)
@@ -162,10 +243,19 @@ class MemoProvider extends ChangeNotifier {
         orElse: () => null,
       );
       if (match != null) {
+        // Remove remotamente se existir no kDrive
+        if (match.remoteFileId != null && _storage != null && _storage!.isConfigured) {
+          try {
+            await _storage!.deleteMemo(match.remoteFileId!);
+          } catch (_) {
+            // Falha no delete remoto não bloqueia o soft delete local
+          }
+        }
         final blocks = await _db.getBlocksForMemo(match.uuid);
         await _db.saveMemoWithBlocks(match.copyWith(isDeleted: true), blocks);
       }
     }
+    _scheduleSync();
   }
 
   // Restaurar da Lixeira
@@ -180,13 +270,23 @@ class MemoProvider extends ChangeNotifier {
         await _db.saveMemoWithBlocks(match.copyWith(isDeleted: false), blocks);
       }
     }
+    _scheduleSync();
   }
 
   // Eliminar permanentemente da base de dados
   Future<void> deleteMultiplePermanent(List<String> uuids) async {
     for (var id in uuids) {
+      final memo = _memos.firstWhere((m) => m.uuid == id, orElse: () => throw StateError('Memo não encontrado'));
+      if (memo.remoteFileId != null && _storage != null && _storage!.isConfigured) {
+        try {
+          await _storage!.deleteMemo(memo.remoteFileId!);
+        } catch (_) {
+          // Falha no delete remoto não bloqueia o delete local
+        }
+      }
       await _db.deleteMemoCascading(id);
     }
+    _scheduleSync();
   }
 
   Future<void> deleteMultiple(List<String> uuids) async {
@@ -216,6 +316,7 @@ class MemoProvider extends ChangeNotifier {
         blocks,
       );
     }
+    _scheduleSync();
   }
 
   Future<void> duplicateMultiple(List<String> uuids) async {
@@ -261,5 +362,6 @@ class MemoProvider extends ChangeNotifier {
 
       await _db.saveMemoWithBlocks(duplicatedMemo, duplicatedBlocks);
     }
+    _scheduleSync();
   }
 }

@@ -46,6 +46,7 @@ dependencies:
   shared_preferences:
   share_plus: ^12.0.2
   url_launcher: ^6.2.6
+  http: ^1.2.0
   package_info_plus: ^8.0.0
 
 dev_dependencies:
