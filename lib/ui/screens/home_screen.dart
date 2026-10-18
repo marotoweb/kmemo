@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
@@ -28,7 +29,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _checkWidgetLaunch();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkWidgetLaunch();
+      _checkSharedText();
+    });
     _setupWidgetChannel();
   }
 
@@ -49,6 +53,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           debugPrint('[HomeScreen] Returning pending UUID: $uuid');
           await _openNoteFromWidget(uuid);
         }
+      } else if (call.method == 'onSharedTextReceived') {
+        debugPrint('[HomeScreen] Widget channel: onSharedTextReceived');
+        await _checkSharedText();
       }
     });
   }
@@ -104,6 +111,74 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Verifica se há texto partilhado de outra aplicação e cria uma nova nota com esse conteúdo.
+  Future<void> _checkSharedText() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final sharedText = prefs.getString('kmemo.shared_text');
+      debugPrint('[HomeScreen] sharedText from prefs: $sharedText');
+      if (sharedText != null && sharedText.isNotEmpty) {
+        await prefs.setString('kmemo.shared_text', '');
+
+        if (!mounted) return;
+
+        final provider = context.read<MemoProvider>();
+        final now = DateTime.now();
+
+        // Usa a primeira linha como título, ou "Nota partilhada" se estiver vazio
+        final lines = sharedText.split('\n');
+        final title = lines.first.trim().isNotEmpty
+            ? lines.first.trim()
+            : 'Nota partilhada';
+
+        // O corpo é o resto (ou o texto completo se for uma linha só)
+        final body = lines.length > 1
+            ? lines.sublist(1).join('\n')
+            : '';
+
+        final memo = Memo(
+          uuid: const Uuid().v4(),
+          title: title,
+          createdAt: now,
+          updatedAt: now,
+          isSynced: false,
+          colorIndex: 0,
+          bgImageIndex: -1,
+          imageAttachments: '[]',
+          audioAttachments: '[]',
+          linkAttachments: '[]',
+          isArchived: false,
+          isDeleted: false,
+        );
+
+        final block = Block(
+          id: 0,
+          uuid: const Uuid().v4(),
+          memoUuid: memo.uuid,
+          type: BlockType.text,
+          content: {'text': body},
+          sortOrder: 0,
+          isDeleted: false,
+        );
+
+        await provider.saveMemo(memo, [block]);
+
+        if (!mounted) return;
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MemoDetailScreen(memo: memo),
+          ),
+        );
+
+        debugPrint('[HomeScreen] Nova nota criada a partir de texto partilhado: $title');
+      }
+    } catch (e) {
+      debugPrint('[HomeScreen] Erro ao processar texto partilhado: $e');
+    }
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -116,6 +191,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       // A app voltou ao foreground (ex.: ao clicar no widget enquanto já estava aberta)
       _checkWidgetLaunch();
+      _checkSharedText();
     }
   }
 

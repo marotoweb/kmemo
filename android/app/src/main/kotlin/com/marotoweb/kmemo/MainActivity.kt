@@ -6,16 +6,26 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
+import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
 
+    private companion object {
+        const val CHANNEL = "com.marotoweb.kmemo/widget"
+        const val SHARED_TEXT_KEY = "kmemo.shared_text"
+    }
+
+    private lateinit var sharedChannel: MethodChannel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        sharedChannel = MethodChannel(flutterEngine!!.dartExecutor.binaryMessenger, CHANNEL)
         Log.d("WIDGET_DEBUG", "=== MainActivity.onCreate ===")
         Log.d("WIDGET_DEBUG", "Intent action: ${intent.action}")
         Log.d("WIDGET_DEBUG", "Intent data: ${intent.data}")
         Log.d("WIDGET_DEBUG", "Intent note_uuid: ${intent.getStringExtra("note_uuid")}")
         handleWidgetIntent(intent)
+        handleSharedTextIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -26,6 +36,7 @@ class MainActivity : FlutterActivity() {
         Log.d("WIDGET_DEBUG", "Intent data: ${intent.data}")
         Log.d("WIDGET_DEBUG", "Intent note_uuid: ${intent.getStringExtra("note_uuid")}")
         handleWidgetIntent(intent)
+        handleSharedTextIntent(intent)
     }
 
     private fun handleWidgetIntent(intent: Intent?) {
@@ -51,6 +62,26 @@ class MainActivity : FlutterActivity() {
                 val prefs = getSharedPreferences("flutter_shared_preferences", MODE_PRIVATE)
                 prefs.edit().putString("flutter.clicked_note_uuid", uuid).apply()
                 Log.d("WIDGET_DEBUG", "UUID saved successfully: $uuid")
+            }
+        }
+    }
+
+    private fun handleSharedTextIntent(intent: Intent?) {
+        intent?.let {
+            val action = it.action
+            val type = it.type
+            Log.d("SHARE_DEBUG", "handleSharedTextIntent: action=$action, type=$type")
+            if (Intent.ACTION_SEND == action && type != null && type == "text/plain") {
+                val sharedText = it.getStringExtra(Intent.EXTRA_TEXT)
+                val sharedSubject = it.getStringExtra(Intent.EXTRA_SUBJECT)
+                Log.d("SHARE_DEBUG", "Shared text: $sharedText, subject: $sharedSubject")
+                if (sharedText.isNullOrEmpty() && sharedSubject.isNullOrEmpty()) return
+                val content = if (sharedText.isNullOrEmpty()) sharedSubject else sharedText
+                val prefs = getSharedPreferences("flutter_shared_preferences", MODE_PRIVATE)
+                prefs.edit().putString(SHARED_TEXT_KEY, content).apply()
+                Log.d("SHARE_DEBUG", "Shared text saved to SharedPreferences: $content")
+                // Notificar o Flutter que há novo texto partilhado
+                sharedChannel.invokeMethod("onSharedTextReceived", null)
             }
         }
     }

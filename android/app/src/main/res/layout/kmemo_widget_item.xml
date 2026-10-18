@@ -36,7 +36,7 @@
             android:id="@+id/widget_item_preview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="2dp"
             android:maxLines="8"
             android:minLines="2"
             android:textColor="#444444"

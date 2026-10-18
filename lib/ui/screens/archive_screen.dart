@@ -138,6 +138,60 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
               ),
               elevation: 0,
               backgroundColor: Colors.transparent,
+              actions: [
+                if (archivedMemos.isNotEmpty)
+                  IconButton(
+                    icon: Icon(
+                      Icons.unarchive,
+                      color: isDarkMode ? Colors.white70 : Colors.black87,
+                    ),
+                    onPressed: () async {
+                      final uuidsToUnarchive =
+                          archivedMemos.map((m) => m.uuid).toList();
+
+                      for (var uuid in uuidsToUnarchive) {
+                        await provider.archiveMemoStatus(uuid, false);
+                      }
+
+                      if (!context.mounted) return;
+
+                      final scaffoldMessenger =
+                          ScaffoldMessenger.of(context);
+                      scaffoldMessenger.hideCurrentSnackBar();
+
+                      final snackBarController =
+                          scaffoldMessenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            uuidsToUnarchive.length > 1
+                                ? '${uuidsToUnarchive.length} notas retiradas do arquivo'
+                                : 'Nota retirada do arquivo',
+                          ),
+                          duration: const Duration(seconds: 8),
+                          action: SnackBarAction(
+                            label: 'Anular',
+                            textColor: Colors.amberAccent,
+                            onPressed: () async {
+                              scaffoldMessenger.hideCurrentSnackBar();
+                              for (var uuid in uuidsToUnarchive) {
+                                await provider.archiveMemoStatus(
+                                  uuid,
+                                  true,
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      );
+
+                      Future.delayed(const Duration(seconds: 8), () {
+                        try {
+                          snackBarController.close();
+                        } catch (_) {}
+                      });
+                    },
+                  ),
+              ],
             ),
       body: provider.isLoading
           ? const Center(child: CircularProgressIndicator())

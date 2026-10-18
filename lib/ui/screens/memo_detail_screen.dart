@@ -4,9 +4,52 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
+
+/// Captura de estado do editor para suporte a desfazer/refazer.
+class _MemoEditorSnapshot {
+  final String title;
+  final String text;
+  final bool isChecklistMode;
+  final List<String> listTexts;
+  final List<bool> listCheckStates;
+
+  const _MemoEditorSnapshot({
+    required this.title,
+    required this.text,
+    required this.isChecklistMode,
+    required this.listTexts,
+    required this.listCheckStates,
+  });
+
+  factory _MemoEditorSnapshot.fromEditor(_MemoDetailScreenState editor) {
+    return _MemoEditorSnapshot(
+      title: editor._titleController.text,
+      text: editor._textNoteController.text,
+      isChecklistMode: editor._isChecklistMode,
+      listTexts: editor._listControllers.map((c) => c.text).toList(),
+      listCheckStates: List<bool>.from(editor._listCheckStates),
+    );
+  }
+}
+
+// ---------- Regiões e resultados de busca ----------
+class _SearchRegion {
+  final TextEditingController controller;
+  final FocusNode? focusNode;
+  final String text;
+  _SearchRegion(this.controller, this.focusNode, this.text);
+}
+
+class _Match {
+  final int regionIndex;
+  final int start;
+  final int end;
+  _Match(this.regionIndex, this.start, this.end);
+}
 
 class MemoDetailScreen extends StatefulWidget {
   final Memo memo;
@@ -22,6 +65,27 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   late TextEditingController _titleController;
   bool _isChecklistMode = false;
   bool _isLoading = true;
+  bool _isRestoring = false;
+  bool _isSearchActive = false;
+
+  // Foco do campo de texto (modo nota corrida)
+  late FocusNode _textFocusNode;
+
+  // Foco do campo de pesquisa
+  late FocusNode _searchFocusNode;
+
+  // Estado da pesquisa inline
+  final TextEditingController _searchQueryController = TextEditingController();
+  int _searchMatchIndex = -1;
+  List<_Match> _searchMatches = [];
+
+  // Histórico de desfazer/refazer
+  final List<_MemoEditorSnapshot> _history = [];
+  int _historyIndex = -1;
+  static const int _maxHistorySize = 50;
+
+  bool get _canUndo => _historyIndex > 0;
+  bool get _canRedo => _historyIndex >= 0 && _historyIndex < _history.length - 1;
 
   // Controladores do Modo Texto e Lista Sequencial
   late TextEditingController _textNoteController;
@@ -94,6 +158,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     _currentMemo = widget.memo;
     _titleController = TextEditingController(text: _currentMemo.title);
     _textNoteController = TextEditingController();
+    _textFocusNode = FocusNode();
+    _searchFocusNode = FocusNode();
 
     // ID fixo para o bloco de texto caso a nota se mantenha em texto corrido
     _textBlockUuid = '${_currentMemo.uuid}_text_fixed';
@@ -104,6 +170,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   void dispose() {
     _titleController.dispose();
     _textNoteController.dispose();
+    _textFocusNode.dispose();
+    _searchFocusNode.dispose();
+    _searchQueryController.dispose();
     _clearListControllers();
     super.dispose();
   }
@@ -171,6 +240,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
         }
       }
       _isLoading = false;
+      _pushSnapshot();
     });
   }
 
@@ -203,6 +273,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     String text, {
     bool checked = false,
     required String id,
+    bool requestFocus = true,
   }) {
     final controller = TextEditingController(text: text);
     final focusNode = FocusNode();
@@ -212,7 +283,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     _listUuids.insert(index, id);
     _listIds.insert(index, 0);
 
-    if (!_isLoading) {
+    if (!_isLoading && requestFocus && !_isRestoring) {
       WidgetsBinding.instance.addPostFrameCallback(
         (_) => focusNode.requestFocus(),
       );
@@ -249,7 +320,77 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   }
 
   // Captura os blocos persistidos e sincroniza os IDs reais do SQLite
-  void _persistData() async {
+  void _pushSnapshot() {
+    if (_isRestoring || !mounted) return;
+
+    final snapshot = _MemoEditorSnapshot.fromEditor(this);
+
+    // Evita duplicatas consecutivas do mesmo estado
+    if (_historyIndex >= 0 &&
+        _history[_historyIndex].title == snapshot.title &&
+        _history[_historyIndex].text == snapshot.text &&
+        _history[_historyIndex].isChecklistMode == snapshot.isChecklistMode &&
+        _history[_historyIndex].listTexts == snapshot.listTexts &&
+        _history[_historyIndex].listCheckStates == snapshot.listCheckStates) {
+      return;
+    }
+
+    // Descarta o histórico futuro quando um novo estado é criado
+    if (_historyIndex < _history.length - 1) {
+      _history.removeRange(_historyIndex + 1, _history.length);
+    }
+
+    _history.add(snapshot);
+    _historyIndex = _history.length - 1;
+
+    // Limita o tamanho do histórico
+    while (_history.length > _maxHistorySize) {
+      _history.removeAt(0);
+      _historyIndex--;
+    }
+  }
+
+  void _undo() {
+    if (!_canUndo) return;
+    _historyIndex--;
+    _restoreSnapshot(_history[_historyIndex]);
+    _persistData(pushSnapshot: false);
+  }
+
+  void _redo() {
+    if (!_canRedo) return;
+    _historyIndex++;
+    _restoreSnapshot(_history[_historyIndex]);
+    _persistData(pushSnapshot: false);
+  }
+
+  void _restoreSnapshot(_MemoEditorSnapshot s) {
+    _isRestoring = true;
+    setState(() {
+      _titleController.text = s.title;
+      _textNoteController.text = s.text;
+      _isChecklistMode = s.isChecklistMode;
+      if (_isChecklistMode) {
+        _clearListControllers();
+        for (int i = 0; i < s.listTexts.length; i++) {
+          _addChecklistItem(
+            i,
+            s.listTexts[i],
+            checked: s.listCheckStates[i],
+            id: _uuidGenerator.v4(),
+            requestFocus: false,
+          );
+        }
+      }
+    });
+    _isRestoring = false;
+  }
+
+  Future<void> _persistData({bool pushSnapshot = true}) async {
+    if (pushSnapshot && !_isRestoring && mounted) {
+      _pushSnapshot();
+    }
+
     final List<Block> updatedBlocks = [];
 
     if (_isChecklistMode) {
@@ -531,6 +672,174 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     );
   }
 
+  List<_SearchRegion> _getSearchRegions() {
+    final regions = <_SearchRegion>[];
+    if (_isChecklistMode) {
+      for (int i = 0; i < _listControllers.length; i++) {
+        regions.add(_SearchRegion(
+          _listControllers[i],
+          _listFocusNodes[i],
+          _listControllers[i].text,
+        ));
+      }
+    } else {
+      regions.add(_SearchRegion(_textNoteController, _textFocusNode, _textNoteController.text));
+    }
+    return regions;
+  }
+
+  List<_Match> _findMatches(String query) {
+    final result = <_Match>[];
+    if (query.isEmpty) return result;
+    final lowerQuery = query.toLowerCase();
+    for (int r = 0; r < _getSearchRegions().length; r++) {
+      final text = _getSearchRegions()[r].text.toLowerCase();
+      int start = 0;
+      while (true) {
+        final idx = text.indexOf(lowerQuery, start);
+        if (idx == -1) break;
+        result.add(_Match(r, idx, idx + query.length));
+        start = idx + 1;
+      }
+    }
+    return result;
+  }
+
+  void _jumpToMatch(_Match match) {
+    final region = _getSearchRegions()[match.regionIndex];
+    region.controller.selection = TextSelection(
+      baseOffset: match.start,
+      extentOffset: match.end,
+    );
+    region.focusNode?.requestFocus();
+  }
+
+  void _activateSearch() {
+    setState(() {
+      _isSearchActive = true;
+      _searchQueryController.clear();
+      _searchMatches = [];
+      _searchMatchIndex = -1;
+    });
+    // Pequeno atraso para dar tempo do layout renderizar antes de pedir foco
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _searchFocusNode.requestFocus();
+      }
+    });
+  }
+
+  void _deactivateSearch() {
+    setState(() {
+      _isSearchActive = false;
+      _searchQueryController.clear();
+      _searchMatches = [];
+      _searchMatchIndex = -1;
+    });
+    // Devolve foco ao editor de texto
+    if (_isChecklistMode && _listFocusNodes.isNotEmpty) {
+      _listFocusNodes.last.requestFocus();
+    } else {
+      _textFocusNode.requestFocus();
+    }
+  }
+
+  void _performSearch(String query) {
+    setState(() {
+      _searchMatches = _findMatches(query);
+      _searchMatchIndex = _searchMatches.isNotEmpty ? 0 : -1;
+      if (_searchMatchIndex != -1) {
+        _jumpToMatch(_searchMatches[_searchMatchIndex]);
+      }
+    });
+  }
+
+  // ---------- Menu de opções (três pontos) ----------
+  Future<void> _showOptionsMenu() async {
+    final provider = context.read<MemoProvider>();
+
+    final String? action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.search_outlined),
+              title: const Text('Localizar na nota'),
+              onTap: () => Navigator.pop(ctx, 'find'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: const Text('Eliminar'),
+              onTap: () => Navigator.pop(ctx, 'delete'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.share_outlined),
+              title: const Text('Enviar'),
+              onTap: () => Navigator.pop(ctx, 'share'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.content_copy_outlined),
+              title: const Text('Fazer copia'),
+              onTap: () => Navigator.pop(ctx, 'copy'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.access_time_outlined),
+              title: const Text('Última edição'),
+              subtitle: Text(
+                '${_currentMemo.updatedAt.day}/${_currentMemo.updatedAt.month}/${_currentMemo.updatedAt.year} '
+                '${_currentMemo.updatedAt.hour.toString().padLeft(2, '0')}:${_currentMemo.updatedAt.minute.toString().padLeft(2, '0')}',
+              ),
+              onTap: () => Navigator.pop(ctx),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (action == 'find') {
+      _activateSearch();
+    } else if (action == 'delete') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Eliminar nota'),
+          content: const Text('Esta nota será movida para a lixeira. Deseja continuar?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Eliminar', style: TextStyle(color: Colors.redAccent)),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true) {
+        await provider.deleteMemo(widget.memo.uuid);
+        if (mounted) Navigator.pop(context);
+      }
+    } else if (action == 'share') {
+      final textToShare = '''
+${_titleController.text}
+
+${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listControllers.indexOf(c)] ? '☑' : '☐'} ${c.text}').join('\n') : _textNoteController.text}
+''';
+      await SharePlus.instance.share(
+        ShareParams(
+          text: textToShare.trim(),
+          title: _titleController.text.isNotEmpty ? _titleController.text : 'Nota',
+        ),
+      );
+    } else if (action == 'copy') {
+      await provider.duplicateMultiple([widget.memo.uuid]);
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -581,7 +890,10 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
             ),
             IconButton(
               icon: Icon(Icons.archive_outlined, color: iconColor),
-              onPressed: () {},
+              onPressed: () async {
+                await context.read<MemoProvider>().archiveMemoStatus(widget.memo.uuid, true);
+                if (mounted) Navigator.pop(context);
+              },
             ),
           ],
         ),
@@ -651,37 +963,182 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                     ),
                   ),
                 ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        Icons.add_box_outlined,
-                        color: isDarkMode ? Colors.white60 : Colors.black54,
-                      ),
-                      onPressed: () => _showAttachmentMenu(context),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.palette_outlined,
-                        color: isDarkMode ? Colors.white60 : Colors.black54,
-                      ),
-                      onPressed: () => _showStyleMenu(context),
-                    ),
-                    const Spacer(),
-                    Text(
-                      'Editado recentemente',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDarkMode ? Colors.white38 : Colors.black45,
-                      ),
-                    ),
-                    const Spacer(),
-                  ],
-                ),
+                child: _isSearchActive
+                    ? _buildSearchToolbar(isDarkMode, footerBgColor)
+                    : _buildBottomToolbar(isDarkMode, footerBgColor),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBottomToolbar(bool isDarkMode, Color footerBgColor) {
+    return Container(
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      decoration: BoxDecoration(
+        color: footerBgColor,
+        border: Border(
+          top: BorderSide(
+            color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          IconButton(
+            icon: Icon(
+              Icons.add_box_outlined,
+              color: isDarkMode ? Colors.white60 : Colors.black54,
+            ),
+            onPressed: () => _showAttachmentMenu(context),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.palette_outlined,
+              color: isDarkMode ? Colors.white60 : Colors.black54,
+            ),
+            onPressed: () => _showStyleMenu(context),
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.text_format_outlined,
+              color: isDarkMode ? Colors.white60 : Colors.black54,
+            ),
+            onPressed: () => _showStyleMenu(context),
+          ),
+          const Spacer(),
+          IconButton(
+            icon: Icon(
+              Icons.undo,
+              color: _canUndo
+                  ? (isDarkMode ? Colors.white60 : Colors.black54)
+                  : Colors.grey,
+            ),
+            onPressed: _canUndo ? _undo : null,
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.redo,
+              color: _canRedo
+                  ? (isDarkMode ? Colors.white60 : Colors.black54)
+                  : Colors.grey,
+            ),
+            onPressed: _canRedo ? _redo : null,
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.more_vert,
+              color: isDarkMode ? Colors.white60 : Colors.black54,
+            ),
+            onPressed: _showOptionsMenu,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchToolbar(bool isDarkMode, Color footerBgColor) {
+    final textColor = isDarkMode ? Colors.white70 : Colors.black87;
+    final hintColor = isDarkMode ? Colors.white38 : Colors.black38;
+
+    return Container(
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      decoration: BoxDecoration(
+        color: footerBgColor,
+        border: Border(
+          top: BorderSide(
+            color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: TextField(
+              key: const ValueKey('search_field'),
+              controller: _searchQueryController,
+              focusNode: _searchFocusNode,
+              style: TextStyle(color: textColor, fontSize: 16),
+              textAlignVertical: TextAlignVertical.center,
+              decoration: InputDecoration(
+                hintText: 'Localizar texto',
+                hintStyle: TextStyle(color: hintColor, fontSize: 14),
+                border: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                prefixIcon: Icon(Icons.search_outlined, size: 20, color: hintColor),
+                suffixIcon: _searchQueryController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.edit, size: 18),
+                        color: hintColor,
+                        onPressed: () {
+                          _searchQueryController.clear();
+                          _performSearch('');
+                        },
+                      )
+                    : null,
+              ),
+              onChanged: (value) {
+                _performSearch(value);
+                // Restaurar foco após rebuild para evitar que o cursor salte
+                Future.delayed(Duration.zero, () {
+                  if (mounted && _isSearchActive) {
+                    _searchFocusNode.requestFocus();
+                  }
+                });
+              },
+            ),
+          ),
+          if (_searchMatches.isNotEmpty) ...[
+            Text(
+              '${_searchMatchIndex + 1} de ${_searchMatches.length}',
+              style: TextStyle(
+                fontSize: 12,
+                color: isDarkMode ? Colors.white54 : Colors.black54,
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.arrow_upward, size: 18),
+              color: _searchMatchIndex <= 0 ? Colors.grey : textColor,
+              onPressed: _searchMatchIndex <= 0
+                  ? null
+                  : () {
+                      setState(() {
+                        _searchMatchIndex--;
+                        _jumpToMatch(_searchMatches[_searchMatchIndex]);
+                      });
+                    },
+            ),
+            IconButton(
+              icon: const Icon(Icons.arrow_downward, size: 18),
+              color: _searchMatchIndex >= _searchMatches.length - 1
+                  ? Colors.grey
+                  : textColor,
+              onPressed: _searchMatchIndex >= _searchMatches.length - 1
+                  ? null
+                  : () {
+                      setState(() {
+                        _searchMatchIndex++;
+                        _jumpToMatch(_searchMatches[_searchMatchIndex]);
+                      });
+                    },
+            ),
+          ],
+          IconButton(
+            icon: const Icon(Icons.close, size: 20),
+            color: isDarkMode ? Colors.white60 : Colors.black54,
+            onPressed: _deactivateSearch,
+          ),
+        ],
       ),
     );
   }
@@ -691,6 +1148,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       key: ValueKey('text_input_${_textBlockId}_$_textBlockUuid'),
       textCapitalization: TextCapitalization.sentences,
       controller: _textNoteController,
+      focusNode: _textFocusNode,
       maxLines: null,
       keyboardType: TextInputType.multiline,
       style: TextStyle(fontSize: 16, color: textColor),
