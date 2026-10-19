@@ -109,6 +109,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 24),
 
+          // SECÇÃO: SINCRONIZAÇÃO
+          const Text(
+            'SINCRONIZAÇÃO',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? const Color(0xFF1E1E1E)
+                  : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+              ),
+            ),
+            child: ListTile(
+              title: const Text('Armazenamento remoto'),
+              subtitle: const Text(
+                'Sincronize as suas notas com kDrive ou WebDAV',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () async {
+                final changed = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(builder: (_) => const SyncSettingsScreen()),
+                );
+                if (changed == true && context.mounted) {
+                  setState(() {});
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 24),
+
           // SECÇÃO: ISSUE REPORTING
           const Text(
             'REPORTAR PROBLEMA',
@@ -143,47 +182,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // SECÇÃO: SINCRONIZAÇÃO
-          const Text(
-            'SINCRONIZAÇÃO',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: isDarkMode
-                  ? const Color(0xFF1E1E1E)
-                  : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
-              ),
-            ),
-            child: ListTile(
-              title: const Text('Armazenamento remoto'),
-              subtitle: const Text(
-                'Sincronize as suas notas com kDrive, WebDAV (futuro) ou encriptação',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () async {
-                final changed = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute(
-                    builder: (_) => const SyncSettingsScreen(),
-                  ),
-                );
-                if (changed == true && context.mounted) {
-                  setState(() {});
-                }
-              },
             ),
           ),
           const SizedBox(height: 24),

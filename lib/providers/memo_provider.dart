@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database.dart';
 import '../services/kdrive_storage.dart';
+import '../services/storage_repository.dart';
+import '../services/encryption_service.dart';
 import '../services/widget_service.dart';
 import 'package:drift/drift.dart';
 
@@ -149,7 +151,7 @@ class MemoProvider extends ChangeNotifier {
 
   /// Agenda uma sincronização remota com debounce (evita chamar a API a cada tecla).
   void _scheduleSync() {
-    if (_storage == null || !_storage!.isConfigured) return;
+    if (_storage == null || !_storage.isConfigured) return;
     _syncDebounce?.cancel();
     _syncDebounce = Timer(const Duration(seconds: 3), () async {
       try {
@@ -162,21 +164,43 @@ class MemoProvider extends ChangeNotifier {
 
   /// Executa sincronização completa: push (upload de locais não sincronizados)
   /// e pull (download de remotos inexistentes localmente).
-  Future<void> performSync() async {
+  /// Retorna o número de ficheiros que falharam ao desencriptar (0 se nenhum).
+  /// Se [force] for true, ignora a guarda de rate-limit.
+  /// [requestPassphrase] é chamado quando uma nota remota não pode ser
+  /// desencriptada; deve devolver uma passphrase a tentar ou null para ignorar.
+  /// [confirmDeleteRemote] é chamado após duas falhas; devolve true para
+  /// apagar o ficheiro remoto.
+  Future<int> performSync({
+    bool force = false,
+    Future<String?> Function(String remoteFileId)? requestPassphrase,
+    Future<bool> Function(String remoteFileId)? confirmDeleteRemote,
+  }) async {
     final storage = _storage;
-    if (storage == null || !storage.isConfigured) return;
+    if (storage == null || !storage.isConfigured) return 0;
 
-    // Guarda de rate-limit
-    if (!storage.syncAllowed) return;
+    // Guarda de rate-limit (ignorar se force=true)
+    if (!force && !storage.syncAllowed) return 0;
 
+    // Recarregar a lista de memos do DB para garantir que temos os dados mais recentes
+    // (incluindo notas marcadas como não sincronizadas via UPDATE)
+    // Usar uma query direta para garantir que obtemos os dados mais recentes
+    _memos = await (_db.select(_db.memos)..orderBy([(t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc)])).get();
     final localMemos = List<Memo>.from(_memos);
+    int decryptionFailures = 0;
+
+    debugPrint('[MemoProvider] performSync(): ${localMemos.length} notas totais, encriptação=${storage.encryptionEnabled}');
+    for (var memo in localMemos) {
+      debugPrint('[MemoProvider] Memo: ${memo.uuid} isSynced=${memo.isSynced}, remoteFileId=${memo.remoteFileId}, colorIndex=${memo.colorIndex}, bgImageIndex=${memo.bgImageIndex}');
+    }
 
     // ---------------------------------------------------------------
     // PUSH: envia notas locais não sincronizadas e associa remoteFileId
     // ---------------------------------------------------------------
     final unsynced = localMemos.where((m) => !m.isSynced).toList();
+    debugPrint('[MemoProvider] performSync(): ${unsynced.length} notas não sincronizadas para upload');
     for (var memo in unsynced) {
       try {
+        debugPrint('[MemoProvider] Push: ${memo.uuid} (isSynced=${memo.isSynced}, remoteFileId=${memo.remoteFileId}, colorIndex=${memo.colorIndex}, encriptação=${storage.encryptionEnabled})');
         final blocks = await _db.getBlocksForMemo(memo.uuid);
         final remoteId = await storage.uploadMemo(memo, blocks);
         final updated = memo.copyWith(
@@ -185,38 +209,117 @@ class MemoProvider extends ChangeNotifier {
         );
         await _db.saveMemoWithBlocks(updated, blocks);
         if (remoteId != null) {
-          print('[MemoProvider] Push OK: ${memo.uuid} → kDrive id $remoteId');
+          debugPrint('[MemoProvider] Push OK: ${memo.uuid} → kDrive id $remoteId');
         }
       } catch (e) {
-        print('[MemoProvider] Push falhou para ${memo.uuid}: $e');
+        debugPrint('[MemoProvider] Push falhou para ${memo.uuid}: $e');
       }
     }
 
     // ---------------------------------------------------------------
     // PULL: baixar notas remotas que não existem localmente
     // ---------------------------------------------------------------
+    // Se encriptação está ativada no storage mas a passphrase não foi carregada no EncryptionService,
+    // precisamos pedir ao utilizador antes de tentar descriptografar
+    if (storage.encryptionEnabled && !EncryptionService.instance.isEnabled) {
+      throw Exception(
+        'Encriptação ativada mas passphrase não configurada. '
+        'Insira a passphrase nas definições de sincronização antes de restaurar notas.',
+      );
+    }
+
     try {
       final remoteMemos = await storage.listRemoteMemos();
       final localUuids = localMemos.map((m) => m.uuid).toSet();
+
+      debugPrint('[MemoProvider] performSync(): ${remoteMemos.length} notas remotas encontradas');
 
       for (var remote in remoteMemos) {
         final memoUuid = remote.name.replaceAll('.json', '');
         if (localUuids.contains(memoUuid)) continue;
 
         try {
-          final remoteMemo = await storage.downloadMemo(remote.remoteFileId);
-          final patched = remoteMemo.memo.copyWith(isSynced: true);
+          RemoteMemo? remoteMemo = await storage.downloadMemo(remote.remoteFileId);
+
+          // Se não conseguiu desencriptar, tentar com passphrase pedida ao utilizador
+          if (remoteMemo == null && requestPassphrase != null) {
+            // Guardar estado geral de encriptação para restaurar depois
+            final wasEnabled = EncryptionService.instance.isEnabled;
+            int attempts = 0;
+            while (remoteMemo == null && attempts < 2) {
+              attempts++;
+              final pass = await requestPassphrase(remote.remoteFileId);
+              if (pass == null || pass.isEmpty) break; // ignorar
+              EncryptionService.instance.enable(pass);
+              remoteMemo = await storage.downloadMemo(remote.remoteFileId);
+            }
+            // Restaurar estado geral de encriptação
+            if (wasEnabled) {
+              final generalPass = await storage.getEncryptionPassphrase();
+              if (generalPass != null && generalPass.isNotEmpty) {
+                EncryptionService.instance.enable(generalPass);
+              }
+            } else {
+              EncryptionService.instance.disable();
+            }
+          }
+
+          if (remoteMemo == null) {
+            // Duas falhas: perguntar se ignora ou apaga remoto
+            if (confirmDeleteRemote != null) {
+              final delete = await confirmDeleteRemote(remote.remoteFileId);
+              if (delete) {
+                await storage.deleteMemo(remote.remoteFileId);
+                debugPrint('[MemoProvider] Pull: nota remota $memoUuid apagada');
+              }
+            }
+            decryptionFailures++;
+            debugPrint('[MemoProvider] Pull: falha ao desencriptar $memoUuid (${remote.remoteFileId})');
+            continue;
+          }
+
+          // Re-gravar conforme configuração geral de encriptação:
+          // marcar como não sincronizada para re-enviar com a configuração atual
+          final patched = remoteMemo.memo.copyWith(isSynced: false);
           await _db.saveMemoWithBlocks(patched, remoteMemo.blocks);
-          print('[MemoProvider] Pull OK: $memoUuid baixada do kDrive');
+          debugPrint('[MemoProvider] Pull OK: $memoUuid baixada do kDrive (colorIndex=${patched.colorIndex}, bgImageIndex=${patched.bgImageIndex})');
         } catch (e) {
-          print('[MemoProvider] Erro ao baixar memo $memoUuid: $e');
+          debugPrint('[MemoProvider] Erro ao baixar memo $memoUuid: $e');
         }
       }
     } catch (e) {
-      print('[MemoProvider] Erro ao listar remotos: $e');
+      debugPrint('[MemoProvider] Erro ao listar remotos: $e');
     }
 
     storage.markSyncedNow();
+    return decryptionFailures;
+  }
+
+  /// Força a sincronização de TODAS as notas (ignora o estado isSynced).
+  /// Útil para re-enviar todas as notas após mudar de passphrase ou desativar encriptação.
+  Future<int> syncAll() async {
+    final storage = _storage;
+    if (storage == null || !storage.isConfigured) return 0;
+
+    debugPrint('[MemoProvider] syncAll(): iniciando re-sincronização de todas as notas');
+
+    // Marcar todas as notas como não sincronizadas usando transação explícita
+    await _db.transaction(() async {
+      await _db.customStatement('UPDATE memos SET is_synced = 0, remote_file_id = NULL');
+    });
+    debugPrint('[MemoProvider] syncAll(): todas as notas marcadas como não sincronizadas e remoteFileId limpo');
+
+    // Recarregar a lista de memos do DB para garantir que temos os dados mais recentes
+    _memos = await _db.watchAllMemos().first;
+    final localMemos = List<Memo>.from(_memos);
+
+    debugPrint('[MemoProvider] syncAll(): ${localMemos.length} notas totais para re-sincronizar');
+    for (var memo in localMemos) {
+      debugPrint('[MemoProvider] syncAll(): nota ${memo.uuid} isSynced=${memo.isSynced}, remoteFileId=${memo.remoteFileId}, colorIndex=${memo.colorIndex}');
+    }
+
+    // Forçar performSync com force=true
+    return await performSync(force: true);
   }
 
   Future<void> archiveMemo(String memoUuid) async {
@@ -244,9 +347,9 @@ class MemoProvider extends ChangeNotifier {
       );
       if (match != null) {
         // Remove remotamente se existir no kDrive
-        if (match.remoteFileId != null && _storage != null && _storage!.isConfigured) {
+        if (match.remoteFileId != null && _storage != null && _storage.isConfigured) {
           try {
-            await _storage!.deleteMemo(match.remoteFileId!);
+            await _storage.deleteMemo(match.remoteFileId!);
           } catch (_) {
             // Falha no delete remoto não bloqueia o soft delete local
           }
@@ -277,9 +380,9 @@ class MemoProvider extends ChangeNotifier {
   Future<void> deleteMultiplePermanent(List<String> uuids) async {
     for (var id in uuids) {
       final memo = _memos.firstWhere((m) => m.uuid == id, orElse: () => throw StateError('Memo não encontrado'));
-      if (memo.remoteFileId != null && _storage != null && _storage!.isConfigured) {
+      if (memo.remoteFileId != null && _storage != null && _storage.isConfigured) {
         try {
-          await _storage!.deleteMemo(memo.remoteFileId!);
+          await _storage.deleteMemo(memo.remoteFileId!);
         } catch (_) {
           // Falha no delete remoto não bloqueia o delete local
         }
@@ -295,6 +398,17 @@ class MemoProvider extends ChangeNotifier {
 
   Future<void> deleteMemo(String memoUuid) async {
     await softDeleteMultiple([memoUuid]);
+  }
+
+  /// Desativa a sincronização: marca todas as notas como não sincronizadas
+  /// em todos os estados (Drift, memória, Hive).
+  Future<void> disableSync() async {
+    await _db.transaction(() async {
+      await _db.customStatement('UPDATE memos SET is_synced = 0, remote_file_id = NULL');
+    });
+    // Recarregar a lista de memos do DB para garantir que temos os dados mais recentes
+    _memos = await _db.watchAllMemos().first;
+    debugPrint('[MemoProvider] disableSync(): todas as notas marcadas como não sincronizadas');
   }
 
   Future<void> changeColorMultiple(List<String> uuids, int colorIndex) async {

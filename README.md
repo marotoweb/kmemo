@@ -112,7 +112,7 @@ O widget nativo Android exibe as notas ativas diretamente no ecrã principal:
 - **Cantos:** Arredondados (16dp), iguais ao fundo do widget.
 - **Espaçamento:** 6dp nas laterais, 1dp vertical entre cards.
 
-> **Nota:** Clicar numa nota do widget abre a aplicação na tela inicial (home_screen). A abertura direta de notas específicas via widget está em desenvolvimento.
+> **Nota:** Clicar numa nota do widget abre diretamente essa nota em modo de edição (MemoDetailScreen). O fluxo `PendingIntentTemplate`/`fillInIntent` está agora funcional: o `note_uuid` é extraído do `data` URI (`kmemo://note/<uuid>`) ou do extra `note_uuid` no `MainActivity`, guardado em SharedPreferences e lido pelo Flutter via MethodChannel.
 
 ---
 

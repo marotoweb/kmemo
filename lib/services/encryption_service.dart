@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 import 'package:encrypt/encrypt.dart' as enc;
+import 'package:flutter/foundation.dart' show debugPrint;
 
 /// Serviço de encriptação opcional para notas antes de enviar para a nuvem.
 ///
@@ -39,24 +40,32 @@ class EncryptionService {
     }
     final iv = enc.IV.fromSecureRandom(16);
     final encrypted = _encrypter!.encrypt(plaintext, iv: iv);
-    return base64UrlEncode(iv.bytes) + ':' + base64UrlEncode(encrypted.bytes);
+    return '${base64UrlEncode(iv.bytes)}:${base64UrlEncode(encrypted.bytes)}';
   }
 
   /// Decripta uma string. Retorna a string original se a encriptação estiver desativada.
-  String decrypt(String ciphertext) {
+  /// Retorna null se a decriptação falhar (passphrase errada ou dados corrompidos).
+  String? tryDecrypt(String ciphertext) {
     if (!_enabled || _encrypter == null) {
       return ciphertext;
     }
     try {
       final parts = ciphertext.split(':');
       if (parts.length != 2) {
-        return ciphertext;
+        return ciphertext; // Pode ser texto não encriptado
       }
       final iv = enc.IV(base64Url.decode(parts[0]));
       final encrypted = enc.Encrypted(base64Url.decode(parts[1]));
       return _encrypter!.decrypt(encrypted, iv: iv);
-    } catch (_) {
-      return ciphertext;
+    } catch (e) {
+      debugPrint('[EncryptionService] Falha ao desencriptar: $e');
+      return null;
     }
+  }
+
+  /// Decripta uma string. Retorna a string original se a encriptação estiver desativada ou se falhar.
+  String decrypt(String ciphertext) {
+    final result = tryDecrypt(ciphertext);
+    return result ?? ciphertext;
   }
 }

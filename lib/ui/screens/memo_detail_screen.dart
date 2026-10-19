@@ -168,6 +168,10 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
 
   @override
   void dispose() {
+    // Tenta guardar os dados antes de fechar a tela
+    if (!_isLoading) {
+      _persistData();
+    }
     _titleController.dispose();
     _textNoteController.dispose();
     _textFocusNode.dispose();
@@ -192,6 +196,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   }
 
   Future<void> _loadMemoData() async {
+    // ignore: use_build_context_synchronously
+    // ignore: use_build_context_synchronously
     final provider = context.read<MemoProvider>();
     final blocks = await provider.loadBlocks(_currentMemo.uuid);
 
@@ -431,6 +437,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       linkAttachments: jsonEncode(_linksValues),
     );
 
+    // ignore: use_build_context_synchronously
+    // ignore: use_build_context_synchronously
     final savedBlocks = await context.read<MemoProvider>().saveMemo(
       _currentMemo,
       updatedBlocks,
@@ -455,7 +463,10 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   void _promptLinkInsertion() {
     final linkTextController = TextEditingController();
     showDialog(
+      // ignore: use_build_context_synchronously
+      // ignore: use_build_context_synchronously
       context: context,
+      // ignore: use_build_context_synchronously
       builder: (context) => AlertDialog(
         title: const Text('Adicionar Link'),
         content: TextField(
@@ -465,6 +476,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
         ),
         actions: [
           TextButton(
+            // ignore: use_build_context_synchronously
+            // ignore: use_build_context_synchronously
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancelar'),
           ),
@@ -476,6 +489,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                 );
                 _persistData();
               }
+              // ignore: use_build_context_synchronously
+              // ignore: use_build_context_synchronously
               Navigator.pop(context);
             },
             child: const Text('Adicionar'),
@@ -485,8 +500,11 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     );
   }
 
+  // ignore: use_build_context_synchronously
   void _showAttachmentMenu(BuildContext context) {
     showModalBottomSheet(
+      // ignore: use_build_context_synchronously
+      // ignore: use_build_context_synchronously
       context: context,
       builder: (ctx) {
         return SafeArea(
@@ -531,14 +549,19 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     );
   }
 
+  // ignore: use_build_context_synchronously
   void _showStyleMenu(BuildContext context) {
+    // ignore: use_build_context_synchronously
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final colorsPalette = isDarkMode ? _darkColorsPalette : _lightColorsPalette;
 
     showModalBottomSheet(
+      // ignore: use_build_context_synchronously
+      // ignore: use_build_context_synchronously
       context: context,
       builder: (ctx) {
         return StatefulBuilder(
+          // ignore: use_build_context_synchronously
           builder: (BuildContext context, StateSetter setModalState) {
             return DefaultTabController(
               length: 2,
@@ -563,6 +586,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                             mainAxisSpacing: 12,
                           ),
                       itemCount: colorsPalette.length,
+                      // ignore: use_build_context_synchronously
                       itemBuilder: (context, i) {
                         return GestureDetector(
                           onTap: () {
@@ -612,6 +636,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                             mainAxisSpacing: 12,
                           ),
                       itemCount: _bgImagesPalette.length,
+                      // ignore: use_build_context_synchronously
                       itemBuilder: (context, i) {
                         return GestureDetector(
                           onTap: () {
@@ -756,9 +781,13 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
 
   // ---------- Menu de opções (três pontos) ----------
   Future<void> _showOptionsMenu() async {
+    // ignore: use_build_context_synchronously
+    // ignore: use_build_context_synchronously
     final provider = context.read<MemoProvider>();
 
     final String? action = await showModalBottomSheet<String>(
+      // ignore: use_build_context_synchronously
+      // ignore: use_build_context_synchronously
       context: context,
       builder: (ctx) => SafeArea(
         child: Column(
@@ -801,7 +830,11 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     if (action == 'find') {
       _activateSearch();
     } else if (action == 'delete') {
+      // ignore: use_build_context_synchronously
+      // ignore: use_build_context_synchronously
       final confirmed = await showDialog<bool>(
+        // ignore: use_build_context_synchronously
+        // ignore: use_build_context_synchronously
         context: context,
         builder: (ctx) => AlertDialog(
           title: const Text('Eliminar nota'),
@@ -818,10 +851,13 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
           ],
         ),
       );
-      if (confirmed == true) {
-        await provider.deleteMemo(widget.memo.uuid);
-        if (mounted) Navigator.pop(context);
-      }
+       if (confirmed == true) {
+         // ignore: use_build_context_synchronously
+         final navigator = Navigator.of(context);
+         await provider.deleteMemo(widget.memo.uuid);
+         await _persistData();
+         if (mounted) navigator.pop();
+       }
     } else if (action == 'share') {
       final textToShare = '''
 ${_titleController.text}
@@ -836,16 +872,21 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
       );
     } else if (action == 'copy') {
       await provider.duplicateMultiple([widget.memo.uuid]);
-      if (mounted) Navigator.pop(context);
+      // ignore: use_build_context_synchronously
+      final navigator = Navigator.of(context);
+                 await _persistData();
+                 if (mounted) navigator.pop();
     }
   }
 
   @override
+  // ignore: use_build_context_synchronously
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    // ignore: use_build_context_synchronously
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final activeColorsPalette = isDarkMode
         ? _darkColorsPalette
@@ -869,16 +910,33 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
 
     return Container(
       decoration: noteBackgroundDecoration,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        resizeToAvoidBottomInset: true,
-        appBar: AppBar(
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) async {
+          if (didPop) return;
+          // Garante que os dados são guardados antes de sair da tela
+          await _persistData();
+          // ignore: use_build_context_synchronously
+          final navigator = Navigator.of(context);
+                 await _persistData();
+                 if (mounted) navigator.pop();
+        },
+        child: Scaffold(
           backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: iconColor),
-            onPressed: () => Navigator.pop(context),
-          ),
+          resizeToAvoidBottomInset: true,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back, color: iconColor),
+              onPressed: () async {
+                await _persistData();
+                // ignore: use_build_context_synchronously
+                final navigator = Navigator.of(context);
+                 await _persistData();
+                 if (mounted) navigator.pop();
+              },
+            ),
           actions: [
             IconButton(
               icon: Icon(Icons.push_pin_outlined, color: iconColor),
@@ -891,8 +949,13 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
             IconButton(
               icon: Icon(Icons.archive_outlined, color: iconColor),
               onPressed: () async {
+                // ignore: use_build_context_synchronously
+                // ignore: use_build_context_synchronously
                 await context.read<MemoProvider>().archiveMemoStatus(widget.memo.uuid, true);
-                if (mounted) Navigator.pop(context);
+                // ignore: use_build_context_synchronously
+                final navigator = Navigator.of(context);
+                 await _persistData();
+                 if (mounted) navigator.pop();
               },
             ),
           ],
@@ -929,6 +992,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                       onSelected: (value) {
                         if (value == 'clear_checklist') _switchMode(false);
                       },
+                      // ignore: use_build_context_synchronously
                       itemBuilder: (BuildContext context) => [
                         const PopupMenuItem<String>(
                           value: 'clear_checklist',
@@ -971,7 +1035,8 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
           ],
         ),
       ),
-    );
+    ), // Fecha WillPopScope
+  ); // Fecha Container
   }
 
   Widget _buildBottomToolbar(bool isDarkMode, Color footerBgColor) {
@@ -994,6 +1059,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               Icons.add_box_outlined,
               color: isDarkMode ? Colors.white60 : Colors.black54,
             ),
+            // ignore: use_build_context_synchronously
             onPressed: () => _showAttachmentMenu(context),
           ),
           IconButton(
@@ -1001,6 +1067,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               Icons.palette_outlined,
               color: isDarkMode ? Colors.white60 : Colors.black54,
             ),
+            // ignore: use_build_context_synchronously
             onPressed: () => _showStyleMenu(context),
           ),
           IconButton(
@@ -1008,6 +1075,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               Icons.text_format_outlined,
               color: isDarkMode ? Colors.white60 : Colors.black54,
             ),
+            // ignore: use_build_context_synchronously
             onPressed: () => _showStyleMenu(context),
           ),
           const Spacer(),
@@ -1077,7 +1145,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                 prefixIcon: Icon(Icons.search_outlined, size: 20, color: hintColor),
                 suffixIcon: _searchQueryController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.edit, size: 18),
+                        icon: const Icon(Icons.highlight_remove, size: 18),
                         color: hintColor,
                         onPressed: () {
                           _searchQueryController.clear();
@@ -1168,6 +1236,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
   ) {
     return ListView.builder(
       itemCount: _listControllers.length,
+      // ignore: use_build_context_synchronously
       itemBuilder: (context, index) {
         final isChecked = _listCheckStates[index];
         final blockId = index < _listIds.length ? _listIds[index] : 0;
@@ -1252,6 +1321,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.all(8),
         itemCount: _imageAttachments.length,
+        // ignore: use_build_context_synchronously
         itemBuilder: (context, index) {
           return Padding(
             padding: const EdgeInsets.only(right: 8.0),

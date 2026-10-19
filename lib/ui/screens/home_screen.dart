@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:home_widget/home_widget.dart';
+
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -24,6 +24,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final List<String> _selectedUuids = [];
   static const MethodChannel _widgetChannel = MethodChannel('com.marotoweb.kmemo/widget');
+  bool _isOpeningNote = false;
 
   @override
   void initState() {
@@ -53,6 +54,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           debugPrint('[HomeScreen] Returning pending UUID: $uuid');
           await _openNoteFromWidget(uuid);
         }
+      } else if (call.method == 'createNewNote') {
+        debugPrint('[HomeScreen] Widget channel: createNewNote');
+        await _createNoteFromWidget();
       } else if (call.method == 'onSharedTextReceived') {
         debugPrint('[HomeScreen] Widget channel: onSharedTextReceived');
         await _checkSharedText();
@@ -61,53 +65,138 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _openNoteFromWidget(String uuid) async {
+    if (_isOpeningNote) {
+      debugPrint('[HomeScreen] Already opening note, skipping');
+      return;
+    }
+    _isOpeningNote = true;
     final db = Provider.of<AppDatabase>(context, listen: false);
     final memo = await (db.select(
       db.memos,
     )..where((t) => t.uuid.equals(uuid))).getSingleOrNull();
-
+    
     if (memo != null && mounted) {
+      debugPrint('[HomeScreen] Opening note: $uuid (${memo.title})');
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => MemoDetailScreen(memo: memo),
         ),
-      );
+      ).then((_) {
+        // Limpar a flag quando voltar
+        _isOpeningNote = false;
+        debugPrint('[HomeScreen] Returned from note detail');
+      });
+    } else {
+      _isOpeningNote = false;
     }
   }
 
   Future<void> _checkWidgetLaunch() async {
     try {
       debugPrint('[HomeScreen] _checkWidgetLaunch called');
-      final prefs = await SharedPreferences.getInstance();
-      final clickedUuid = prefs.getString('flutter.clicked_note_uuid');
-      debugPrint('[HomeScreen] clickedUuid from prefs: $clickedUuid');
-      if (clickedUuid != null && clickedUuid.isNotEmpty) {
-        await prefs.setString('flutter.clicked_note_uuid', '');
-
+      
+      // Verificar se há um flag para criar nova nota
+      bool createNewNote = false;
+      try {
+        createNewNote = await _widgetChannel.invokeMethod<bool>('getCreateNoteFlag') ?? false;
+        debugPrint('[HomeScreen] createNewNote from MethodChannel: $createNewNote');
+      } catch (e) {
+        debugPrint('[HomeScreen] MethodChannel error (getCreateNoteFlag): $e');
+      }
+      
+      if (createNewNote) {
         if (!mounted) return;
-
+        await _createNoteFromWidget();
+        return;
+      }
+      
+      // Tentar obter o UUID via MethodChannel (mais fiável que SharedPreferences)
+      String? clickedUuid;
+      try {
+        clickedUuid = await _widgetChannel.invokeMethod<String>('getPendingNoteUuid');
+        debugPrint('[HomeScreen] UUID from MethodChannel: $clickedUuid');
+      } catch (e) {
+        debugPrint('[HomeScreen] MethodChannel error: $e');
+      }
+      
+      // Fallback: tentar ler diretamente do SharedPreferences
+      if (clickedUuid == null || clickedUuid.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        clickedUuid = prefs.getString('flutter.clicked_note_uuid');
+        if (clickedUuid != null && clickedUuid.isNotEmpty) {
+          await prefs.setString('flutter.clicked_note_uuid', '');
+        }
+        debugPrint('[HomeScreen] clickedUuid from prefs: $clickedUuid');
+      }
+      
+      if (clickedUuid != null && clickedUuid.isNotEmpty) {
+        if (!mounted) return;
+        
+        // Verificar se já estamos a abrir uma nota
+        if (_isOpeningNote) {
+          debugPrint('[HomeScreen] Already opening note, skipping _checkWidgetLaunch');
+          return;
+        }
+        
         final db = Provider.of<AppDatabase>(context, listen: false);
         final memo = await (db.select(
           db.memos,
-        )..where((t) => t.uuid.equals(clickedUuid))).getSingleOrNull();
-
+        )..where((t) => t.uuid.equals(clickedUuid!))).getSingleOrNull();
+        
         if (memo != null && mounted) {
           debugPrint('[HomeScreen] Opening note: $clickedUuid (${memo.title})');
+          _isOpeningNote = true;
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => MemoDetailScreen(memo: memo),
             ),
-          );
+          ).then((_) {
+            // Limpar a flag quando voltar
+            _isOpeningNote = false;
+            debugPrint('[HomeScreen] Returned from note detail');
+          });
         } else {
           debugPrint('[HomeScreen] Memo not found for uuid: $clickedUuid');
         }
       } else {
-        debugPrint('[HomeScreen] No pending UUID in SharedPreferences');
+        debugPrint('[HomeScreen] No pending UUID found');
       }
     } catch (e) {
       debugPrint('[HomeScreen] Erro ao abrir nota via widget: $e');
+    }
+  }
+
+  Future<void> _createNoteFromWidget() async {
+    try {
+      if (_isOpeningNote) {
+        debugPrint('[HomeScreen] Already opening note, skipping _createNoteFromWidget');
+        return;
+      }
+      _isOpeningNote = true;
+      
+      final provider = context.read<MemoProvider>();
+      final newMemo = await provider.createNewMemo();
+      
+      if (!mounted) {
+        _isOpeningNote = false;
+        return;
+      }
+      
+      debugPrint('[HomeScreen] Creating new note from widget: ${newMemo.uuid}');
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => MemoDetailScreen(memo: newMemo),
+        ),
+      ).then((_) {
+        _isOpeningNote = false;
+        debugPrint('[HomeScreen] Returned from new note detail');
+      });
+    } catch (e) {
+      _isOpeningNote = false;
+      debugPrint('[HomeScreen] Erro ao criar nota via widget: $e');
     }
   }
 

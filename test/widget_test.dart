@@ -5,12 +5,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:kmemo/database/database.dart';
 import 'package:kmemo/providers/memo_provider.dart';
+import 'package:kmemo/providers/theme_provider.dart';
+import 'package:kmemo/services/kdrive_storage.dart';
 import 'package:kmemo/main.dart';
 
 void main() {
   testWidgets('kMemo smoke test', (WidgetTester tester) async {
     // Cria uma instância isolada em memória do Drift exclusiva para o ambiente de testes
     final database = AppDatabase();
+  final storage = KDriveStorage();
 
     // Constrói a aplicação injetando os mocks necessários para simular a árvore do main.dart
     await tester.pumpWidget(
@@ -18,8 +21,10 @@ void main() {
         providers: [
           Provider<AppDatabase>.value(value: database),
           ChangeNotifierProvider<MemoProvider>(
-            create: (_) => MemoProvider(database),
+            create: (_) => MemoProvider(database, storage: storage),
           ),
+          ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          Provider<KDriveStorage>.value(value: storage),
         ],
         child:
             const KMemoApp(), // Correção: Uso da classe correta definida no main.dart

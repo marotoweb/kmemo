@@ -18,6 +18,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        Provider<AppDatabase>.value(value: database),
         ChangeNotifierProvider(
           create: (_) => MemoProvider(database, storage: storage),
         ),

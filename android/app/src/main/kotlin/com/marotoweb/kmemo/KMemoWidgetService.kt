@@ -68,6 +68,7 @@ class KMemoWidgetFactory(private val context: Context) : RemoteViewsService.Remo
             // PendingIntent individual para abrir esta nota específica via App Link
             val fillInIntent = Intent(Intent.ACTION_VIEW).apply {
                 data = Uri.parse("kmemo://note/${note.uuid}")
+                putExtra("note_uuid", note.uuid)
             }
             Log.d("WIDGET_DEBUG", "Widget item ${position}: fillInIntent data=kmemo://note/${note.uuid}")
             views.setOnClickFillInIntent(R.id.widget_item_bg, fillInIntent)

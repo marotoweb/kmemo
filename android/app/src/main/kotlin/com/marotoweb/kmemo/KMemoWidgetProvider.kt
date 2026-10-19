@@ -33,7 +33,7 @@ class KMemoWidgetProvider : AppWidgetProvider() {
 
             // Clica em qualquer parte abre a app com nota específica via fillInIntent
             // NÃO colocar note_uuid aqui - o fillInIntent do serviço adiciona o UUID real
-            // Com FLAG_IMMUTABLE, o fillInIntent só pode adicionar extras que NÃO estão no template
+            // Com FLAG_MUTABLE, o fillInIntent só pode adicionar extras que NÃO estão no template
             Log.d("WIDGET_DEBUG", "Widget provider: creating template for appWidgetId=$appWidgetId")
             val clickIntent = Intent(context, MainActivity::class.java).apply {
                 action = "ACTION_OPEN_NOTE"
@@ -42,10 +42,23 @@ class KMemoWidgetProvider : AppWidgetProvider() {
                 context,
                 appWidgetId,
                 clickIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
             )
             views.setPendingIntentTemplate(R.id.widget_notes_list, clickPendingIntent)
             Log.d("WIDGET_DEBUG", "Widget provider: template set for appWidgetId=$appWidgetId")
+
+            // Botão "+" para criar nova nota
+            val addIntent = Intent(context, MainActivity::class.java).apply {
+                action = "ACTION_CREATE_NOTE"
+            }
+            val addPendingIntent = PendingIntent.getActivity(
+                context,
+                appWidgetId + 1000, // Offset para não conflitar com o template
+                addIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_add_button, addPendingIntent)
+            Log.d("WIDGET_DEBUG", "Widget provider: add button set for appWidgetId=$appWidgetId")
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
