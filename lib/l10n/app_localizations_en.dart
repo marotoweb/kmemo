@@ -266,7 +266,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get step4ClickSync =>
-      '4. Click \"Sync now\" to save configuration and sync notes';
+      '4. Click \"Sync now\" to save the configuration and sync notes';
 
   @override
   String get generateTokenWithScopes =>
@@ -281,7 +281,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get configureRemoteStorageToSync =>
-      'Configure um armazenamento remoto para sincronizar as suas notas.';
+      'Configure remote storage to sync your notes.';
 
   @override
   String get trashIsEmpty => 'The trash is empty.';
@@ -337,4 +337,197 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsTitle => 'Settings';
+
+  @override
+  String get sharedNote => 'Shared note';
+
+  @override
+  String get colorsTab => 'Colors (16)';
+
+  @override
+  String get imagesTab => 'Images (16)';
+
+  @override
+  String bgLabel(String index) {
+    return 'Background $index';
+  }
+
+  @override
+  String get noteSentToTrash => 'Note moved to trash';
+
+  @override
+  String notesArchivedCount(String count) {
+    return '$count notes archived';
+  }
+
+  @override
+  String notesSentToTrashCount(String count) {
+    return '$count notes moved to trash';
+  }
+
+  @override
+  String get lastSyncJustNow => 'Just now';
+
+  @override
+  String lastSyncMinutesAgo(String minutes) {
+    return '$minutes min ago';
+  }
+
+  @override
+  String lastSyncHoursAgo(String hours) {
+    return '$hours h ago';
+  }
+
+  @override
+  String get lastSyncNever => 'Never';
+
+  @override
+  String syncErrorWithDetail(String error) {
+    return 'Sync error: $error';
+  }
+
+  @override
+  String configSaveError(String error) {
+    return 'Error saving configuration: $error';
+  }
+
+  @override
+  String syncPartialFailure(String count) {
+    return 'Sync completed, but $count file(s) could not be decrypted. Check that the passphrase is correct.';
+  }
+
+  @override
+  String get activeSyncTitle => 'Sync active';
+
+  @override
+  String get inactiveSyncTitle => 'Sync disabled';
+
+  @override
+  String get configureRemoteSection => 'SET UP REMOTE STORAGE';
+
+  @override
+  String get selectDrive => 'Select a drive';
+
+  @override
+  String get syncingNow => 'Syncing...';
+
+  @override
+  String get syncNowButton => 'Sync now';
+
+  @override
+  String selectedFolder(String name) {
+    return 'Selected folder: $name';
+  }
+
+  @override
+  String get selectFolderToStoreNotes => 'Select a folder to store your notes';
+
+  @override
+  String get folderWord => 'Folder';
+
+  @override
+  String get fileWord => 'File';
+
+  @override
+  String get itemWord => 'Item';
+
+  @override
+  String folderIdLabel(String id) {
+    return 'Folder (ID: $id)';
+  }
+
+  @override
+  String fileIdLabel(String id) {
+    return 'File (ID: $id)';
+  }
+
+  @override
+  String idLabel(String id) {
+    return 'ID: $id';
+  }
+
+  @override
+  String cannotCreateInFile(String type) {
+    return 'Cannot create a folder inside a file (type: $type).';
+  }
+
+  @override
+  String errorListingFolder(String error) {
+    return 'Error listing folder: $error';
+  }
+
+  @override
+  String createInFolder(String name) {
+    return 'Create inside: $name';
+  }
+
+  @override
+  String errorCreatingFolderIn(String folder, String error) {
+    return 'Error creating folder in \"$folder\": $error';
+  }
+
+  @override
+  String get scopeDrive => 'kDrive products';
+
+  @override
+  String get scopeUserInfo => 'Profile information';
+
+  @override
+  String get scopeAccounts => 'List accounts';
+
+  @override
+  String get noValidAccount =>
+      'No valid Infomaniak account found for this token.';
+
+  @override
+  String errorDiscoveringAccounts(String error) {
+    return 'Error discovering accounts/drives: $error';
+  }
+
+  @override
+  String get privateFolderEmpty => 'The Private folder is empty.';
+
+  @override
+  String errorListingPrivateFolder(String error) {
+    return 'Error listing Private folder: $error';
+  }
+
+  @override
+  String get restore => 'Restore';
+
+  @override
+  String imageAttachmentsCount(String count) {
+    return 'Image attachments ($count)';
+  }
+
+  @override
+  String updatedOn(String date) {
+    return 'Updated: $date';
+  }
+
+  @override
+  String notesUnarchivedCount(String count) {
+    return '$count notes removed from archive';
+  }
+
+  @override
+  String notesRestoredCount(String count) {
+    return '$count notes restored';
+  }
+
+  @override
+  String searchCounter(String current, String total) {
+    return '$current of $total';
+  }
+
+  @override
+  String decryptionFailuresCount(String count) {
+    return '$count file(s) could not be decrypted. Check the passphrase.';
+  }
+
+  @override
+  String get widgetUntitled => 'Untitled';
+
+  @override
+  String get widgetEmptyNote => 'Empty note';
 }

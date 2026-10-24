@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
+import 'package:kmemo/l10n/app_localizations.dart';
 
 class MemoCard extends StatelessWidget {
   final Memo memo;
@@ -44,21 +45,22 @@ class MemoCard extends StatelessWidget {
     ];
 
     final List<Color> darkColorsPalette = [
+      Color(0xFF1E1E1E), // Preto suave
       Color(0xFF3B1A1A), // Vermelho escuro suave
       Color(0xFF3D2C1E), // Laranja escuro suave
-      Color(0xFF3D361E), // Amarelo/Âmbar escuro suave
+      Color(0xFF3D361E), // Dark soft yellow/amber
       Color(0xFF1E3322), // Verde escuro suave
       Color(0xFF1E3331), // Teal escuro suave
       Color(0xFF1E2A3B), // Azul escuro suave
-      Color(0xFF261E3B), // Índigo escuro suave
+      Color(0xFF261E3B), // Dark soft indigo
       Color(0xFF331E3B), // Roxo escuro suave
       Color(0xFF3B1E32), // Rosa escuro suave
       Color(0xFF2E2621), // Castanho escuro suave
       Color(0xFF252B2E), // Azul-acinzentado escuro suave
-      Color(0xFF3B2E1E), // Âmbar profundo suave
+      Color(0xFF3B2E1E), // Deep soft amber
       Color(0xFF27331E), // Verde-lima escuro suave
       Color(0xFF1E3338), // Ciano escuro suave
-      Color(0xFF2C2C2C), // Cinzento escuro secundário
+      Color(0xFF2C2C2C), // Secondary dark grey
     ];
 
     final colorsPalette = isDarkMode ? darkColorsPalette : lightColorsPalette;
@@ -178,7 +180,7 @@ class MemoCard extends StatelessWidget {
                                         Expanded(
                                           child: Text(
                                             text.isEmpty
-                                                ? 'Item de lista'
+                                                ? AppLocalizations.of(context)!.listItem
                                                 : text,
                                             style: TextStyle(
                                               fontSize: 13,
@@ -248,7 +250,7 @@ class MemoCard extends StatelessWidget {
                             Icon(Icons.image, size: 13, color: subtitleColor),
                             SizedBox(width: 4),
                             Text(
-                              'Anexos de imagem (${images.length})',
+                              AppLocalizations.of(context)!.imageAttachmentsCount('${images.length}'),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: subtitleColor,
@@ -259,7 +261,7 @@ class MemoCard extends StatelessWidget {
                         SizedBox(height: 4),
                       ],
                       Text(
-                        'Atualizado: ${_formatDate(memo.updatedAt)}',
+                        AppLocalizations.of(context)!.updatedOn(_formatDate(memo.updatedAt)),
                         style: TextStyle(
                           fontSize: 10,
                           color: isDarkMode

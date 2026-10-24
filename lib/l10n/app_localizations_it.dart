@@ -266,7 +266,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get step4ClickSync =>
-      '4. Clicca su \"Sincronizza ora\" per salvare e sincronizzare';
+      '4. Clicca su \"Sincronizza ora\" per salvare la configurazione e sincronizzare le note';
 
   @override
   String get generateTokenWithScopes =>
@@ -281,7 +281,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get configureRemoteStorageToSync =>
-      'Configura un archivio remoto per sincronizzare le note.';
+      'Configura un’archiviazione remota per sincronizzare le tue note.';
 
   @override
   String get trashIsEmpty => 'Il cestino è vuoto.';
@@ -337,4 +337,198 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get settingsTitle => 'Impostazioni';
+
+  @override
+  String get sharedNote => 'Nota condivisa';
+
+  @override
+  String get colorsTab => 'Colori (16)';
+
+  @override
+  String get imagesTab => 'Immagini (16)';
+
+  @override
+  String bgLabel(String index) {
+    return 'Sfondo $index';
+  }
+
+  @override
+  String get noteSentToTrash => 'Nota spostata nel cestino';
+
+  @override
+  String notesArchivedCount(String count) {
+    return '$count note archiviate';
+  }
+
+  @override
+  String notesSentToTrashCount(String count) {
+    return '$count note spostate nel cestino';
+  }
+
+  @override
+  String get lastSyncJustNow => 'Poco fa';
+
+  @override
+  String lastSyncMinutesAgo(String minutes) {
+    return '$minutes min fa';
+  }
+
+  @override
+  String lastSyncHoursAgo(String hours) {
+    return '$hours h fa';
+  }
+
+  @override
+  String get lastSyncNever => 'Mai';
+
+  @override
+  String syncErrorWithDetail(String error) {
+    return 'Errore di sincronizzazione: $error';
+  }
+
+  @override
+  String configSaveError(String error) {
+    return 'Errore nel salvataggio della configurazione: $error';
+  }
+
+  @override
+  String syncPartialFailure(String count) {
+    return 'Sincronizzazione completata, ma $count file non è stato possibile decifrare. Verifica che la passphrase sia corretta.';
+  }
+
+  @override
+  String get activeSyncTitle => 'Sincronizzazione attiva';
+
+  @override
+  String get inactiveSyncTitle => 'Sincronizzazione disattivata';
+
+  @override
+  String get configureRemoteSection => 'CONFIGURA L’ARCHIVIAZIONE REMOTA';
+
+  @override
+  String get selectDrive => 'Seleziona un drive';
+
+  @override
+  String get syncingNow => 'Sincronizzazione...';
+
+  @override
+  String get syncNowButton => 'Sincronizza ora';
+
+  @override
+  String selectedFolder(String name) {
+    return 'Cartella selezionata: $name';
+  }
+
+  @override
+  String get selectFolderToStoreNotes =>
+      'Seleziona una cartella per salvare le note';
+
+  @override
+  String get folderWord => 'Cartella';
+
+  @override
+  String get fileWord => 'File';
+
+  @override
+  String get itemWord => 'Elemento';
+
+  @override
+  String folderIdLabel(String id) {
+    return 'Cartella (ID: $id)';
+  }
+
+  @override
+  String fileIdLabel(String id) {
+    return 'File (ID: $id)';
+  }
+
+  @override
+  String idLabel(String id) {
+    return 'ID: $id';
+  }
+
+  @override
+  String cannotCreateInFile(String type) {
+    return 'Impossibile creare una cartella all’interno di un file (tipo: $type).';
+  }
+
+  @override
+  String errorListingFolder(String error) {
+    return 'Errore nell’elenco della cartella: $error';
+  }
+
+  @override
+  String createInFolder(String name) {
+    return 'Crea dentro: $name';
+  }
+
+  @override
+  String errorCreatingFolderIn(String folder, String error) {
+    return 'Errore nella creazione della cartella in \"$folder\": $error';
+  }
+
+  @override
+  String get scopeDrive => 'Prodotti kDrive';
+
+  @override
+  String get scopeUserInfo => 'Informazioni del profilo';
+
+  @override
+  String get scopeAccounts => 'Elenca gli account';
+
+  @override
+  String get noValidAccount =>
+      'Nessun account Infomaniak valido trovato per questo token.';
+
+  @override
+  String errorDiscoveringAccounts(String error) {
+    return 'Errore nella ricerca di account/drive: $error';
+  }
+
+  @override
+  String get privateFolderEmpty => 'La cartella Private è vuota.';
+
+  @override
+  String errorListingPrivateFolder(String error) {
+    return 'Errore nell’elenco della cartella Private: $error';
+  }
+
+  @override
+  String get restore => 'Ripristina';
+
+  @override
+  String imageAttachmentsCount(String count) {
+    return 'Allegati immagine ($count)';
+  }
+
+  @override
+  String updatedOn(String date) {
+    return 'Aggiornato: $date';
+  }
+
+  @override
+  String notesUnarchivedCount(String count) {
+    return '$count note rimosse dall’archivio';
+  }
+
+  @override
+  String notesRestoredCount(String count) {
+    return '$count note ripristinate';
+  }
+
+  @override
+  String searchCounter(String current, String total) {
+    return '$current di $total';
+  }
+
+  @override
+  String decryptionFailuresCount(String count) {
+    return '$count file non è stato possibile decifrare. Verifica la passphrase.';
+  }
+
+  @override
+  String get widgetUntitled => 'Senza titolo';
+
+  @override
+  String get widgetEmptyNote => 'Nota vuota';
 }

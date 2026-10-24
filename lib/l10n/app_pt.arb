@@ -54,7 +54,7 @@
   "theme": "Tema",
   "takePhoto": "Tirar foto",
   "infomaniakToken": "Token da Infomaniak",
-  "version": "Version",
+  "version": "Versão",
   "lastEdited": "Última edição",
   "undo": "Anular",
   "pasteTokenHere": "Cole o token aqui",
@@ -83,7 +83,7 @@
   "step1EnterToken": "1. Insira o token da Infomaniak",
   "step2SelectDrive": "2. Selecione o drive kDrive",
   "step3SelectFolder": "3. Selecione a pasta de destino",
-  "step4ClickSync": "4. Carregue em \"Syncronizar agora\" para guardar a configuração e sincronizar as notas",
+  "step4ClickSync": "4. Carregue em \"Sincronizar agora\" para guardar a configuração e sincronizar as notas",
   "generateTokenWithScopes": "Gere um token em manager.infomaniak.com com os seguintes scopes:",
   "definePassphrase": "Defina uma passphrase para encriptar as suas notas. Sem ela, não será possível recuperar os dados.",
   "emptyFolder": "Pasta vazia",
@@ -105,5 +105,227 @@
   "reportBugSubtitle": "Reporte um bug, sugira uma funcionalidade, ou deixe um comentário",
   "archiveScreenTitle": "Arquivo",
   "trashScreenTitle": "Lixeira",
-  "settingsTitle": "Definições"
+  "settingsTitle": "Definições",
+  "sharedNote": "Nota partilhada",
+  "colorsTab": "Cores (16)",
+  "imagesTab": "Imagens (16)",
+  "bgLabel": "Fundo {index}",
+  "@bgLabel": {
+    "placeholders": {
+      "index": {
+        "type": "String"
+      }
+    }
+  },
+  "noteSentToTrash": "Nota enviada para a lixeira",
+  "notesArchivedCount": "{count} notas arquivadas",
+  "@notesArchivedCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "notesSentToTrashCount": "{count} notas enviadas para a lixeira",
+  "@notesSentToTrashCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "lastSyncJustNow": "Agora há pouco",
+  "lastSyncMinutesAgo": "Há {minutes} min",
+  "@lastSyncMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      }
+    }
+  },
+  "lastSyncHoursAgo": "Há {hours} h",
+  "@lastSyncHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "String"
+      }
+    }
+  },
+  "lastSyncNever": "Nunca",
+  "syncErrorWithDetail": "Erro de sincronização: {error}",
+  "@syncErrorWithDetail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "configSaveError": "Erro ao guardar configuração: {error}",
+  "@configSaveError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "syncPartialFailure": "Sincronização concluída, mas {count} ficheiro(s) não puderam ser desencriptados. Verifique se a passphrase está correta.",
+  "@syncPartialFailure": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "activeSyncTitle": "Sincronização ativa",
+  "inactiveSyncTitle": "Sincronização desativada",
+  "configureRemoteSection": "CONFIGURAR ARMAZENAMENTO REMOTO",
+  "selectDrive": "Selecione um drive",
+  "syncingNow": "A sincronizar...",
+  "syncNowButton": "Sincronizar agora",
+  "selectedFolder": "Pasta selecionada: {name}",
+  "@selectedFolder": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "selectFolderToStoreNotes": "Selecione uma pasta para guardar as notas",
+  "folderWord": "Pasta",
+  "fileWord": "Ficheiro",
+  "itemWord": "Item",
+  "folderIdLabel": "Pasta (ID: {id})",
+  "@folderIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "fileIdLabel": "Ficheiro (ID: {id})",
+  "@fileIdLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "idLabel": "ID: {id}",
+  "@idLabel": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotCreateInFile": "Não é possível criar pasta dentro de um ficheiro (tipo: {type}).",
+  "@cannotCreateInFile": {
+    "placeholders": {
+      "type": {
+        "type": "String"
+      }
+    }
+  },
+  "errorListingFolder": "Erro ao listar pasta: {error}",
+  "@errorListingFolder": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "createInFolder": "Criar dentro de: {name}",
+  "@createInFolder": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "errorCreatingFolderIn": "Erro ao criar pasta em \"{folder}\": {error}",
+  "@errorCreatingFolderIn": {
+    "placeholders": {
+      "folder": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "scopeDrive": "Produtos kDrive",
+  "scopeUserInfo": "Informações do perfil",
+  "scopeAccounts": "Listar contas",
+  "noValidAccount": "Nenhuma conta Infomaniak válida encontrada para este token.",
+  "errorDiscoveringAccounts": "Erro ao descobrir contas/drives: {error}",
+  "@errorDiscoveringAccounts": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "privateFolderEmpty": "A pasta Private está vazia.",
+  "errorListingPrivateFolder": "Erro ao listar pasta Private: {error}",
+  "@errorListingPrivateFolder": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "restore": "Restaurar",
+  "imageAttachmentsCount": "Anexos de imagem ({count})",
+  "@imageAttachmentsCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "updatedOn": "Atualizado: {date}",
+  "@updatedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "notesUnarchivedCount": "{count} notas retiradas do arquivo",
+  "@notesUnarchivedCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "notesRestoredCount": "{count} notas restauradas",
+  "@notesRestoredCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "searchCounter": "{current} de {total}",
+  "@searchCounter": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "decryptionFailuresCount": "{count} ficheiro(s) não puderam ser desencriptados. Verifique a passphrase.",
+  "@decryptionFailuresCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "widgetUntitled": "Sem título",
+  "widgetEmptyNote": "Nota vazia"
 }

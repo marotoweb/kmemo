@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database.dart';
 import '../services/kdrive_storage.dart';
@@ -150,7 +151,23 @@ class MemoProvider extends ChangeNotifier {
   }
 
   Future<void> _updateWidgetData() async {
-    await WidgetService.updateWidgetData(db: _db);
+    // Determine whether the dark theme is active
+    bool isDark = false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final themeIndex = prefs.getInt('theme_mode') ?? 0;
+      if (themeIndex == 1) {
+        isDark = false; // light
+      } else if (themeIndex == 2) {
+        isDark = true; // dark
+      } else {
+        // system - use the platform brightness
+        isDark = WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+      }
+    } catch (_) {
+      isDark = WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+    }
+    await WidgetService.updateWidgetData(db: _db, isDark: isDark);
   }
 
   /// Schedules remote sync with debounce (avoids calling the API on every keystroke).
@@ -333,7 +350,7 @@ class MemoProvider extends ChangeNotifier {
     if (storage == null || !storage.isConfigured) return 0;
 
     debugPrint(
-      '[MemoProvider] syncAll(): starting re-sincronização of all the notes',
+      '[MemoProvider] syncAll(): starting re-sync of all notes',
     );
 
     // Mark all notes as not synced using an explicit transaction
@@ -381,6 +398,12 @@ class MemoProvider extends ChangeNotifier {
 
   // Mark as deleted (send to trash)
   Future<void> softDeleteMultiple(List<String> uuids) async {
+    debugPrint('[MemoProvider] softDeleteMultiple: ${uuids.length} uuids: $uuids');
+    debugPrint('[MemoProvider] _memos count: ${_memos.length}');
+    if (uuids.isEmpty) {
+      debugPrint('[MemoProvider] softDeleteMultiple: nothing to delete');
+      return;
+    }
     for (var id in uuids) {
       final match = _memos.cast<Memo?>().firstWhere(
         (m) => m?.uuid == id,
@@ -399,6 +422,7 @@ class MemoProvider extends ChangeNotifier {
         }
         final blocks = await _db.getBlocksForMemo(match.uuid);
         await _db.saveMemoWithBlocks(match.copyWith(isDeleted: true), blocks);
+        debugPrint('[MemoProvider] softDeleteMultiple: saved ${match.uuid} isDeleted=true');
       }
     }
     _scheduleSync();

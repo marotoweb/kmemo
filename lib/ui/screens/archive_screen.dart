@@ -87,12 +87,12 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                         SnackBar(
                           content: Text(
                             uuidsToUnarchive.length > 1
-                                ? '${uuidsToUnarchive.length} notas retiradas do arquivo'
+                                ? AppLocalizations.of(context)!.notesUnarchivedCount('${uuidsToUnarchive.length}')
                                 : AppLocalizations.of(context)!.noteRemovedFromArchive,
                           ),
                           duration: Duration(seconds: 8),
                           action: SnackBarAction(
-                            label: 'Anular',
+                            label: AppLocalizations.of(context)!.undo,
                             textColor: Colors.amberAccent,
                             onPressed: () async {
                               scaffoldMessenger.hideCurrentSnackBar();
@@ -165,12 +165,12 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                         SnackBar(
                           content: Text(
                             uuidsToUnarchive.length > 1
-                                ? '${uuidsToUnarchive.length} notas retiradas do arquivo'
+                                ? AppLocalizations.of(context)!.notesUnarchivedCount('${uuidsToUnarchive.length}')
                                 : AppLocalizations.of(context)!.noteRemovedFromArchive,
                           ),
                           duration: Duration(seconds: 8),
                           action: SnackBarAction(
-                            label: 'Anular',
+                            label: AppLocalizations.of(context)!.undo,
                             textColor: Colors.amberAccent,
                             onPressed: () async {
                               scaffoldMessenger.hideCurrentSnackBar();
@@ -264,7 +264,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                                   ),
                                   duration: Duration(seconds: 8),
                                   action: SnackBarAction(
-                                    label: 'Anular',
+                                    label: AppLocalizations.of(context)!.undo,
                                     textColor: Colors.amberAccent,
                                     onPressed: () async {
                                       scaffoldMessenger.hideCurrentSnackBar();

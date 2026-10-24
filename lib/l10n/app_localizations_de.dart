@@ -267,7 +267,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get step4ClickSync =>
-      '4. Auf \"Jetzt synchronisieren\" klicken, um zu speichern und zu synchronisieren';
+      '4. Klicke auf „Jetzt synchronisieren“, um die Konfiguration zu speichern und die Notizen zu synchronisieren';
 
   @override
   String get generateTokenWithScopes =>
@@ -282,7 +282,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get configureRemoteStorageToSync =>
-      'Konfigurieren Sie einen Remote-Speicher, um Ihre Notizen zu synchronisieren.';
+      'Richte einen Remote-Speicher ein, um deine Notizen zu synchronisieren.';
 
   @override
   String get trashIsEmpty => 'Der Papierkorb ist leer.';
@@ -339,4 +339,198 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsTitle => 'Einstellungen';
+
+  @override
+  String get sharedNote => 'Geteilte Notiz';
+
+  @override
+  String get colorsTab => 'Farben (16)';
+
+  @override
+  String get imagesTab => 'Bilder (16)';
+
+  @override
+  String bgLabel(String index) {
+    return 'Hintergrund $index';
+  }
+
+  @override
+  String get noteSentToTrash => 'Notiz in den Papierkorb verschoben';
+
+  @override
+  String notesArchivedCount(String count) {
+    return '$count Notizen archiviert';
+  }
+
+  @override
+  String notesSentToTrashCount(String count) {
+    return '$count Notizen in den Papierkorb verschoben';
+  }
+
+  @override
+  String get lastSyncJustNow => 'Gerade eben';
+
+  @override
+  String lastSyncMinutesAgo(String minutes) {
+    return 'Vor $minutes Min.';
+  }
+
+  @override
+  String lastSyncHoursAgo(String hours) {
+    return 'Vor $hours Std.';
+  }
+
+  @override
+  String get lastSyncNever => 'Nie';
+
+  @override
+  String syncErrorWithDetail(String error) {
+    return 'Synchronisierungsfehler: $error';
+  }
+
+  @override
+  String configSaveError(String error) {
+    return 'Fehler beim Speichern der Konfiguration: $error';
+  }
+
+  @override
+  String syncPartialFailure(String count) {
+    return 'Synchronisierung abgeschlossen, aber $count Datei(en) konnten nicht entschlüsselt werden. Prüfe, ob die Passphrase korrekt ist.';
+  }
+
+  @override
+  String get activeSyncTitle => 'Synchronisierung aktiv';
+
+  @override
+  String get inactiveSyncTitle => 'Synchronisierung deaktiviert';
+
+  @override
+  String get configureRemoteSection => 'REMOTE-SPEICHER EINRICHTEN';
+
+  @override
+  String get selectDrive => 'Drive auswählen';
+
+  @override
+  String get syncingNow => 'Synchronisiere...';
+
+  @override
+  String get syncNowButton => 'Jetzt synchronisieren';
+
+  @override
+  String selectedFolder(String name) {
+    return 'Ausgewählter Ordner: $name';
+  }
+
+  @override
+  String get selectFolderToStoreNotes =>
+      'Wähle einen Ordner zum Speichern deiner Notizen';
+
+  @override
+  String get folderWord => 'Ordner';
+
+  @override
+  String get fileWord => 'Datei';
+
+  @override
+  String get itemWord => 'Element';
+
+  @override
+  String folderIdLabel(String id) {
+    return 'Ordner (ID: $id)';
+  }
+
+  @override
+  String fileIdLabel(String id) {
+    return 'Datei (ID: $id)';
+  }
+
+  @override
+  String idLabel(String id) {
+    return 'ID: $id';
+  }
+
+  @override
+  String cannotCreateInFile(String type) {
+    return 'In einer Datei können keine Ordner erstellt werden (Typ: $type).';
+  }
+
+  @override
+  String errorListingFolder(String error) {
+    return 'Fehler beim Auflisten des Ordners: $error';
+  }
+
+  @override
+  String createInFolder(String name) {
+    return 'Erstellen in: $name';
+  }
+
+  @override
+  String errorCreatingFolderIn(String folder, String error) {
+    return 'Fehler beim Erstellen des Ordners in „$folder“: $error';
+  }
+
+  @override
+  String get scopeDrive => 'kDrive-Produkte';
+
+  @override
+  String get scopeUserInfo => 'Profilinformationen';
+
+  @override
+  String get scopeAccounts => 'Konten auflisten';
+
+  @override
+  String get noValidAccount =>
+      'Für dieses Token wurde kein gültiges Infomaniak-Konto gefunden.';
+
+  @override
+  String errorDiscoveringAccounts(String error) {
+    return 'Fehler beim Ermitteln von Konten/Drives: $error';
+  }
+
+  @override
+  String get privateFolderEmpty => 'Der Ordner Private ist leer.';
+
+  @override
+  String errorListingPrivateFolder(String error) {
+    return 'Fehler beim Auflisten des Ordners Private: $error';
+  }
+
+  @override
+  String get restore => 'Wiederherstellen';
+
+  @override
+  String imageAttachmentsCount(String count) {
+    return 'Bildanhänge ($count)';
+  }
+
+  @override
+  String updatedOn(String date) {
+    return 'Aktualisiert: $date';
+  }
+
+  @override
+  String notesUnarchivedCount(String count) {
+    return '$count Notizen aus dem Archiv entfernt';
+  }
+
+  @override
+  String notesRestoredCount(String count) {
+    return '$count Notizen wiederhergestellt';
+  }
+
+  @override
+  String searchCounter(String current, String total) {
+    return '$current von $total';
+  }
+
+  @override
+  String decryptionFailuresCount(String count) {
+    return '$count Datei(en) konnten nicht entschlüsselt werden. Prüfe die Passphrase.';
+  }
+
+  @override
+  String get widgetUntitled => 'Ohne Titel';
+
+  @override
+  String get widgetEmptyNote => 'Leere Notiz';
 }

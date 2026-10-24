@@ -17,14 +17,14 @@ class Memos extends Table {
   BoolColumn get isSynced => boolean().withDefault(const Constant(false))();
   TextColumn get remoteFileId => text().nullable()();
 
-  // Customização visual and anexos locais
+  // Visual customization and local attachments
   IntColumn get colorIndex => integer().withDefault(const Constant(0))();
   IntColumn get bgImageIndex => integer().withDefault(const Constant(-1))();
   TextColumn get imageAttachments => text().withDefault(const Constant('[]'))();
   TextColumn get audioAttachments => text().withDefault(const Constant('[]'))();
   TextColumn get linkAttachments => text().withDefault(const Constant('[]'))();
 
-  // Controlo of archive and Eliminação lógica
+  // Archive control and logical deletion
   BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
 
@@ -104,7 +104,7 @@ class AppDatabase extends _$AppDatabase {
     },
   );
 
-  // Listagem with ordenação decrescente
+  // Listing with descending order
   Stream<List<Memo>> watchActiveMemos() {
     return (select(memos)
           ..where((t) => t.isArchived.equals(false) & t.isDeleted.equals(false))

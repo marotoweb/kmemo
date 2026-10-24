@@ -10,7 +10,7 @@ import '../../database/database.dart';
 import 'encryption_service.dart';
 import 'storage_repository.dart';
 
-const String _apiBase = 'https://api.infomaniak.with';
+const String _apiBase = 'https://api.infomaniak.com';
 
 const String _prefsToken = 'infomaniak_token';
 const String _prefsDriveId = 'infomaniak_drive_id';
@@ -527,7 +527,8 @@ class KDriveStorage extends StorageRepository {
           }
           return parser(data);
         }
-        return parser!(jsonDecode(responseBody) as Map<String, dynamic>);
+        // No parser: success with no body expected (e.g. DELETE).
+        return null as T;
       }
 
       if (response.statusCode == 302) {
@@ -592,7 +593,7 @@ class KDriveStorage extends StorageRepository {
     return files.cast<Map<String, dynamic>>();
   }
 
-  // Getter helper for drive_id (not null when configured)
+  // Getter helper for the drive id (non-null when configured)
   int get _driveIdValue => _driveId!;
 
   // ------------------------------------------------------------------------
@@ -622,7 +623,7 @@ class KDriveStorage extends StorageRepository {
         );
         if (attempt < maxRetries) {
           debugPrint(
-            '[KDriveStorage] uploadMemo(${memo.uuid}): waiting ${backoff.inSeconds}s before of tentar novamente',
+            '[KDriveStorage] uploadMemo(${memo.uuid}): waiting ${backoff.inSeconds}s before trying again',
           );
           await Future.delayed(backoff);
           backoff = backoff * 2; // Exponential backoff
@@ -644,7 +645,7 @@ class KDriveStorage extends StorageRepository {
 
     if (blocks.isEmpty) {
       debugPrint(
-        '[KDriveStorage] uploadMemo(${memo.uuid}): without blocos, skip upload',
+        '[KDriveStorage] uploadMemo(${memo.uuid}): no blocks, skip upload',
       );
       return null;
     }
@@ -662,8 +663,6 @@ class KDriveStorage extends StorageRepository {
         'linkAttachments': memo.linkAttachments,
         'isArchived': memo.isArchived,
         'isDeleted': memo.isDeleted,
-        'remoteFileId': memo.remoteFileId,
-        'isSynced': memo.isSynced,
       },
       'blocks': blocks.map((b) {
         return {
@@ -680,7 +679,7 @@ class KDriveStorage extends StorageRepository {
     final jsonContent = jsonEncode(payload);
     if (jsonContent.isEmpty || jsonContent == '{}') {
       debugPrint(
-        '[KDriveStorage] uploadMemo(${memo.uuid}): payload vazio, skip upload',
+        '[KDriveStorage] uploadMemo(${memo.uuid}): empty payload, skip upload',
       );
       return null;
     }
@@ -690,7 +689,7 @@ class KDriveStorage extends StorageRepository {
 
     if (bytes.isEmpty) {
       debugPrint(
-        '[KDriveStorage] uploadMemo(${memo.uuid}): bytes vazios após encriptação, skip upload',
+        '[KDriveStorage] uploadMemo(${memo.uuid}): empty bytes after encryption, skip upload',
       );
       return null;
     }
@@ -790,7 +789,7 @@ class KDriveStorage extends StorageRepository {
           return remoteId;
         }
         lastError =
-            'Falha ao enviar nota (sem directory_id): ${response.statusCode} ${response.body}';
+            'Failed to upload note (without directory_id): ${response.statusCode} ${response.body}';
         continue;
       }
 
@@ -820,7 +819,7 @@ class KDriveStorage extends StorageRepository {
         return remoteId;
       }
       lastError =
-          'Falha ao enviar nota: ${response.statusCode} ${response.body}';
+          'Failed to upload note: ${response.statusCode} ${response.body}';
     }
 
     throw Exception(lastError ?? 'Failed to upload note');
@@ -928,6 +927,10 @@ class KDriveStorage extends StorageRepository {
   }
 
   RemoteMemo? _parseDownloadedMemo(List<int> bytes) {
+    if (bytes.isEmpty) {
+      debugPrint('[KDriveStorage] _parseDownloadedMemo: empty file content');
+      return null;
+    }
     final content = utf8.decode(bytes);
     final decrypted = EncryptionService.instance.tryDecrypt(content);
     if (decrypted == null) {

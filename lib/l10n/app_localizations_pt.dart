@@ -172,7 +172,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get infomaniakToken => 'Token da Infomaniak';
 
   @override
-  String get version => 'Version';
+  String get version => 'Versão';
 
   @override
   String get lastEdited => 'Última edição';
@@ -266,7 +266,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get step4ClickSync =>
-      '4. Carregue em \"Syncronizar agora\" para guardar a configuração e sincronizar as notas';
+      '4. Carregue em \"Sincronizar agora\" para guardar a configuração e sincronizar as notas';
 
   @override
   String get generateTokenWithScopes =>
@@ -337,4 +337,198 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsTitle => 'Definições';
+
+  @override
+  String get sharedNote => 'Nota partilhada';
+
+  @override
+  String get colorsTab => 'Cores (16)';
+
+  @override
+  String get imagesTab => 'Imagens (16)';
+
+  @override
+  String bgLabel(String index) {
+    return 'Fundo $index';
+  }
+
+  @override
+  String get noteSentToTrash => 'Nota enviada para a lixeira';
+
+  @override
+  String notesArchivedCount(String count) {
+    return '$count notas arquivadas';
+  }
+
+  @override
+  String notesSentToTrashCount(String count) {
+    return '$count notas enviadas para a lixeira';
+  }
+
+  @override
+  String get lastSyncJustNow => 'Agora há pouco';
+
+  @override
+  String lastSyncMinutesAgo(String minutes) {
+    return 'Há $minutes min';
+  }
+
+  @override
+  String lastSyncHoursAgo(String hours) {
+    return 'Há $hours h';
+  }
+
+  @override
+  String get lastSyncNever => 'Nunca';
+
+  @override
+  String syncErrorWithDetail(String error) {
+    return 'Erro de sincronização: $error';
+  }
+
+  @override
+  String configSaveError(String error) {
+    return 'Erro ao guardar configuração: $error';
+  }
+
+  @override
+  String syncPartialFailure(String count) {
+    return 'Sincronização concluída, mas $count ficheiro(s) não puderam ser desencriptados. Verifique se a passphrase está correta.';
+  }
+
+  @override
+  String get activeSyncTitle => 'Sincronização ativa';
+
+  @override
+  String get inactiveSyncTitle => 'Sincronização desativada';
+
+  @override
+  String get configureRemoteSection => 'CONFIGURAR ARMAZENAMENTO REMOTO';
+
+  @override
+  String get selectDrive => 'Selecione um drive';
+
+  @override
+  String get syncingNow => 'A sincronizar...';
+
+  @override
+  String get syncNowButton => 'Sincronizar agora';
+
+  @override
+  String selectedFolder(String name) {
+    return 'Pasta selecionada: $name';
+  }
+
+  @override
+  String get selectFolderToStoreNotes =>
+      'Selecione uma pasta para guardar as notas';
+
+  @override
+  String get folderWord => 'Pasta';
+
+  @override
+  String get fileWord => 'Ficheiro';
+
+  @override
+  String get itemWord => 'Item';
+
+  @override
+  String folderIdLabel(String id) {
+    return 'Pasta (ID: $id)';
+  }
+
+  @override
+  String fileIdLabel(String id) {
+    return 'Ficheiro (ID: $id)';
+  }
+
+  @override
+  String idLabel(String id) {
+    return 'ID: $id';
+  }
+
+  @override
+  String cannotCreateInFile(String type) {
+    return 'Não é possível criar pasta dentro de um ficheiro (tipo: $type).';
+  }
+
+  @override
+  String errorListingFolder(String error) {
+    return 'Erro ao listar pasta: $error';
+  }
+
+  @override
+  String createInFolder(String name) {
+    return 'Criar dentro de: $name';
+  }
+
+  @override
+  String errorCreatingFolderIn(String folder, String error) {
+    return 'Erro ao criar pasta em \"$folder\": $error';
+  }
+
+  @override
+  String get scopeDrive => 'Produtos kDrive';
+
+  @override
+  String get scopeUserInfo => 'Informações do perfil';
+
+  @override
+  String get scopeAccounts => 'Listar contas';
+
+  @override
+  String get noValidAccount =>
+      'Nenhuma conta Infomaniak válida encontrada para este token.';
+
+  @override
+  String errorDiscoveringAccounts(String error) {
+    return 'Erro ao descobrir contas/drives: $error';
+  }
+
+  @override
+  String get privateFolderEmpty => 'A pasta Private está vazia.';
+
+  @override
+  String errorListingPrivateFolder(String error) {
+    return 'Erro ao listar pasta Private: $error';
+  }
+
+  @override
+  String get restore => 'Restaurar';
+
+  @override
+  String imageAttachmentsCount(String count) {
+    return 'Anexos de imagem ($count)';
+  }
+
+  @override
+  String updatedOn(String date) {
+    return 'Atualizado: $date';
+  }
+
+  @override
+  String notesUnarchivedCount(String count) {
+    return '$count notas retiradas do arquivo';
+  }
+
+  @override
+  String notesRestoredCount(String count) {
+    return '$count notas restauradas';
+  }
+
+  @override
+  String searchCounter(String current, String total) {
+    return '$current de $total';
+  }
+
+  @override
+  String decryptionFailuresCount(String count) {
+    return '$count ficheiro(s) não puderam ser desencriptados. Verifique a passphrase.';
+  }
+
+  @override
+  String get widgetUntitled => 'Sem título';
+
+  @override
+  String get widgetEmptyNote => 'Nota vazia';
 }

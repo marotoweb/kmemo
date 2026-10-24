@@ -267,7 +267,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get step4ClickSync =>
-      '4. Cliquez sur \"Synchroniser\" pour enregistrer et synchroniser';
+      '4. Cliquez sur « Synchroniser maintenant » pour enregistrer la configuration et synchroniser les notes';
 
   @override
   String get generateTokenWithScopes =>
@@ -282,7 +282,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get configureRemoteStorageToSync =>
-      'Configure um armazenamento remoto para sincronizar as suas notas.';
+      'Configurez un stockage distant pour synchroniser vos notes.';
 
   @override
   String get trashIsEmpty => 'La corbeille est vide.';
@@ -338,4 +338,198 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsTitle => 'Paramètres';
+
+  @override
+  String get sharedNote => 'Note partagée';
+
+  @override
+  String get colorsTab => 'Couleurs (16)';
+
+  @override
+  String get imagesTab => 'Images (16)';
+
+  @override
+  String bgLabel(String index) {
+    return 'Fond $index';
+  }
+
+  @override
+  String get noteSentToTrash => 'Note envoyée à la corbeille';
+
+  @override
+  String notesArchivedCount(String count) {
+    return '$count notes archivées';
+  }
+
+  @override
+  String notesSentToTrashCount(String count) {
+    return '$count notes envoyées à la corbeille';
+  }
+
+  @override
+  String get lastSyncJustNow => 'À l’instant';
+
+  @override
+  String lastSyncMinutesAgo(String minutes) {
+    return 'Il y a $minutes min';
+  }
+
+  @override
+  String lastSyncHoursAgo(String hours) {
+    return 'Il y a $hours h';
+  }
+
+  @override
+  String get lastSyncNever => 'Jamais';
+
+  @override
+  String syncErrorWithDetail(String error) {
+    return 'Erreur de synchronisation : $error';
+  }
+
+  @override
+  String configSaveError(String error) {
+    return 'Erreur lors de l’enregistrement de la configuration : $error';
+  }
+
+  @override
+  String syncPartialFailure(String count) {
+    return 'Synchronisation terminée, mais $count fichier(s) n’ont pas pu être déchiffrés. Vérifiez que la phrase secrète est correcte.';
+  }
+
+  @override
+  String get activeSyncTitle => 'Synchronisation active';
+
+  @override
+  String get inactiveSyncTitle => 'Synchronisation désactivée';
+
+  @override
+  String get configureRemoteSection => 'CONFIGURER LE STOCKAGE DISTANT';
+
+  @override
+  String get selectDrive => 'Sélectionnez un drive';
+
+  @override
+  String get syncingNow => 'Synchronisation...';
+
+  @override
+  String get syncNowButton => 'Synchroniser maintenant';
+
+  @override
+  String selectedFolder(String name) {
+    return 'Dossier sélectionné : $name';
+  }
+
+  @override
+  String get selectFolderToStoreNotes =>
+      'Sélectionnez un dossier pour enregistrer vos notes';
+
+  @override
+  String get folderWord => 'Dossier';
+
+  @override
+  String get fileWord => 'Fichier';
+
+  @override
+  String get itemWord => 'Élément';
+
+  @override
+  String folderIdLabel(String id) {
+    return 'Dossier (ID : $id)';
+  }
+
+  @override
+  String fileIdLabel(String id) {
+    return 'Fichier (ID : $id)';
+  }
+
+  @override
+  String idLabel(String id) {
+    return 'ID : $id';
+  }
+
+  @override
+  String cannotCreateInFile(String type) {
+    return 'Impossible de créer un dossier dans un fichier (type : $type).';
+  }
+
+  @override
+  String errorListingFolder(String error) {
+    return 'Erreur lors de la lecture du dossier : $error';
+  }
+
+  @override
+  String createInFolder(String name) {
+    return 'Créer dans : $name';
+  }
+
+  @override
+  String errorCreatingFolderIn(String folder, String error) {
+    return 'Erreur lors de la création du dossier dans « $folder » : $error';
+  }
+
+  @override
+  String get scopeDrive => 'Produits kDrive';
+
+  @override
+  String get scopeUserInfo => 'Informations du profil';
+
+  @override
+  String get scopeAccounts => 'Lister les comptes';
+
+  @override
+  String get noValidAccount =>
+      'Aucun compte Infomaniak valide trouvé pour ce jeton.';
+
+  @override
+  String errorDiscoveringAccounts(String error) {
+    return 'Erreur lors de la recherche des comptes/drives : $error';
+  }
+
+  @override
+  String get privateFolderEmpty => 'Le dossier Private est vide.';
+
+  @override
+  String errorListingPrivateFolder(String error) {
+    return 'Erreur lors de la lecture du dossier Private : $error';
+  }
+
+  @override
+  String get restore => 'Restaurer';
+
+  @override
+  String imageAttachmentsCount(String count) {
+    return 'Pièces jointes image ($count)';
+  }
+
+  @override
+  String updatedOn(String date) {
+    return 'Mis à jour : $date';
+  }
+
+  @override
+  String notesUnarchivedCount(String count) {
+    return '$count notes retirées des archives';
+  }
+
+  @override
+  String notesRestoredCount(String count) {
+    return '$count notes restaurées';
+  }
+
+  @override
+  String searchCounter(String current, String total) {
+    return '$current sur $total';
+  }
+
+  @override
+  String decryptionFailuresCount(String count) {
+    return '$count fichier(s) n’ont pas pu être déchiffrés. Vérifiez la phrase secrète.';
+  }
+
+  @override
+  String get widgetUntitled => 'Sans titre';
+
+  @override
+  String get widgetEmptyNote => 'Note vide';
 }

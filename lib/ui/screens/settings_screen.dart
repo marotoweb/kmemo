@@ -54,7 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: EdgeInsets.all(16.0),
         children: [
-          // SECÇÃO: APARENCIA
+          // SECTION: APPEARANCE
           Text(
             AppLocalizations.of(context)!.appearance,
             style: TextStyle(
@@ -87,19 +87,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     _buildThemeSegment(
                       context,
-                      'Claro',
+                      AppLocalizations.of(context)!.light,
                       ThemeMode.light,
                       themeProvider.themeMode == ThemeMode.light,
                     ),
                     _buildThemeSegment(
                       context,
-                      'Escuro',
+                      AppLocalizations.of(context)!.dark,
                       ThemeMode.dark,
                       themeProvider.themeMode == ThemeMode.dark,
                     ),
                     _buildThemeSegment(
                       context,
-                      'Auto',
+                      AppLocalizations.of(context)!.auto,
                       ThemeMode.system,
                       themeProvider.themeMode == ThemeMode.system,
                     ),
@@ -110,7 +110,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           SizedBox(height: 24),
 
-          // SECÇÃO: IDIOMA
+          // SECTION: LANGUAGE
           Text(
             AppLocalizations.of(context)!.language,
             style: TextStyle(
@@ -152,7 +152,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           SizedBox(height: 24),
 
-          // SECÇÃO: SINCRONIZAÇÃO
+          // SECTION: SYNCHRONIZATION
           Text(
             AppLocalizations.of(context)!.syncSection,
             style: TextStyle(
@@ -175,7 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: ListTile(
               title: Text(AppLocalizations.of(context)!.remoteStorage),
               subtitle: Text(
-                'Sincronize as suas notas com kDrive ou WebDAV',
+                AppLocalizations.of(context)!.syncSubtitle,
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               trailing: Icon(Icons.chevron_right),
@@ -191,7 +191,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           SizedBox(height: 24),
 
-          // SECÇÃO: ISSUE REPORTING
+          // SECTION: ISSUE REPORTING
           Text(
             AppLocalizations.of(context)!.reportProblem,
             style: TextStyle(
@@ -216,7 +216,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ListTile(
                   title: Text(AppLocalizations.of(context)!.sendFeedback),
                   subtitle: Text(
-                    'Reporte um bug, sugira uma funcionalidade, ou deixe um comentário',
+                    AppLocalizations.of(context)!.reportBugSubtitle,
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   trailing: Icon(Icons.chevron_right),
@@ -229,7 +229,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           SizedBox(height: 24),
 
-          // SECÇÃO: ABOUT
+          // SECTION: ABOUT
           Text(
             AppLocalizations.of(context)!.about,
             style: TextStyle(

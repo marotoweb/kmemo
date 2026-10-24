@@ -31,7 +31,7 @@ class MainActivity : FlutterActivity() {
                         Log.d("WIDGET_DEBUG", "getPendingNoteUuid: returning $uuid")
                         result.success(uuid)
                     } else {
-                        // Fallback: tentar ler do SharedPreferences
+                        // Fallback: try reading from SharedPreferences
                         val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
                         val savedUuid = prefs.getString("flutter.clicked_note_uuid", null)
                         if (savedUuid != null && savedUuid.isNotEmpty()) {
@@ -51,7 +51,7 @@ class MainActivity : FlutterActivity() {
                         Log.d("WIDGET_DEBUG", "getCreateNoteFlag: returning true")
                         result.success(true)
                     } else {
-                        // Fallback: tentar ler do SharedPreferences
+                        // Fallback: try reading from SharedPreferences
                         val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
                         val savedFlag = prefs.getBoolean("flutter.create_new_note", false)
                         if (savedFlag) {
@@ -111,7 +111,7 @@ class MainActivity : FlutterActivity() {
                 return
             }
             
-            // Extrair UUID do extra ou do data URI
+            // Extract the UUID from the extra or the data URI
             var resolvedUuid: String? = uuid
             if (resolvedUuid.isNullOrEmpty() && data != null && data.scheme == "kmemo" && data.host == "note") {
                 val pathSegments = data.pathSegments
@@ -128,11 +128,11 @@ class MainActivity : FlutterActivity() {
             if (!resolvedUuid.isNullOrEmpty()) {
                 Log.d("WIDGET_DEBUG", "Saving UUID to instance variable: $resolvedUuid")
                 pendingNoteUuid = resolvedUuid
-                // Também guardar no SharedPreferences para persistência
+                // Also save to SharedPreferences for persistence
                 val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
                 prefs.edit().putString("flutter.clicked_note_uuid", resolvedUuid).apply()
                 Log.d("WIDGET_DEBUG", "UUID saved successfully: $resolvedUuid")
-                // Notificar o Flutter diretamente via MethodChannel (se o engine estiver disponível)
+                // Notify Flutter directly via MethodChannel (if the engine is available)
                 try {
                     if (::sharedChannel.isInitialized) {
                         sharedChannel.invokeMethod("openNote", resolvedUuid)
@@ -160,9 +160,9 @@ class MainActivity : FlutterActivity() {
                 if (sharedText.isNullOrEmpty() && sharedSubject.isNullOrEmpty()) return
                 val content = if (sharedText.isNullOrEmpty()) sharedSubject else sharedText
                 val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-                prefs.edit().putString(SHARED_TEXT_KEY, content).apply()
+                prefs.edit().putString("flutter.$SHARED_TEXT_KEY", content).apply()
                 Log.d("SHARE_DEBUG", "Shared text saved to SharedPreferences: $content")
-                // Notificar o Flutter que há novo texto partilhado
+                // Notify Flutter that new shared text is available
                 sharedChannel.invokeMethod("onSharedTextReceived", null)
             }
         }

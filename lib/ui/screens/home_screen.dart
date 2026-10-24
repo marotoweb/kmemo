@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
+import '../../services/widget_service.dart';
 import 'memo_detail_screen.dart';
 import 'archive_screen.dart';
 import 'trash_screen.dart';
@@ -28,12 +29,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isOpeningNote = false;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final l10n = AppLocalizations.of(context)!;
+    WidgetService.saveLabels(
+      untitled: l10n.widgetUntitled,
+      empty: l10n.widgetEmptyNote,
+      listItem: l10n.listItem,
+    );
+  }
+
+  @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkWidgetLaunch();
-      _checkSharedText();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Prioritize shared text over pending widget note to avoid overlapping navigation.
+      final prefs = await SharedPreferences.getInstance();
+      final sharedText = prefs.getString('kmemo.shared_text');
+      if (sharedText != null && sharedText.isNotEmpty) {
+        await _checkSharedText();
+      } else {
+        await _checkWidgetLaunch();
+      }
     });
     _setupWidgetChannel();
   }
@@ -47,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           await _openNoteFromWidget(uuid);
         }
       } else if (call.method == 'getPendingNoteUuid') {
-        // the Android consulta aqui if há the uuid pendente
+        // Android checks here if there is a pending uuid
         final prefs = await SharedPreferences.getInstance();
         final uuid = prefs.getString('flutter.clicked_note_uuid');
         if (uuid != null && uuid.isNotEmpty) {
@@ -84,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           builder: (context) => MemoDetailScreen(memo: memo),
         ),
       ).then((_) {
-        // Limpar the flag quando voltar
+        // Clear the flag when returning
         _isOpeningNote = false;
         debugPrint('[HomeScreen] Returned from note detail');
       });
@@ -97,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       debugPrint('[HomeScreen] _checkWidgetLaunch called');
       
-      // Verificar if há the flag for create nova note
+      // Check if there is a flag to create a new note
       bool createNewNote = false;
       try {
         createNewNote = await _widgetChannel.invokeMethod<bool>('getCreateNoteFlag') ?? false;
@@ -112,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return;
       }
       
-      // Tentar obter the uuid via MethodChannel (more fiável that SharedPreferences)
+      // Try to get the uuid via MethodChannel (more reliable than SharedPreferences)
       String? clickedUuid;
       try {
         clickedUuid = await _widgetChannel.invokeMethod<String>('getPendingNoteUuid');
@@ -134,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (clickedUuid != null && clickedUuid.isNotEmpty) {
         if (!mounted) return;
         
-        // Verificar if já estamos the abrir the note
+        // Check if we are already opening the note
         if (_isOpeningNote) {
           debugPrint('[HomeScreen] Already opening note, skipping _checkWidgetLaunch');
           return;
@@ -154,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               builder: (context) => MemoDetailScreen(memo: memo),
             ),
           ).then((_) {
-            // Limpar the flag quando voltar
+            // Clear the flag when returning
             _isOpeningNote = false;
             debugPrint('[HomeScreen] Returned from note detail');
           });
@@ -201,29 +219,58 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// Verifica if há text partilhado of outra aplicação and cria the nova note with esse conteúdo.
+  /// Sanitizes text received from other apps before storing it in a note.
+  String _sanitizeSharedText(String input) {
+    // Remove null bytes and other control characters except newline/tab.
+    final cleaned = input.replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'), '');
+    // Normalize line endings and collapse excessive blank lines.
+    final normalized = cleaned.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+    final lines = normalized.split('\n');
+    final trimmedLines = lines.map((l) => l.trimRight()).toList();
+    // Limit total length to avoid huge notes.
+    const maxLength = 100000;
+    var result = trimmedLines.join('\n').trim();
+    if (result.length > maxLength) {
+      result = result.substring(0, maxLength);
+    }
+    return result;
+  }
+
+  /// Checks if there is text shared from another app and creates a new note with that content.
   Future<void> _checkSharedText() async {
+    if (_isOpeningNote) {
+      debugPrint('[HomeScreen] Already opening note, skipping shared text');
+      return;
+    }
+    _isOpeningNote = true;
     try {
       final prefs = await SharedPreferences.getInstance();
       final sharedText = prefs.getString('kmemo.shared_text');
       debugPrint('[HomeScreen] sharedText from prefs: $sharedText');
       if (sharedText != null && sharedText.isNotEmpty) {
         await prefs.setString('kmemo.shared_text', '');
+        // Clear any pending widget note to avoid overlapping navigation
+        await prefs.setString('flutter.clicked_note_uuid', '');
 
         if (!mounted) return;
 
         final provider = context.read<MemoProvider>();
         final now = DateTime.now();
 
-        // Usa the primeira linha como título, or "note partilhada" if estiver vazio
-        final lines = sharedText.split('\n');
+        // Sanitize the shared text: remove control characters, normalize
+        // whitespace and limit length to avoid malformed notes.
+        final sanitized = _sanitizeSharedText(sharedText);
+        if (sanitized.isEmpty) return;
+
+        // Use the first line as title, or "shared note" if empty
+        final lines = sanitized.split('\n');
         final title = lines.first.trim().isNotEmpty
             ? lines.first.trim()
-            : 'Nota partilhada';
+            : AppLocalizations.of(context)!.sharedNote;
 
         // the body is the rest (or the full text if it's the only line)
         final body = lines.length > 1
-            ? lines.sublist(1).join('\n')
+            ? lines.sublist(1).join('\n').trim()
             : '';
 
         final memo = Memo(
@@ -262,10 +309,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         );
 
-        debugPrint('[HomeScreen] Nova note criada the partir of text partilhado: $title');
+        debugPrint('[HomeScreen] New note created from shared text: $title');
       }
     } catch (e) {
-      debugPrint('[HomeScreen] error ao processar text partilhado: $e');
+      debugPrint('[HomeScreen] error processing shared text: $e');
+    } finally {
+      _isOpeningNote = false;
     }
   }
 
@@ -371,8 +420,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   automaticallyImplyLeading: false,
                   title: TabBar(
                     tabs: [
-                      Tab(text: 'Cores (16)'),
-                      Tab(text: 'Imagens (16)'),
+                      Tab(text: AppLocalizations.of(context)!.colorsTab),
+                      Tab(text: AppLocalizations.of(context)!.imagesTab),
                     ],
                   ),
                 ),
@@ -462,7 +511,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     : Colors.grey.shade200,
                                 child: Center(
                                   child: Text(
-                                    'BG $i',
+                                    AppLocalizations.of(context)!.bgLabel('$i'),
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: isDarkMode
@@ -553,12 +602,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         SnackBar(
                           content: Text(
                             uuidsToArchive.length > 1
-                                ? '${uuidsToArchive.length} notas arquivadas'
-                                : 'Nota arquivada',
+                                ? AppLocalizations.of(context)!.notesArchivedCount('${uuidsToArchive.length}')
+                                : AppLocalizations.of(context)!.noteArchived,
                           ),
                           duration: Duration(seconds: 8),
                           action: SnackBarAction(
-                            label: 'Anular',
+                            label: AppLocalizations.of(context)!.undo,
                             textColor: Colors.amberAccent,
                             onPressed: () async {
                               scaffoldMessenger.hideCurrentSnackBar();
@@ -593,12 +642,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         SnackBar(
                           content: Text(
                             uuidsToDelete.length > 1
-                                ? '${uuidsToDelete.length} notas enviadas para a lixeira'
-                                : 'Nota enviada para a lixeira',
+                                ? AppLocalizations.of(context)!.notesSentToTrashCount('${uuidsToDelete.length}')
+                                : AppLocalizations.of(context)!.noteSentToTrash,
                           ),
                           duration: Duration(seconds: 8),
                           action: SnackBarAction(
-                            label: 'Anular',
+                            label: AppLocalizations.of(context)!.undo,
                             textColor: Colors.amberAccent,
                             onPressed: () async {
                               scaffoldMessenger.hideCurrentSnackBar();
@@ -778,7 +827,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   content: Text(AppLocalizations.of(context)!.noteArchived),
                                   duration: Duration(seconds: 8),
                                   action: SnackBarAction(
-                                    label: 'Anular',
+                                    label: AppLocalizations.of(context)!.undo,
                                     textColor: Colors.amberAccent,
                                     onPressed: () async {
                                       scaffoldMessenger.hideCurrentSnackBar();

@@ -433,7 +433,7 @@ abstract class AppLocalizations {
   /// No description provided for @version.
   ///
   /// In pt, this message translates to:
-  /// **'Version'**
+  /// **'Versão'**
   String get version;
 
   /// No description provided for @lastEdited.
@@ -607,7 +607,7 @@ abstract class AppLocalizations {
   /// No description provided for @step4ClickSync.
   ///
   /// In pt, this message translates to:
-  /// **'4. Carregue em \"Syncronizar agora\" para guardar a configuração e sincronizar as notas'**
+  /// **'4. Carregue em \"Sincronizar agora\" para guardar a configuração e sincronizar as notas'**
   String get step4ClickSync;
 
   /// No description provided for @generateTokenWithScopes.
@@ -741,6 +741,294 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Definições'**
   String get settingsTitle;
+
+  /// No description provided for @sharedNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nota partilhada'**
+  String get sharedNote;
+
+  /// No description provided for @colorsTab.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cores (16)'**
+  String get colorsTab;
+
+  /// No description provided for @imagesTab.
+  ///
+  /// In pt, this message translates to:
+  /// **'Imagens (16)'**
+  String get imagesTab;
+
+  /// No description provided for @bgLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fundo {index}'**
+  String bgLabel(String index);
+
+  /// No description provided for @noteSentToTrash.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nota enviada para a lixeira'**
+  String get noteSentToTrash;
+
+  /// No description provided for @notesArchivedCount.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} notas arquivadas'**
+  String notesArchivedCount(String count);
+
+  /// No description provided for @notesSentToTrashCount.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} notas enviadas para a lixeira'**
+  String notesSentToTrashCount(String count);
+
+  /// No description provided for @lastSyncJustNow.
+  ///
+  /// In pt, this message translates to:
+  /// **'Agora há pouco'**
+  String get lastSyncJustNow;
+
+  /// No description provided for @lastSyncMinutesAgo.
+  ///
+  /// In pt, this message translates to:
+  /// **'Há {minutes} min'**
+  String lastSyncMinutesAgo(String minutes);
+
+  /// No description provided for @lastSyncHoursAgo.
+  ///
+  /// In pt, this message translates to:
+  /// **'Há {hours} h'**
+  String lastSyncHoursAgo(String hours);
+
+  /// No description provided for @lastSyncNever.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nunca'**
+  String get lastSyncNever;
+
+  /// No description provided for @syncErrorWithDetail.
+  ///
+  /// In pt, this message translates to:
+  /// **'Erro de sincronização: {error}'**
+  String syncErrorWithDetail(String error);
+
+  /// No description provided for @configSaveError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Erro ao guardar configuração: {error}'**
+  String configSaveError(String error);
+
+  /// No description provided for @syncPartialFailure.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sincronização concluída, mas {count} ficheiro(s) não puderam ser desencriptados. Verifique se a passphrase está correta.'**
+  String syncPartialFailure(String count);
+
+  /// No description provided for @activeSyncTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sincronização ativa'**
+  String get activeSyncTitle;
+
+  /// No description provided for @inactiveSyncTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sincronização desativada'**
+  String get inactiveSyncTitle;
+
+  /// No description provided for @configureRemoteSection.
+  ///
+  /// In pt, this message translates to:
+  /// **'CONFIGURAR ARMAZENAMENTO REMOTO'**
+  String get configureRemoteSection;
+
+  /// No description provided for @selectDrive.
+  ///
+  /// In pt, this message translates to:
+  /// **'Selecione um drive'**
+  String get selectDrive;
+
+  /// No description provided for @syncingNow.
+  ///
+  /// In pt, this message translates to:
+  /// **'A sincronizar...'**
+  String get syncingNow;
+
+  /// No description provided for @syncNowButton.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sincronizar agora'**
+  String get syncNowButton;
+
+  /// No description provided for @selectedFolder.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pasta selecionada: {name}'**
+  String selectedFolder(String name);
+
+  /// No description provided for @selectFolderToStoreNotes.
+  ///
+  /// In pt, this message translates to:
+  /// **'Selecione uma pasta para guardar as notas'**
+  String get selectFolderToStoreNotes;
+
+  /// No description provided for @folderWord.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pasta'**
+  String get folderWord;
+
+  /// No description provided for @fileWord.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ficheiro'**
+  String get fileWord;
+
+  /// No description provided for @itemWord.
+  ///
+  /// In pt, this message translates to:
+  /// **'Item'**
+  String get itemWord;
+
+  /// No description provided for @folderIdLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pasta (ID: {id})'**
+  String folderIdLabel(String id);
+
+  /// No description provided for @fileIdLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ficheiro (ID: {id})'**
+  String fileIdLabel(String id);
+
+  /// No description provided for @idLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'ID: {id}'**
+  String idLabel(String id);
+
+  /// No description provided for @cannotCreateInFile.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não é possível criar pasta dentro de um ficheiro (tipo: {type}).'**
+  String cannotCreateInFile(String type);
+
+  /// No description provided for @errorListingFolder.
+  ///
+  /// In pt, this message translates to:
+  /// **'Erro ao listar pasta: {error}'**
+  String errorListingFolder(String error);
+
+  /// No description provided for @createInFolder.
+  ///
+  /// In pt, this message translates to:
+  /// **'Criar dentro de: {name}'**
+  String createInFolder(String name);
+
+  /// No description provided for @errorCreatingFolderIn.
+  ///
+  /// In pt, this message translates to:
+  /// **'Erro ao criar pasta em \"{folder}\": {error}'**
+  String errorCreatingFolderIn(String folder, String error);
+
+  /// No description provided for @scopeDrive.
+  ///
+  /// In pt, this message translates to:
+  /// **'Produtos kDrive'**
+  String get scopeDrive;
+
+  /// No description provided for @scopeUserInfo.
+  ///
+  /// In pt, this message translates to:
+  /// **'Informações do perfil'**
+  String get scopeUserInfo;
+
+  /// No description provided for @scopeAccounts.
+  ///
+  /// In pt, this message translates to:
+  /// **'Listar contas'**
+  String get scopeAccounts;
+
+  /// No description provided for @noValidAccount.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhuma conta Infomaniak válida encontrada para este token.'**
+  String get noValidAccount;
+
+  /// No description provided for @errorDiscoveringAccounts.
+  ///
+  /// In pt, this message translates to:
+  /// **'Erro ao descobrir contas/drives: {error}'**
+  String errorDiscoveringAccounts(String error);
+
+  /// No description provided for @privateFolderEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'A pasta Private está vazia.'**
+  String get privateFolderEmpty;
+
+  /// No description provided for @errorListingPrivateFolder.
+  ///
+  /// In pt, this message translates to:
+  /// **'Erro ao listar pasta Private: {error}'**
+  String errorListingPrivateFolder(String error);
+
+  /// No description provided for @restore.
+  ///
+  /// In pt, this message translates to:
+  /// **'Restaurar'**
+  String get restore;
+
+  /// No description provided for @imageAttachmentsCount.
+  ///
+  /// In pt, this message translates to:
+  /// **'Anexos de imagem ({count})'**
+  String imageAttachmentsCount(String count);
+
+  /// No description provided for @updatedOn.
+  ///
+  /// In pt, this message translates to:
+  /// **'Atualizado: {date}'**
+  String updatedOn(String date);
+
+  /// No description provided for @notesUnarchivedCount.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} notas retiradas do arquivo'**
+  String notesUnarchivedCount(String count);
+
+  /// No description provided for @notesRestoredCount.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} notas restauradas'**
+  String notesRestoredCount(String count);
+
+  /// No description provided for @searchCounter.
+  ///
+  /// In pt, this message translates to:
+  /// **'{current} de {total}'**
+  String searchCounter(String current, String total);
+
+  /// No description provided for @decryptionFailuresCount.
+  ///
+  /// In pt, this message translates to:
+  /// **'{count} ficheiro(s) não puderam ser desencriptados. Verifique a passphrase.'**
+  String decryptionFailuresCount(String count);
+
+  /// No description provided for @widgetUntitled.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem título'**
+  String get widgetUntitled;
+
+  /// No description provided for @widgetEmptyNote.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nota vazia'**
+  String get widgetEmptyNote;
 }
 
 class _AppLocalizationsDelegate

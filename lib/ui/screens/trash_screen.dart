@@ -66,7 +66,7 @@ class _TrashScreenState extends State<TrashScreen> {
                     Icons.restore,
                     color: isDarkMode ? Colors.white70 : Colors.black87,
                   ),
-                  tooltip: 'Restaurar',
+                  tooltip: AppLocalizations.of(context)!.restore,
                   onPressed: () async {
                     final uuidsToRestore = List<String>.from(_selectedUuids);
                     _clearSelection();
@@ -78,8 +78,8 @@ class _TrashScreenState extends State<TrashScreen> {
                       SnackBar(
                         content: Text(
                           uuidsToRestore.length > 1
-                              ? '${uuidsToRestore.length} notas restauradas'
-                              : 'Nota restaurada',
+                              ? AppLocalizations.of(context)!.notesRestoredCount('${uuidsToRestore.length}')
+                              : AppLocalizations.of(context)!.noteRestored,
                         ),
                       ),
                     );

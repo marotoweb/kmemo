@@ -37,7 +37,7 @@ class _MemoEditorSnapshot {
   }
 }
 
-// ---------- Regiões and resultados of busca ----------
+// ---------- Search regions and results ----------
 class _SearchRegion {
   final TextEditingController controller;
   final FocusNode? focusNode;
@@ -94,18 +94,60 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   final List<FocusNode> _listFocusNodes = [];
   final List<bool> _listCheckStates = [];
 
-  // Abordagem Joplin: IDs estáticos and persistentes by elemento
+  // Joplin approach: static and persistent IDs per element
   final List<String> _listUuids = [];
   final List<int> _listIds = [];
   late String _textBlockUuid;
   int _textBlockId = 0;
 
-  // Listas of Anexos Locais
+  // Lists of local attachments
   List<String> _imageAttachments = [];
   List<String> _audioAttachments = [];
   List<String> _linksValues = [];
 
   final _uuidGenerator = Uuid();
+
+  // Original state captured at load time to detect real changes before persisting.
+  String? _originalTitle;
+  String? _originalText;
+  List<Map<String, dynamic>> _originalChecklists = [];
+  String _originalImageAttachments = '[]';
+  String _originalAudioAttachments = '[]';
+  String _originalLinkAttachments = '[]';
+
+  bool get _isDirty {
+    if (_originalTitle == null || _originalText == null) return false;
+    if (_titleController.text != _originalTitle) return true;
+    if (_isChecklistMode) {
+      if (_listControllers.length != _originalChecklists.length) return true;
+      for (int i = 0; i < _listControllers.length; i++) {
+        final o = _originalChecklists[i];
+        if (_listControllers[i].text != (o['text'] as String? ?? '')) return true;
+        if (_listCheckStates[i] != (o['checked'] as bool? ?? false)) return true;
+      }
+      return false;
+    }
+    if (_textNoteController.text != _originalText) return true;
+    if (jsonEncode(_imageAttachments) != _originalImageAttachments) return true;
+    if (jsonEncode(_audioAttachments) != _originalAudioAttachments) return true;
+    if (jsonEncode(_linksValues) != _originalLinkAttachments) return true;
+    return false;
+  }
+
+  void _captureOriginalState() {
+    _originalTitle = _titleController.text;
+    _originalText = _textNoteController.text;
+    _originalChecklists = _listControllers.asMap().entries.map((e) {
+      return {
+        'uuid': _listUuids[e.key],
+        'text': e.value.text,
+        'checked': _listCheckStates[e.key],
+      };
+    }).toList();
+    _originalImageAttachments = jsonEncode(_imageAttachments);
+    _originalAudioAttachments = jsonEncode(_audioAttachments);
+    _originalLinkAttachments = jsonEncode(_linksValues);
+  }
 
   final List<Color> _lightColorsPalette = [
     Colors.white,
@@ -167,7 +209,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
 
   @override
   void dispose() {
-    // Tenta save the dados antes of fechar the screen
+    // Try to save the data before closing the screen
     if (!_isLoading) {
       _persistData();
     }
@@ -246,6 +288,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       }
       _isLoading = false;
       _pushSnapshot();
+      _captureOriginalState();
     });
   }
 
@@ -270,7 +313,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
         _isChecklistMode = false;
       }
     });
-    _persistData();
+    // Do not persist on load: opening a note must not mark it as modified/unsynced.
+    // Persistence happens only when the user edits content (via onChanged).
   }
 
   void _addChecklistItem(
@@ -392,6 +436,10 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   }
 
   Future<void> _persistData({bool pushSnapshot = true}) async {
+    if (!_isDirty) {
+      // No real changes: do not mark note as modified/unsynced.
+      return;
+    }
     if (pushSnapshot && !_isRestoring && mounted) {
       _pushSnapshot();
     }
@@ -438,6 +486,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
 
     // ignore: use_build_context_synchronously
     // ignore: use_build_context_synchronously
+    _captureOriginalState();
     final savedBlocks = await context.read<MemoProvider>().saveMemo(
       _currentMemo,
       updatedBlocks,
@@ -471,7 +520,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
         content: TextField(
           controller: linkTextController,
           autofocus: true,
-          decoration: InputDecoration(hintText: 'https://exemplo.with'),
+          decoration: InputDecoration(hintText: 'https://example.com'),
         ),
         actions: [
           TextButton(
@@ -569,8 +618,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                   automaticallyImplyLeading: false,
                   title: TabBar(
                     tabs: [
-                      Tab(text: 'Cores (16)'),
-                      Tab(text: 'Imagens (16)'),
+                      Tab(text: AppLocalizations.of(context)!.colorsTab),
+                      Tab(text: AppLocalizations.of(context)!.imagesTab),
                     ],
                   ),
                 ),
@@ -671,7 +720,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                                     : Colors.grey.shade200,
                                 child: Center(
                                   child: Text(
-                                    'BG $i',
+                                    AppLocalizations.of(context)!.bgLabel('$i'),
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: isDarkMode
@@ -778,7 +827,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     });
   }
 
-  // ---------- Menu of opções (três pontos) ----------
+  // ---------- Options menu (three dots) ----------
   Future<void> _showOptionsMenu() async {
     // ignore: use_build_context_synchronously
     // ignore: use_build_context_synchronously
@@ -866,7 +915,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
       await SharePlus.instance.share(
         ShareParams(
           text: textToShare.trim(),
-          title: _titleController.text.isNotEmpty ? _titleController.text : 'Nota',
+          title: _titleController.text.isNotEmpty ? _titleController.text : AppLocalizations.of(context)!.note,
         ),
       );
     } else if (action == 'copy') {
@@ -978,7 +1027,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                         color: textColor,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'Título',
+                        hintText: AppLocalizations.of(context)!.title,
                         border: InputBorder.none,
                         hintStyle: TextStyle(color: hintColor),
                       ),
@@ -1135,7 +1184,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               style: TextStyle(color: textColor, fontSize: 16),
               textAlignVertical: TextAlignVertical.center,
               decoration: InputDecoration(
-                hintText: 'Localizar texto',
+                hintText: AppLocalizations.of(context)!.findText,
                 hintStyle: TextStyle(color: hintColor, fontSize: 14),
                 border: InputBorder.none,
                 focusedBorder: InputBorder.none,
@@ -1155,7 +1204,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               ),
               onChanged: (value) {
                 _performSearch(value);
-                // Restaurar foco após rebuild for evitar that the cursor salte
+                // Restore focus after rebuild to avoid cursor jumping
                 Future.delayed(Duration.zero, () {
                   if (mounted && _isSearchActive) {
                     _searchFocusNode.requestFocus();
@@ -1166,7 +1215,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
           ),
           if (_searchMatches.isNotEmpty) ...[
             Text(
-              '${_searchMatchIndex + 1} de ${_searchMatches.length}',
+              AppLocalizations.of(context)!.searchCounter('${_searchMatchIndex + 1}', '${_searchMatches.length}'),
               style: TextStyle(
                 fontSize: 12,
                 color: isDarkMode ? Colors.white54 : Colors.black54,
@@ -1220,7 +1269,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
       keyboardType: TextInputType.multiline,
       style: TextStyle(fontSize: 16, color: textColor),
       decoration: InputDecoration(
-        hintText: 'Nota',
+        hintText: AppLocalizations.of(context)!.note,
         border: InputBorder.none,
         hintStyle: TextStyle(color: hintColor),
       ),
@@ -1279,7 +1328,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                         : TextDecoration.none,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Item de lista',
+                    hintText: AppLocalizations.of(context)!.listItem,
                     border: InputBorder.none,
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(vertical: 6.0),

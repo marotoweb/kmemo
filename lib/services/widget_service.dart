@@ -6,12 +6,29 @@ import 'package:drift/drift.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:kmemo/database/database.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class WidgetService {
   static const String _androidWidgetName = 'KMemoWidgetProvider';
 
   // Shared JSON file between Dart and Kotlin (same location for both)
   static const String _widgetDataFile = 'widget_data.json';
+
+  // Localized labels (saved by the UI) used when a note has no title or content
+  static const String _labelUntitledKey = 'widget_label_untitled';
+  static const String _labelEmptyKey = 'widget_label_empty';
+  static const String _labelListItemKey = 'widget_label_list_item';
+
+  static Future<void> saveLabels({
+    required String untitled,
+    required String empty,
+    required String listItem,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_labelUntitledKey, untitled);
+    await prefs.setString(_labelEmptyKey, empty);
+    await prefs.setString(_labelListItemKey, listItem);
+  }
 
   static const List<int> _lightColorsHex = [
     0xFFFFFFFF, // Branco
@@ -21,19 +38,39 @@ class WidgetService {
     0xFFC8E6C9, // Verde claro
     0xFFB2DFDB, // Teal claro
     0xFFBBDEFB, // Azul claro
-    0xFFC5CAE9, // Índigo claro
+    0xFFC5CAE9, // Light indigo
     0xFFE1BEE7, // Roxo claro
     0xFFF8BBD0, // Rosa claro
     0xFFD7CCC8, // Castanho claro
     0xFFCFD8DC, // Azul-acinzentado claro
-    0xFFFFECB3, // Âmbar claro
+    0xFFFFECB3, // Light amber
     0xFFDCEDC8, // Verde-lima claro
     0xFFB2EBF2, // Ciano claro
     0xFFF5F5F5, // Cinzento muito claro
   ];
 
+  static const List<int> _darkColorsHex = [
+    0xFF1E1E1E, // Preto
+    0xFF3B1A1A, // Vermelho escuro
+    0xFF3D2C1E, // Laranja escuro
+    0xFF3D361E, // Amarelo escuro
+    0xFF1E3322, // Verde escuro
+    0xFF1E3331, // Teal escuro
+    0xFF1E2A3B, // Azul escuro
+    0xFF261E3B, // Indigo escuro
+    0xFF331E3B, // Roxo escuro
+    0xFF3B1E32, // Rosa escuro
+    0xFF2E2621, // Castanho escuro
+    0xFF252B2E, // Azul-acinzentado escuro
+    0xFF3B2E1E, // Amber escuro
+    0xFF27331E, // Verde-lima escuro
+    0xFF1E3338, // Ciano escuro
+    0xFF2C2C2C, // Cinzento escuro
+  ];
+
   /// Syncs active notes with the JSON file shared with the native Android side
-  static Future<void> updateWidgetData({required AppDatabase db}) async {
+  /// [isDark] controls whether light or dark color palette is used for note cards
+  static Future<void> updateWidgetData({required AppDatabase db, bool isDark = false}) async {
     try {
       final memos =
           await (db.select(db.memos)
@@ -49,6 +86,11 @@ class WidgetService {
 
       debugPrint('[WidgetService] Memos activos encontrados: ${memos.length}');
 
+      final prefs = await SharedPreferences.getInstance();
+      final untitledLabel = prefs.getString(_labelUntitledKey) ?? 'Sem título';
+      final emptyLabel = prefs.getString(_labelEmptyKey) ?? 'Nota vazia';
+      final listItemLabel = prefs.getString(_labelListItemKey) ?? 'Item de lista';
+
       final List<String> idsList = [];
       final List<String> titlesList = [];
       final List<String> previewsList = [];
@@ -59,15 +101,16 @@ class WidgetService {
 
         final rawTitle = memo.title;
         final displayTitle = rawTitle.trim().isEmpty
-            ? 'Sem título'
+            ? untitledLabel
             : rawTitle.trim();
         titlesList.add(displayTitle);
 
         final colorIndex = memo.colorIndex;
+        final palette = isDark ? _darkColorsHex : _lightColorsHex;
         final hexColor =
-            (colorIndex >= 0 && colorIndex < _lightColorsHex.length)
-            ? _lightColorsHex[colorIndex]
-            : 0xFFFFFFFF;
+            (colorIndex >= 0 && colorIndex < palette.length)
+            ? palette[colorIndex]
+            : (isDark ? 0xFF1E1E1E : 0xFFFFFFFF);
         colorsList.add(hexColor);
 
         final blocks = await db.getBlocksForMemo(memo.uuid);
@@ -77,7 +120,7 @@ class WidgetService {
           final isChecklist = blocks.any((b) => b.type == BlockType.checklist);
 
           if (isChecklist) {
-            // Shoes up to 8 items with checkbox, then "..."
+            // Shows up to 8 items with a checkbox, then "..."
             final sortedBlocks = List<Block>.from(blocks)
               ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
             final hasMoreThanEight = sortedBlocks.length > 8;
@@ -87,7 +130,7 @@ class WidgetService {
             for (var block in visibleBlocks) {
               final checked = block.content['checked'] as bool? ?? false;
               final text = block.content['text']?.toString() ?? '';
-              final displayText = text.isEmpty ? 'Item de lista' : text;
+              final displayText = text.isEmpty ? listItemLabel : text;
               final styledText = checked
                   ? displayText.replaceAllMapped(
                       RegExp(r'.'),
@@ -117,7 +160,7 @@ class WidgetService {
           }
         }
 
-        final displayPreview = previewText.isEmpty ? 'Nota vazia' : previewText;
+        final displayPreview = previewText.isEmpty ? emptyLabel : previewText;
         previewsList.add(displayPreview);
 
         debugPrint(
@@ -133,13 +176,14 @@ class WidgetService {
         'titles': titlesList,
         'previews': previewsList,
         'colors': colorsList,
+        'labels': {'untitled': untitledLabel, 'empty': emptyLabel},
       };
       await file.writeAsString(jsonEncode(widgetData));
 
-      debugPrint('[WidgetService] Widget date written to: ${file.path}');
+      debugPrint('[WidgetService] Widget data written to: ${file.path}');
       debugPrint('[WidgetService] Titles: $titlesList');
 
-      // Notifica the widget nativo for recarregar
+      // Notify the native widget to reload
       await HomeWidget.updateWidget(
         androidName: _androidWidgetName,
         iOSName: _androidWidgetName,
