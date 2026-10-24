@@ -4,11 +4,11 @@ import 'dart:convert';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:flutter/foundation.dart' show debugPrint;
 
-/// Serviço de encriptação opcional para notas antes de enviar para a nuvem.
+/// Optional encryption service for notes before sending to the cloud.
 ///
-/// Quando o utilizador define uma passphrase, o conteúdo de cada nota é
-/// encriptado no cliente antes do upload e decriptado após o download.
-/// Sem passphrase, as notas são armazenadas em texto claro (JSON).
+/// When the user sets a passphrase, each note's content is
+/// encrypted on the client before upload and decrypted after download.
+/// Without a passphrase, notes are stored in plain text (JSON).
 class EncryptionService {
   EncryptionService._();
 
@@ -18,14 +18,14 @@ class EncryptionService {
   enc.Encrypter? _encrypter;
   bool _enabled = false;
 
-  /// Ativa a encriptação com a passphrase fornecida.
+  /// Enables encryption with the provided passphrase.
   void enable(String passphrase) {
     final key = enc.Key.fromUtf8(passphrase.padRight(32).substring(0, 32));
     _encrypter = enc.Encrypter(enc.AES(key));
     _enabled = true;
   }
 
-  /// Desativa a encriptação.
+  /// Disables encryption.
   void disable() {
     _encrypter = null;
     _enabled = false;
@@ -33,7 +33,7 @@ class EncryptionService {
 
   bool get isEnabled => _enabled && _encrypter != null;
 
-  /// Encripta uma string. Retorna a string original se a encriptação estiver desativada.
+  /// Encrypts a string. Returns the original string if encryption is disabled.
   String encrypt(String plaintext) {
     if (!_enabled || _encrypter == null) {
       return plaintext;
@@ -43,8 +43,8 @@ class EncryptionService {
     return '${base64UrlEncode(iv.bytes)}:${base64UrlEncode(encrypted.bytes)}';
   }
 
-  /// Decripta uma string. Retorna a string original se a encriptação estiver desativada.
-  /// Retorna null se a decriptação falhar (passphrase errada ou dados corrompidos).
+  /// Decrypts a string. Returns the original string if encryption is disabled.
+  /// Returns null if decryption fails (wrong passphrase or corrupted data).
   String? tryDecrypt(String ciphertext) {
     if (!_enabled || _encrypter == null) {
       return ciphertext;
@@ -52,18 +52,18 @@ class EncryptionService {
     try {
       final parts = ciphertext.split(':');
       if (parts.length != 2) {
-        return ciphertext; // Pode ser texto não encriptado
+        return ciphertext; // may be non-encrypted text
       }
       final iv = enc.IV(base64Url.decode(parts[0]));
       final encrypted = enc.Encrypted(base64Url.decode(parts[1]));
       return _encrypter!.decrypt(encrypted, iv: iv);
     } catch (e) {
-      debugPrint('[EncryptionService] Falha ao desencriptar: $e');
+      debugPrint('[EncryptionService] Failed to decrypt: $e');
       return null;
     }
   }
 
-  /// Decripta uma string. Retorna a string original se a encriptação estiver desativada ou se falhar.
+  /// Decrypts a string. Returns the original string if encryption is disabled or if decryption fails (wrong passphrase or corrupted data).
   String decrypt(String ciphertext) {
     final result = tryDecrypt(ciphertext);
     return result ?? ciphertext;

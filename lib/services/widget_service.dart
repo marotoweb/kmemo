@@ -10,10 +10,9 @@ import 'package:path_provider/path_provider.dart';
 class WidgetService {
   static const String _androidWidgetName = 'KMemoWidgetProvider';
 
-  // Ficheiro JSON partilhado entre Dart e Kotlin (mesmo local para ambos)
+  // Shared JSON file between Dart and Kotlin (same location for both)
   static const String _widgetDataFile = 'widget_data.json';
 
-  // Paleta de cores claras correspondente às notas
   static const List<int> _lightColorsHex = [
     0xFFFFFFFF, // Branco
     0xFFFFCDD2, // Vermelho claro
@@ -33,14 +32,19 @@ class WidgetService {
     0xFFF5F5F5, // Cinzento muito claro
   ];
 
-  /// Sincroniza as notas ativas com um ficheiro JSON partilhado com o lado nativo Android
+  /// Syncs active notes with the JSON file shared with the native Android side
   static Future<void> updateWidgetData({required AppDatabase db}) async {
     try {
       final memos =
           await (db.select(db.memos)
                 ..where((t) => t.isArchived.equals(false))
                 ..where((t) => t.isDeleted.equals(false))
-                ..orderBy([(t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc)]))
+                ..orderBy([
+                  (t) => OrderingTerm(
+                    expression: t.updatedAt,
+                    mode: OrderingMode.desc,
+                  ),
+                ]))
               .get();
 
       debugPrint('[WidgetService] Memos activos encontrados: ${memos.length}');
@@ -54,7 +58,9 @@ class WidgetService {
         idsList.add(memo.uuid);
 
         final rawTitle = memo.title;
-        final displayTitle = rawTitle.trim().isEmpty ? 'Sem título' : rawTitle.trim();
+        final displayTitle = rawTitle.trim().isEmpty
+            ? 'Sem título'
+            : rawTitle.trim();
         titlesList.add(displayTitle);
 
         final colorIndex = memo.colorIndex;
@@ -71,7 +77,7 @@ class WidgetService {
           final isChecklist = blocks.any((b) => b.type == BlockType.checklist);
 
           if (isChecklist) {
-            // Checklist: mostra até 8 itens com checkbox, depois "..."
+            // Shoes up to 8 items with checkbox, then "..."
             final sortedBlocks = List<Block>.from(blocks)
               ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
             final hasMoreThanEight = sortedBlocks.length > 8;
@@ -82,7 +88,12 @@ class WidgetService {
               final checked = block.content['checked'] as bool? ?? false;
               final text = block.content['text']?.toString() ?? '';
               final displayText = text.isEmpty ? 'Item de lista' : text;
-              final styledText = checked ? displayText.replaceAllMapped(RegExp(r'.'), (m) => '${m.group(0)!}\u0336') : displayText;
+              final styledText = checked
+                  ? displayText.replaceAllMapped(
+                      RegExp(r'.'),
+                      (m) => '${m.group(0)!}\u0336',
+                    )
+                  : displayText;
               lines.add('${checked ? '☑' : '☐'} $styledText');
             }
             if (hasMoreThanEight) {
@@ -90,7 +101,7 @@ class WidgetService {
             }
             previewText = lines.join('\n');
           } else {
-            // Texto: mostra até 7 linhas + "..." na linha 8 (bate com maxLines=8 do preview)
+            // text: shows up to 7 lines + "..." on line 8 (matches maxLines=8 of the preview)
             final contentText = blocks
                 .map((b) => b.content['text']?.toString() ?? '')
                 .join('\n');
@@ -114,7 +125,7 @@ class WidgetService {
         );
       }
 
-      // Escreve ficheiro JSON no diretório de documentos da aplicação
+      // Writes JSON file to the application's documents directory
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/$_widgetDataFile');
       final widgetData = {
@@ -125,18 +136,20 @@ class WidgetService {
       };
       await file.writeAsString(jsonEncode(widgetData));
 
-      debugPrint('[WidgetService] Widget data written to: ${file.path}');
+      debugPrint('[WidgetService] Widget date written to: ${file.path}');
       debugPrint('[WidgetService] Titles: $titlesList');
 
-      // Notifica o widget nativo para recarregar
+      // Notifica the widget nativo for recarregar
       await HomeWidget.updateWidget(
         androidName: _androidWidgetName,
         iOSName: _androidWidgetName,
       );
 
-      debugPrint('[WidgetService] Dados do widget sincronizados com sucesso (${memos.length} notas).');
+      debugPrint(
+        '[WidgetService] Widget data synced successfully (${memos.length} notes).',
+      );
     } catch (e) {
-      debugPrint('[WidgetService] Erro ao sincronizar widget: $e');
+      debugPrint('[WidgetService] error syncing widget: $e');
     }
   }
 }

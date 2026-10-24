@@ -2,10 +2,10 @@
 
 import 'dart:convert';
 
-/// Utilitários para verificação de integridade de sincronização.
+/// Synchronization integrity verification utilities.
 class SyncIntegrity {
-  /// Calcula um hash SHA-256 simples do conteúdo (para verificação de integridade).
-  /// Usa uma implementação simples baseada em bytes para evitar dependências adicionais.
+  /// Computes a simple SHA-256 hash of the content (for integrity verification).
+  /// Uses a simple byte-based implementation to avoid additional dependencies.
   static String simpleHash(String content) {
     final bytes = utf8.encode(content);
     int hash = 0;
@@ -15,15 +15,15 @@ class SyncIntegrity {
     return hash.toRadixString(16).padLeft(8, '0');
   }
 
-  /// Verifica se o conteúdo de dois ficheiros é igual (comparação de hash).
+  /// Verify if the content of two files is equal (hash comparison).
   static bool contentEquals(String a, String b) {
     return simpleHash(a) == simpleHash(b);
   }
 
-  /// Verifica se uma nota pode ser sincronizada (não é null, não está corrompida).
+  /// Checks whether the note can be synced (not null, not corrupted).
   static bool canSync(String uuid, String title, List<dynamic> blocks) {
     if (uuid.isEmpty) return false;
-    // Verificar se os blocos são válidos
+    // Check if the blocks are valid
     for (var block in blocks) {
       if (block is! Map) return false;
       if (!block.containsKey('uuid')) return false;

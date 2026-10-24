@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
 import 'memo_detail_screen.dart';
+import 'package:kmemo/l10n/app_localizations.dart';
 
 class ArchiveScreen extends StatefulWidget {
   const ArchiveScreen({super.key});
@@ -87,9 +88,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                           content: Text(
                             uuidsToUnarchive.length > 1
                                 ? '${uuidsToUnarchive.length} notas retiradas do arquivo'
-                                : 'Nota retirada do arquivo',
+                                : AppLocalizations.of(context)!.noteRemovedFromArchive,
                           ),
-                          duration: const Duration(seconds: 8),
+                          duration: Duration(seconds: 8),
                           action: SnackBarAction(
                             label: 'Anular',
                             textColor: Colors.amberAccent,
@@ -106,7 +107,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                         ),
                       );
 
-                      Future.delayed(const Duration(seconds: 8), () {
+                      Future.delayed(Duration(seconds: 8), () {
                         try {
                           snackBarController.close();
                         } catch (_) {}
@@ -119,21 +120,21 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                     }
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'unarchive',
-                      child: Text('Remover do arquivo'),
+                      child: Text(AppLocalizations.of(context)!.removeFromArchive),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'delete',
-                      child: Text('Eliminar permanentemente'),
+                      child: Text(AppLocalizations.of(context)!.deletePermanently2),
                     ),
                   ],
                 ),
               ],
             )
           : AppBar(
-              title: const Text(
-                'Arquivo',
+              title: Text(
+                AppLocalizations.of(context)!.archiveScreen,
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               elevation: 0,
@@ -165,9 +166,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                           content: Text(
                             uuidsToUnarchive.length > 1
                                 ? '${uuidsToUnarchive.length} notas retiradas do arquivo'
-                                : 'Nota retirada do arquivo',
+                                : AppLocalizations.of(context)!.noteRemovedFromArchive,
                           ),
-                          duration: const Duration(seconds: 8),
+                          duration: Duration(seconds: 8),
                           action: SnackBarAction(
                             label: 'Anular',
                             textColor: Colors.amberAccent,
@@ -184,7 +185,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                         ),
                       );
 
-                      Future.delayed(const Duration(seconds: 8), () {
+                      Future.delayed(Duration(seconds: 8), () {
                         try {
                           snackBarController.close();
                         } catch (_) {}
@@ -194,20 +195,20 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
               ],
             ),
       body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator())
           : archivedMemos.isEmpty
           ? Center(
               child: Text(
-                'Nenhuma nota arquivada.',
+                AppLocalizations.of(context)!.noArchivedNotes,
                 style: TextStyle(
                   color: isDarkMode ? Colors.white38 : Colors.black45,
                 ),
               ),
             )
           : Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+              padding: EdgeInsets.symmetric(horizontal: 12.0),
               child: ListView.builder(
-                padding: const EdgeInsets.only(bottom: 120.0),
+                padding: EdgeInsets.only(bottom: 120.0),
                 itemCount: archivedMemos.length,
                 itemBuilder: (context, index) {
                   final memo = archivedMemos[index];
@@ -218,12 +219,12 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                     children: [
                       Positioned.fill(
                         child: Container(
-                          margin: const EdgeInsets.symmetric(
+                          margin: EdgeInsets.symmetric(
                             vertical: 4,
                             horizontal: 2,
                           ),
                           alignment: Alignment.centerLeft,
-                          padding: const EdgeInsets.only(left: 20),
+                          padding: EdgeInsets.only(left: 20),
                           decoration: BoxDecoration(
                             color: isDarkMode
                                 ? Colors.amber.shade900
@@ -239,7 +240,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                       Dismissible(
                         key: Key(memo.uuid),
                         direction: DismissDirection.startToEnd,
-                        background: const SizedBox.shrink(),
+                        background: SizedBox.shrink(),
                         onDismissed: (direction) async {
                           final uuidToUnarchive = memo.uuid;
 
@@ -258,10 +259,10 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                           final snackBarController = scaffoldMessenger
                               .showSnackBar(
                                 SnackBar(
-                                  content: const Text(
-                                    'Nota retirada do arquivo',
+                                  content: Text(
+                                    AppLocalizations.of(context)!.noteRemovedFromArchive,
                                   ),
-                                  duration: const Duration(seconds: 8),
+                                  duration: Duration(seconds: 8),
                                   action: SnackBarAction(
                                     label: 'Anular',
                                     textColor: Colors.amberAccent,
@@ -276,7 +277,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                                 ),
                               );
 
-                          Future.delayed(const Duration(seconds: 8), () {
+                          Future.delayed(Duration(seconds: 8), () {
                             try {
                               snackBarController.close();
                             } catch (_) {}

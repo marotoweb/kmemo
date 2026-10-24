@@ -2,7 +2,7 @@
 
 import '../database/database.dart';
 
-/// Resultado de listagem remota de notas.
+/// Result of remote note listing.
 class RemoteMemoInfo {
   final String remoteFileId;
   final String name;
@@ -15,50 +15,48 @@ class RemoteMemoInfo {
   });
 }
 
-/// Nota completa baixada do armazenamento remoto.
+/// Complete note downloaded from remote storage.
 class RemoteMemo {
   final Memo memo;
   final List<Block> blocks;
 
-  RemoteMemo({
-    required this.memo,
-    required this.blocks,
-  });
+  RemoteMemo({required this.memo, required this.blocks});
 }
 
-/// Abstração do armazenamento remoto de notas.
+/// Abstraction of remote note storage.
 ///
-/// O kMemo permanece offline-first: o SQLite local é a única fonte de verdade.
-/// Esta camada apenas espelha as alterações para um destino remoto (kDrive,
-/// WebDAV, etc.) de forma assíncrona, sem bloquear a UI.
+/// kMemo remains offline-first: the local SQLite is the source of truth.
+/// The remote storage is used only for backup and sync, and may be unavailable.
+/// This layer only mirrors changes to the remote destination (kDrive,
+/// WebDAV, etc.) asynchronously, without blocking the UI.
 abstract class StorageRepository {
-  /// Inicializa o repositório (carrega configuração guardada, etc.).
+  /// Initialize the repository (load saved configuration, etc.).
   Future<void> init();
 
-  /// Indica se o repositório está configurado e pronto para sincronizar.
+  /// Indicate if the repository is configured and ready for sync.
   bool get isConfigured;
 
-  /// Nome legível do tipo de armazenamento (ex. "kDrive", "WebDAV").
+  /// Human-readable name of the storage type (e.g. "kDrive", "WebDAV").
   String get storageName;
 
   /// Guards used by the caller (MemoProvider) to throttle sync frequency.
   bool get syncAllowed => true;
 
-  /// Marks a completed sync cycle (used for rate-limit throttling).
+  /// Marks the completed sync cycle (used for rate-limit throttling).
   void markSyncedNow() {}
 
-  /// Envia uma nota para o armazenamento remoto e retorna o ID remoto
-  /// criado (ou null se não disponível).
+  /// Uploads a note to remote storage and returns the remote id
+  /// created (or null if unavailable).
   Future<String?> uploadMemo(Memo memo, List<Block> blocks);
 
-  /// Remove uma nota do armazenamento remoto.
+  /// Removes a note from remote storage.
   Future<void> deleteMemo(String remoteFileId);
 
-  /// Lista as notas disponíveis remotamente.
+  /// Lists the notes available in remote storage.
   Future<List<RemoteMemoInfo>> listRemoteMemos();
 
-  /// Baixa uma nota completa do armazenamento remoto.
-  /// Retorna null se a nota não puder ser desencriptada (passphrase errada ou dados corrompidos).
+  /// Downloads a complete note from remote storage.
+  /// Returns null if the note cannot be decrypted (wrong passphrase or corrupted data).
   Future<RemoteMemo?> downloadMemo(String remoteFileId);
 
   /// Executes full sync (push + pull). Subclasses may override or ignore.

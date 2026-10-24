@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
 import '../../services/kdrive_storage.dart';
+import 'package:kmemo/l10n/app_localizations.dart';
 
 class SyncSettingsScreen extends StatefulWidget {
   const SyncSettingsScreen({super.key});
@@ -14,12 +15,12 @@ class SyncSettingsScreen extends StatefulWidget {
 }
 
 class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
-  // Usa a MESMA instância registada em main.dart (partilhada com MemoProvider)
+  // Uses the same instance registered in main.dart (shared with MemoProvider)
   late final KDriveStorage _storage;
   bool _isLoading = true;
   bool _isSyncing = false;
 
-  // Estado do formulário de configuração
+  // Configuration form state
   final _tokenController = TextEditingController();
   final _passphraseController = TextEditingController();
   String _selectedDriveId = '';
@@ -29,19 +30,19 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   String _remoteFolder = 'kmemo/notes';
   bool _encryptionEnabled = false;
 
-  // Lista de drives descobertos
+  // Discovered drives list
   List<Map<String, dynamic>> _drives = [];
   bool _isLoadingDrives = false;
 
-  // Navegação hierárquica de pastas
+  // Hierarchical folder navigation
   List<Map<String, dynamic>> _currentFolderContents = [];
   List<Map<String, dynamic>> _breadcrumb = [];
   String _currentFolderId =
-      '5'; // '5' = pasta Private (raiz efetiva onde se podem criar pastas)
+      '5'; // '5' = Private folder (effective root where folders can be created)
   String _currentFolderName = 'Private';
   bool _isLoadingFolderContents = false;
 
-  // Conta selecionada (para listar drives)
+  // Selected account (for listing drives)
   int? _selectedAccountId;
 
   @override
@@ -66,11 +67,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   void dispose() {
     _tokenController.dispose();
     _passphraseController.dispose();
-    // NÃO fechamos _storage: é partilhada com MemoProvider
+    // Do not close _storage: it is shared with MemoProvider
     super.dispose();
   }
 
-  /// Carrega os valores persistidos do storage para o estado local do ecrã.
+  /// Loads persisted values from storage into the screen's local state.
   Future<void> _loadPersistedValues() async {
     debugPrint(
       '[SyncSettings] _loadPersistedValues(): storage.driveId=${_storage.driveId}, storage.remoteFolder="${_storage.remoteFolder}", storage.folderId="${_storage.folderId}", storage.folderName="${_storage.folderName}", storage.encryptionEnabled=${_storage.encryptionEnabled}',
@@ -87,7 +88,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       _selectedFolderId = '5';
       _selectedFolderName = 'Private';
     }
-    // Restaurar o caminho (breadcrumb) persistido
+    // Restore the persisted breadcrumb path
     _breadcrumb = _storage.folderPath
         .map((e) => <String, dynamic>{'id': e['id'], 'name': e['name']})
         .toList();
@@ -97,30 +98,30 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       '[SyncSettings] _loadPersistedValues(): set _remoteFolder="$_remoteFolder", _selectedFolderId=$_selectedFolderId, _selectedFolderName=$_selectedFolderName, _encryptionEnabled=$_encryptionEnabled',
     );
 
-    // Ler o token guardado no secure storage para mostrar no campo
+    // Read the token from secure storage to display in the field
     final token = await _storage.getStoredToken();
     if (token != null && token.isNotEmpty) {
       _tokenController.text = token;
       debugPrint(
-        '[SyncSettings] _loadPersistedValues(): token carregado do secure storage (length=${token.length})',
+        '[SyncSettings] _loadPersistedValues(): token loaded of secure storage (length=${token.length})',
       );
     } else {
       debugPrint(
-        '[SyncSettings] _loadPersistedValues(): nenhum token guardado',
+        '[SyncSettings] _loadPersistedValues(): nenhum token saved',
       );
     }
 
-    // Se já temos drive selecionado, carregar drives e pastas da raiz
+    // If a drive is already selected, load drives and root folders
     if (_selectedDriveId.isNotEmpty) {
       debugPrint(
-        '[SyncSettings] _loadPersistedValues(): drive já selecionado, descobrindo drives e carregando pastas da raiz',
+        '[SyncSettings] _loadPersistedValues(): drive já selected, discovering drives and loading folders of root',
       );
       _selectedDriveId = _storage.driveId.toString();
-      // Carregar drives para mostrar o nome correto na UI (não ficar com "Nenhum drive kDrive nesta conta")
+      // Load drives to show the correct name in the UI
       if (_drives.isEmpty) {
         await _discoverAccountsAndDrives();
       }
-      // Mostrar a pasta de destino persistida (ou a raiz Private por defeito)
+      // Show the persisted destination folder (or the Private root by default)
       if (_selectedFolderId.isNotEmpty && _selectedFolderId != '5') {
         await _loadFolderById(
           _selectedFolderId,
@@ -131,13 +132,13 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       }
     } else {
       debugPrint(
-        '[SyncSettings] _loadPersistedValues(): sem drive selecionado',
+        '[SyncSettings] _loadPersistedValues(): without drive selected',
       );
     }
   }
 
-  /// Guarda a configuração atual no storage (chamado após cada alteração do utilizador).
-  /// Se [sync] for true, executa também uma sincronização imediata.
+  /// Saves the current configuration to storage (called after each user change).
+  /// If [sync] is true, also performs an immediate sync.
   Future<void> _saveCurrentConfig({bool sync = false}) async {
     if (_tokenController.text.trim().isEmpty) {
       debugPrint('[SyncSettings] _saveCurrentConfig(): token empty, skipping');
@@ -159,22 +160,22 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       '[SyncSettings] _saveCurrentConfig(): token_length=${_tokenController.text.trim().length}, driveId=$_selectedDriveId, folderId=$_selectedFolderId, remoteFolder="$_remoteFolder", encryptionEnabled=$_encryptionEnabled, passphrase_length=${_passphraseController.text.trim().length}',
     );
     try {
-      // Verificar se a encriptação mudou (ativada ou desativada)
+      // Check if encryption changed (enabled or disabled)
       final wasEncryptionEnabled = _storage.encryptionEnabled;
       final encryptionChanged = wasEncryptionEnabled != _encryptionEnabled;
 
-      // Se a encriptação mudou, marcar todas as notas como não sincronizadas
-      // para que sejam re-enviadas com/sem encriptação
+      // If encryption changed, mark all notes as not synced
+      // so they are re-uploaded with/without encryption
       if (encryptionChanged) {
         debugPrint(
-          '[SyncSettings] _saveCurrentConfig(): encriptação mudou ($wasEncryptionEnabled -> $_encryptionEnabled), marcando todas as notas como não sincronizadas',
+          '[SyncSettings] _saveCurrentConfig(): encriptação mudou ($wasEncryptionEnabled -> $_encryptionEnabled), marcando all the notes como não sincronizadas',
         );
         final db = Provider.of<AppDatabase>(context, listen: false);
         await db.customStatement(
           'UPDATE memos SET is_synced = 0, remote_file_id = NULL',
         );
         debugPrint(
-          '[SyncSettings] _saveCurrentConfig(): todas as notas marcadas como não sincronizadas e remoteFileId limpo',
+          '[SyncSettings] _saveCurrentConfig(): all the notes marcadas como não sincronizadas and remoteFileId limpo',
         );
       }
 
@@ -194,7 +195,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         '[SyncSettings] _saveCurrentConfig(): configure() completed successfully',
       );
 
-      // Sincronização imediata opcional (envia notas locais e puxa remotas)
+      // Optional immediate sync (uploads local notes and pulls remote ones)
       if (sync) {
         try {
           if (!mounted) return;
@@ -205,23 +206,23 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
             );
           }
         } catch (e) {
-          // A configuração está guardada; falha de sync não impede continuar
+          // Configuration is saved; sync failure does not block continuation
           debugPrint(
-            '[SyncSettings] _saveCurrentConfig(): sync inicial falhou: $e',
+            '[SyncSettings] _saveCurrentConfig(): sync inicial failed: $e',
           );
         }
       }
     } catch (e) {
-      debugPrint('[SyncSettings] _saveCurrentConfig(): erro: $e');
+      debugPrint('[SyncSettings] _saveCurrentConfig(): error: $e');
       if (mounted) {
-        _showError('Erro ao guardar configuração: $e');
+        _showError('Error saving configuration: $e');
       }
     } finally {
-      // _isConfiguring removido
+      // _isConfiguring removed
     }
   }
 
-  /// Formata a última data de sincronização para apresentação.
+  /// Formats the last sync date for display.
   String _formatLastSync() {
     final last = _storage.lastSync;
     if (last == null) return 'Nunca';
@@ -238,13 +239,13 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     }
   }
 
-  /// Sincronização manual (push + pull) acionada pelo utilizador.
+  /// Manual sync (push + pull) triggered by the user.
   Future<void> _syncNow() async {
     if (_isSyncing) return;
     setState(() => _isSyncing = true);
     try {
       if (!mounted) return;
-      // Garantir que a configuração atual está guardada antes de sincronizar
+      // Ensure the current configuration is saved before syncing
       await _saveCurrentConfig(sync: false);
       if (!mounted) return;
       final decryptionFailures = await _runSyncWithPrompts(force: true);
@@ -254,17 +255,17 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Sincronização concluída, mas $decryptionFailures ficheiro(s) não puderam ser desencriptados. '
-                'Verifique se a passphrase está correta.',
+                'Sync completed, but $decryptionFailures file(s) could not be decrypted. '
+                'Check that the passphrase is correct.',
               ),
               backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 8),
+              duration: Duration(seconds: 8),
             ),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Sincronização concluída'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.syncCompleted),
               backgroundColor: Colors.green,
             ),
           );
@@ -273,38 +274,37 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _isSyncing = false);
-        _showError('Erro na sincronização: $e');
+        _showError('Sync error: $e');
       }
     }
   }
 
-  /// Executa a sincronização com pedidos de passphrase e confirmação de
-  /// eliminação para notas remotas não desencriptáveis.
+  /// Performs sync with passphrase prompts and confirmation of
+  /// deletion for non-decryptable remote notes.
   Future<int> _runSyncWithPrompts({bool force = false}) async {
     final memoProvider = Provider.of<MemoProvider>(context, listen: false);
     return await memoProvider.performSync(
       force: force,
       requestPassphrase: (remoteFileId) async {
-        // Pedir passphrase ao utilizador para esta nota específica
+        // Prompt the user for a passphrase for this specific note
         final controller = TextEditingController();
         final result = await showDialog<String?>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Nota encriptada na nuvem'),
+            title: Text(AppLocalizations.of(context)!.noteEncryptedInCloud),
             content: SizedBox(
               width: MediaQuery.of(context).size.width * 0.90,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Esta nota está encriptada na nuvem. '
-                    'Insira a passphrase usada para a encriptar.',
+                  Text(
+                    AppLocalizations.of(context)!.thisNoteIsEncryptedInCloud,
                     style: TextStyle(fontSize: 13),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   TextField(
                     controller: controller,
-                    decoration: const InputDecoration(hintText: 'Passphrase'),
+                    decoration: InputDecoration(hintText: 'Passphrase'),
                     obscureText: true,
                     maxLines: 1,
                   ),
@@ -314,11 +314,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, null),
-                child: const Text('Ignorar'),
+                child: Text(AppLocalizations.of(context)!.ignore),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-                child: const Text('Confirmar'),
+                child: Text(AppLocalizations.of(context)!.confirm),
               ),
             ],
           ),
@@ -330,19 +330,18 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         final delete = await showDialog<bool>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('Não foi possível desencriptar'),
-            content: const Text(
-              'Após duas tentativas, a nota não pôde ser desencriptada. '
-              'Pretende eliminar a nota remota?',
+            title: Text(AppLocalizations.of(context)!.couldNotDecrypt),
+            content: Text(
+              AppLocalizations.of(context)!.afterTwoAttempts,
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Ignorar'),
+                child: Text(AppLocalizations.of(context)!.ignore),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Eliminar'),
+                child: Text(AppLocalizations.of(context)!.delete),
               ),
             ],
           ),
@@ -353,7 +352,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   }
 
   Future<void> _logout() async {
-    // Marcar todas as notas como não sincronizadas em todos os estados (Drift, memória)
+    // Mark all notes as not synced in all states (Drift, memory)
     await Provider.of<MemoProvider>(context, listen: false).disableSync();
     await _storage.logout();
     if (mounted) {
@@ -388,22 +387,22 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     final configured = _storage.isConfigured;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Sincronização'), elevation: 0),
+      appBar: AppBar(title: Text(AppLocalizations.of(context)!.syncTitle), elevation: 0),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.all(16.0).copyWith(bottom: 100),
+              padding: EdgeInsets.all(16.0).copyWith(bottom: 100),
               children: [
                 // Estado atual
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: configured
                         ? (isDarkMode
-                              ? const Color(0xFF1E1E1E) // Configurado + Dark
+                              ? Color(0xFF1E1E1E) // Configurado + Dark
                               : Colors.grey.shade100) // Configurado + Light
                         : (isDarkMode
-                              ? const Color(
+                              ? Color(
                                   0xFF2C2C2C,
                                 ) // Não configurado + Dark (exemplo)
                               : Colors
@@ -426,7 +425,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                                 ? Colors.amber.shade300
                                 : Colors.amber.shade700,
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           Text(
                             configured
                                 ? 'Sincronização ativa'
@@ -440,27 +439,27 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       if (configured) ...[
                         Text(
-                          'Drive: ${_storage.storageName}\n'
-                          'Pasta de destino: $_selectedFolderName\n'
-                          'Encriptação: ${_encryptionEnabled ? 'Ativa' : 'Inativa'}\n'
-                          'Última sincronização: ${_formatLastSync()}',
-                          style: const TextStyle(fontSize: 13),
+                          '${AppLocalizations.of(context)!.drive}: ${_storage.storageName}\n'
+                          '${AppLocalizations.of(context)!.destinationFolder}: $_selectedFolderName\n'
+                          '${AppLocalizations.of(context)!.encryption}: ${_encryptionEnabled ? AppLocalizations.of(context)!.active : AppLocalizations.of(context)!.inactive}\n'
+                          '${AppLocalizations.of(context)!.lastSync}: ${_formatLastSync()}',
+                          style: TextStyle(fontSize: 13),
                         ),
                       ] else
-                        const Text(
-                          'Configure um armazenamento remoto para sincronizar as suas notas.',
+                        Text(
+                          AppLocalizations.of(context)!.configureRemoteStorage,
                           style: TextStyle(fontSize: 13, color: Colors.grey),
                         ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
 
-                // Secção de configuração
-                const Text(
+                // Secção of configuração
+                Text(
                   'CONFIGURAR ARMAZENAMENTO REMOTO',
                   style: TextStyle(
                     fontSize: 12,
@@ -468,11 +467,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                     color: Colors.grey,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Container(
                   decoration: BoxDecoration(
                     color: isDarkMode
-                        ? const Color(0xFF1E1E1E)
+                        ? Color(0xFF1E1E1E)
                         : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
@@ -483,14 +482,14 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   ),
                   child: Column(
                     children: [
-                      // Token
+                      // token
                       ListTile(
-                        title: const Text('Token da Infomaniak'),
-                        subtitle: const Text(
-                          'Gere um token em manager.infomaniak.com',
+                        title: Text(AppLocalizations.of(context)!.infomaniakToken),
+                        subtitle: Text(
+                          AppLocalizations.of(context)!.generateTokenAtManager,
                           style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
-                        trailing: const Icon(Icons.chevron_right),
+                        trailing: Icon(Icons.chevron_right),
                         onTap: _editToken,
                       ),
                       Divider(
@@ -500,10 +499,10 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                             : Colors.grey.shade300,
                       ),
 
-                      // Drive
+                      // drive
                       if (_isLoadingDrives)
-                        const ListTile(
-                          title: Text('A descobrir drives...'),
+                        ListTile(
+                          title: Text(AppLocalizations.of(context)!.discoveringDrives),
                           trailing: SizedBox(
                             width: 20,
                             height: 20,
@@ -513,16 +512,15 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                       else if (_tokenController.text.isNotEmpty &&
                           _drives.isEmpty)
                         ListTile(
-                          title: const Text('Drive kDrive'),
-                          subtitle: const Text(
-                            'Nenhum drive kDrive nesta conta. '
-                            'Ative o kDrive em manager.infomaniak.com.',
+                          title: Text(AppLocalizations.of(context)!.kdriveDrive),
+                          subtitle: Text(
+                            AppLocalizations.of(context)!.noKdriveInAccount,
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.orange,
                             ),
                           ),
-                          trailing: const Icon(
+                          trailing: Icon(
                             Icons.info_outline,
                             color: Colors.orange,
                           ),
@@ -530,17 +528,17 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                         )
                       else
                         ListTile(
-                          title: const Text('Drive kDrive'),
+                          title: Text(AppLocalizations.of(context)!.kdriveDrive),
                           subtitle: Text(
                             _selectedDriveId.isEmpty
                                 ? 'Selecione um drive'
                                 : '$_selectedDriveName ($_selectedDriveId)',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey,
                             ),
                           ),
-                          trailing: const Icon(Icons.chevron_right),
+                          trailing: Icon(Icons.chevron_right),
                           onTap: _selectDrive,
                         ),
                       Divider(
@@ -550,11 +548,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                             : Colors.grey.shade300,
                       ),
 
-                      // Pasta de destino dentro do drive
+                      // Destination folder inside the drive
                       if (_selectedDriveId.isNotEmpty) ...[
                         if (_isLoadingFolderContents)
-                          const ListTile(
-                            title: Text('A descobrir pastas...'),
+                          ListTile(
+                            title: Text(AppLocalizations.of(context)!.discoveringFolders),
                             trailing: SizedBox(
                               width: 20,
                               height: 20,
@@ -573,9 +571,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
 
                       // Encriptação
                       ListTile(
-                        title: const Text('Encriptar notas'),
-                        subtitle: const Text(
-                          'Encripta as notas no cliente antes de enviar para a nuvem',
+                        title: Text(AppLocalizations.of(context)!.encryptNotes),
+                        subtitle: Text(
+                          AppLocalizations.of(context)!.encryptNotesOnClient,
                           style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                         trailing: Switch(
@@ -590,48 +588,43 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                                   .withValues(alpha: 0.5),
                           onChanged: (value) async {
                             if (value) {
-                              // Pedir passphrase antes de ativar
+                              // Pedir passphrase antes of ativar
                               final confirmed = await _showPassphraseDialog();
                               if (!confirmed) {
-                                // Utilizador cancelou, não ativar
+                                // user cancelou, não ativar
                                 return;
                               }
                             } else {
-                              // Desativar encriptação e limpar passphrase
+                              // Desativar encriptação and limpar passphrase
                               _passphraseController.clear();
                             }
 
-                            if (!mounted) return;
+                            if (!context.mounted) return;
 
-                            // Confirmar com o utilizador se quer sincronizar todas as notas
-                            final action = value
-                                ? 'encriptadas'
-                                : 'desencriptadas';
+                            // Ask the user whether to sync all notes
+                            // ignore: use_build_context_synchronously
                             final confirmedSync = await showDialog<bool>(
                               context: context,
                               builder: (ctx) => AlertDialog(
-                                title: const Text('Sincronizar todas as notas'),
+                                title: Text(AppLocalizations.of(context)!.syncAllNotes),
                                 content: Text(
-                                  'Pretende sincronizar todas as notas locais '
-                                  '$action para a nuvem?\n\n'
-                                  'Todas as notas serão re-enviadas '
-                                  '${value ? 'com encriptação' : 'sem encriptação'}.',
+                                  AppLocalizations.of(context)!.wantToSyncAllNotes,
                                 ),
                                 actions: [
                                   TextButton(
                                     onPressed: () => Navigator.pop(ctx, false),
-                                    child: const Text('Cancelar'),
+                                    child: Text(AppLocalizations.of(context)!.cancel),
                                   ),
                                   TextButton(
                                     onPressed: () => Navigator.pop(ctx, true),
-                                    child: const Text('Sincronizar'),
+                                    child: Text(AppLocalizations.of(context)!.sync),
                                   ),
                                 ],
                               ),
                             );
 
                             if (confirmedSync != true) {
-                              // Utilizador cancelou, não alterar encriptação
+                              // user cancelou, não alterar encriptação
                               return;
                             }
 
@@ -647,20 +640,20 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
 
-                // Botões de ação
+                // Botões of ação
                 if (!configured) ...[
-                  // Se não está configurado, mostrar instruções
+                  // if não está configurado, mostrar instruções
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: configured
                           ? (isDarkMode
-                                ? const Color(0xFF1E1E1E) // Configurado + Dark
+                                ? Color(0xFF1E1E1E) // Configurado + Dark
                                 : Colors.grey.shade100) // Configurado + Light
                           : (isDarkMode
-                                ? const Color(
+                                ? Color(
                                     0xFF2C2C2C,
                                   ) // Não configurado + Dark (exemplo)
                                 : Colors
@@ -675,34 +668,34 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Passos para configurar:',
+                        Text(
+                          AppLocalizations.of(context)!.stepsToConfigure,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          '1. Insira o token da Infomaniak',
+                        SizedBox(height: 8),
+                        Text(
+                          AppLocalizations.of(context)!.step1EnterToken,
                           style: TextStyle(fontSize: 12),
                         ),
-                        const Text(
-                          '2. Selecione o drive kDrive',
+                        Text(
+                          AppLocalizations.of(context)!.step2SelectDrive,
                           style: TextStyle(fontSize: 12),
                         ),
-                        const Text(
-                          '3. Selecione a pasta de destino',
+                        Text(
+                          AppLocalizations.of(context)!.step3SelectFolder,
                           style: TextStyle(fontSize: 12),
                         ),
-                        const Text(
-                          '4. Carregue em "Syncronizar agora" para guardar a configuração e sincronizar as notas',
+                        Text(
+                          AppLocalizations.of(context)!.step4ClickSync,
                           style: TextStyle(fontSize: 12),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                 ] else ...[
                   // Sincronização manual (push + pull)
                   SizedBox(
@@ -711,25 +704,25 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _isSyncing ? null : _syncNow,
                       icon: _isSyncing
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.sync),
+                          : Icon(Icons.sync),
                       label: Text(
                         _isSyncing ? 'A sincronizar...' : 'Sincronizar agora',
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: OutlinedButton.icon(
                       onPressed: _logout,
-                      icon: const Icon(Icons.logout),
-                      label: const Text('Desativar sincronização'),
+                      icon: Icon(Icons.logout),
+                      label: Text(AppLocalizations.of(context)!.disableSync),
                     ),
                   ),
                 ],
@@ -738,7 +731,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     );
   }
 
-  /// Secção de seleção de pasta de destino com navegação hierárquica
+  /// Destination folder selection section with hierarchical navigation
   Widget _buildDestinationFolderSection(bool isDarkMode) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -746,7 +739,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         // Breadcrumbs
         if (_breadcrumb.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Wrap(
               spacing: 4,
               children: _breadcrumb.asMap().entries.map((entry) {
@@ -757,7 +750,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (idx > 0)
-                      const Icon(
+                      Icon(
                         Icons.chevron_right,
                         size: 16,
                         color: Colors.grey,
@@ -782,36 +775,36 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
               }).toList(),
             ),
           ),
-        // Título da pasta atual
+        // Current folder title
         ListTile(
           title: Text(
             _currentFolderName,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           subtitle: Text(
             _selectedFolderId.isNotEmpty
                 ? 'Pasta selecionada: $_selectedFolderName'
                 : 'Selecione uma pasta para guardar as notas',
-            style: const TextStyle(fontSize: 12, color: Colors.grey),
+            style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
           trailing: _selectedFolderId.isNotEmpty
-              ? const Icon(Icons.check_circle, color: Colors.green)
+              ? Icon(Icons.check_circle, color: Colors.green)
               : null,
         ),
         Divider(
           height: 1,
           color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
         ),
-        // Conteúdo da pasta atual
+        // Current folder contents
         if (_isLoadingFolderContents)
-          const Center(
+          Center(
             child: Padding(
               padding: EdgeInsets.all(16),
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
           )
         else if (_currentFolderContents.isEmpty)
-          const Center(
+          Center(
             child: Padding(
               padding: EdgeInsets.all(24),
               child: Column(
@@ -819,7 +812,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   Icon(Icons.folder_open, size: 48, color: Colors.grey),
                   SizedBox(height: 8),
                   Text(
-                    'Pasta vazia',
+                    AppLocalizations.of(context)!.emptyFolder,
                     style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                 ],
@@ -829,13 +822,13 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         else
           ListView.builder(
             shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
+            physics: NeverScrollableScrollPhysics(),
             itemCount: _currentFolderContents.length,
             itemBuilder: (ctx, index) {
               final item = _currentFolderContents[index];
               final rawType = item['type']?.toString() ?? '';
-              // Tratar como pasta qualquer item que não seja claramente um ficheiro
-              // (a API kDrive pode retornar tipos variados para pastas)
+              // Treat as folder any item that is not clearly a file
+              // (the kDrive API may return various types for folders)
               final isNotFile =
                   (rawType.toLowerCase() != 'file' &&
                   rawType.toLowerCase() != 'document' &&
@@ -851,10 +844,10 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   isFolder
                       ? 'Pasta (ID: ${item['id']})'
                       : 'Ficheiro (ID: ${item['id']})',
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  style: TextStyle(fontSize: 11, color: Colors.grey),
                 ),
                 trailing: _selectedFolderId == item['id'].toString()
-                    ? const Icon(Icons.check, color: Colors.amber)
+                    ? Icon(Icons.check, color: Colors.amber)
                     : null,
                 onTap: () {
                   final folderId = item['id']?.toString() ?? '';
@@ -863,10 +856,10 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                     '[SyncSettings] onTap: id=$folderId, name=$folderName, isFolder=$isFolder',
                   );
                   if (isFolder && folderId.isNotEmpty) {
-                    // Navegar para dentro da pasta
+                    // Navigate into the folder
                     _navigateToFolder(folderId, folderName);
                   } else {
-                    // Selecionar ficheiro não faz sentido para guardar notas
+                    // Selecting a file does not make sense for storing notes
                     _showError(
                       'Não é possível criar pasta dentro de um ficheiro '
                       '(tipo: $rawType).',
@@ -876,7 +869,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
               );
             },
           ),
-        // Botão para criar nova pasta (sempre permite criar, inclusive na raiz)
+        // Button to create a new folder (always allowed, including at root)
         if (_currentFolderId.isNotEmpty)
           SizedBox(
             width: double.infinity,
@@ -885,28 +878,28 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
               onPressed: _isLoadingFolderContents
                   ? null
                   : _showCreateFolderDialog,
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Criar nova pasta'),
+              icon: Icon(Icons.add, size: 18),
+              label: Text(AppLocalizations.of(context)!.createNewFolder),
             ),
           ),
       ],
     );
   }
 
-  /// Navega para uma pasta específica e a define como pasta de destino.
+  /// Navigates to the specific folder and sets it as the destination folder.
   Future<void> _navigateToFolder(String folderId, String folderName) async {
     debugPrint(
       '[SyncSettings] _navigateToFolder called: id=$folderId, name=$folderName',
     );
     setState(() => _isLoadingFolderContents = true);
     try {
-      // Se já estamos nesta pasta, não adicionar ao breadcrumb novamente
+      // If already in this folder, do not add to breadcrumb again
       if (_currentFolderId != folderId) {
-        // Adicionar ao breadcrumb apenas se não for duplicado da entrada anterior
+        // Add to breadcrumb only if not a duplicate of the previous entry
         if (_breadcrumb.isEmpty || _breadcrumb.last['id'] != _currentFolderId) {
           _breadcrumb.add({'id': _currentFolderId, 'name': _currentFolderName});
         }
-        // Remover entradas duplicadas consecutivas
+        // Remove consecutive duplicate entries
         while (_breadcrumb.length > 1 &&
             _breadcrumb[_breadcrumb.length - 1]['id'] ==
                 _breadcrumb[_breadcrumb.length - 2]['id']) {
@@ -915,7 +908,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       }
       _currentFolderId = folderId;
       _currentFolderName = folderName;
-      // Define esta pasta como destino para guardar as notas
+      // Set this folder as the destination for storing notes
       _selectedFolderId = folderId;
       _selectedFolderName = folderName;
 
@@ -932,9 +925,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           _isLoadingFolderContents = false;
         });
       }
-      // Persistir o caminho (breadcrumb) da pasta selecionada
+      // Persist the breadcrumb path of the selected folder
       await _storage.setFolderPath(_breadcrumb);
-      // Guardar a pasta selecionada como destino de forma persistente (sem sincronizar)
+      // Save the selected folder as destination persistently (without sync)
       debugPrint(
         '[SyncSettings] _navigateToFolder: calling _saveCurrentConfig(sync: false)',
       );
@@ -947,11 +940,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     }
   }
 
-  /// Mostra diálogo para criar nova pasta
+  /// Shows dialog to create a new folder
   Future<void> _showCreateFolderDialog() async {
     final controller = TextEditingController();
-    // Quando estiver na raiz do kDrive (id=1), a API não permite criar pastas
-    // diretamente; redireciona para dentro da pasta "Private" (ou primeira disponível).
+    // When at the kDrive root (id=1), the API does not allow creating folders
+    // directly; redirect into the "Private" folder (or the first available).
     String createParentId = _currentFolderId;
     String createParentName = _currentFolderName;
     if (_currentFolderId == '1' && _currentFolderContents.isNotEmpty) {
@@ -967,7 +960,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Criar nova pasta'),
+          title: Text(AppLocalizations.of(context)!.createNewFolder),
           content: SizedBox(
             width: MediaQuery.of(context).size.width * 0.85,
             child: Column(
@@ -976,12 +969,12 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
               children: [
                 Text(
                   'Criar dentro de: $createParentName',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 TextField(
                   controller: controller,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Nome da nova pasta',
                     labelText: 'Nome da pasta',
                   ),
@@ -993,15 +986,15 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             TextButton(
               onPressed: () async {
                 final name = controller.text.trim();
                 if (name.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Insira um nome para a pasta'),
+                    SnackBar(
+                      content: Text(AppLocalizations.of(context)!.enterFolderName),
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -1015,14 +1008,14 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   );
                   if (mounted) {
                     setState(() {
-                      // Adicionar a nova pasta à lista atual
+                      // Add the new folder to the current list
                       _currentFolderContents.add({
                         'id': newFolderId,
                         'name': name,
                         'type': 'directory',
                       });
                     });
-                    // Selecionar a nova pasta automaticamente como destino
+                    // Automatically select the new folder as destination
                     setState(() {
                       _selectedFolderId = newFolderId ?? '';
                       _selectedFolderName = name;
@@ -1030,8 +1023,8 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                     await _saveCurrentConfig();
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Pasta criada com sucesso'),
+                        SnackBar(
+                          content: Text(AppLocalizations.of(context)!.folderCreatedSuccessfully),
                           backgroundColor: Colors.green,
                         ),
                       );
@@ -1045,7 +1038,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   }
                 }
               },
-              child: const Text('Criar'),
+              child: Text(AppLocalizations.of(context)!.create),
             ),
           ],
         );
@@ -1053,10 +1046,10 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     );
   }
 
-  /// Constrói um chip informativo para um scope da API Infomaniak.
+  /// Builds the informational chip for an Infomaniak API scope.
   Widget _buildScopeChip(String scope, String description) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.amber.shade50,
         borderRadius: BorderRadius.circular(8),
@@ -1066,7 +1059,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.check_circle, size: 14, color: Colors.amber.shade700),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Text(
             scope,
             style: TextStyle(
@@ -1075,10 +1068,10 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
               color: Colors.amber.shade700,
             ),
           ),
-          const SizedBox(width: 6),
+          SizedBox(width: 6),
           Text(
             description,
-            style: const TextStyle(fontSize: 11, color: Colors.grey),
+            style: TextStyle(fontSize: 11, color: Colors.grey),
           ),
         ],
       ),
@@ -1092,19 +1085,18 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         bool showToken = false;
         return StatefulBuilder(
           builder: (dialogContext, setDialogState) => AlertDialog(
-            title: const Text('Token da Infomaniak'),
-            insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+            title: Text(AppLocalizations.of(context)!.infomaniakToken),
+            insetPadding: EdgeInsets.symmetric(horizontal: 24),
             content: SizedBox(
               width: MediaQuery.of(dialogContext).size.width * 0.90,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Gere um token em manager.infomaniak.com com os seguintes scopes:',
+                  Text(AppLocalizations.of(context)!.generateTokenWithScopes,
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Wrap(
                     spacing: 4,
                     runSpacing: 4,
@@ -1114,7 +1106,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                       _buildScopeChip('accounts', 'Listar contas'),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   TextField(
                     controller: _tokenController,
                     decoration: InputDecoration(
@@ -1138,11 +1130,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancelar'),
+                child: Text(AppLocalizations.of(context)!.cancel),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('OK'),
+                child: Text(AppLocalizations.of(context)!.ok),
               ),
             ],
           ),
@@ -1155,20 +1147,20 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       );
       await _storage.setToken(_tokenController.text.trim());
       await _discoverAccountsAndDrives();
-      // Não sincronizar automaticamente: o utilizador deve escolher a pasta e clicar em "Sincronizar".
+      // Não sync automaticamente: the user deve escolher the folder and clicar in "sync".
     } else {
       debugPrint('[SyncSettings] _editToken(): token empty, skipping');
     }
   }
 
-  /// Lista as contas do utilizador, seleciona a primeira e lista os drives.
+  /// Lists the user's accounts, selects the first one and lists drives.
   Future<void> _discoverAccountsAndDrives() async {
     setState(() => _isLoadingDrives = true);
     try {
       final accounts = await _storage.listAccounts();
       if (mounted) {
         setState(() {
-          // Seleciona automaticamente a primeira conta
+          // Automatically select the first account
           if (accounts.isNotEmpty) {
             _selectedAccountId =
                 int.tryParse(accounts[0]['id'].toString()) ?? 0;
@@ -1196,15 +1188,14 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           });
           if (drives.isEmpty) {
             _showError(
-              'Nenhum drive kDrive encontrado nesta conta. '
-              'Ative o kDrive em manager.infomaniak.com primeiro.',
+              AppLocalizations.of(context)!.noKdriveInAccount,
             );
           } else if (autoSelectedId != null) {
-            // Pré-selecionou um drive: guardar driveId
+            // Pre-selected the drive: save driveId
             await _storage.setDriveId(int.parse(autoSelectedId));
-            // Carregar as pastas da raiz do drive pré-selecionado
+            // Load the root folders of the pre-selected drive
             await _loadRootFolders();
-            // Não sincronizar automaticamente: o utilizador deve escolher a pasta e clicar em "Sincronizar".
+            // Do not sync automatically: the user must choose the folder and click "sync".
           }
         }
       } else {
@@ -1232,7 +1223,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Escolher drive kDrive'),
+          title: Text(AppLocalizations.of(context)!.chooseKdriveDrive),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.builder(
@@ -1245,7 +1236,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   title: Text(drive['name'] as String? ?? 'Drive'),
                   subtitle: Text('ID: ${drive['id']}'),
                   trailing: isSelected
-                      ? const Icon(Icons.check, color: Colors.amber)
+                      ? Icon(Icons.check, color: Colors.amber)
                       : null,
                   onTap: () async {
                     debugPrint(
@@ -1277,7 +1268,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancelar'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
           ],
         );
@@ -1285,7 +1276,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     );
   }
 
-  /// Carrega o conteúdo de uma pasta específica por ID (usado ao reabrir a página).
+  /// Loads the contents of the specific folder by id (used when reopening the page).
   Future<void> _loadFolderById(String folderId, String folderName) async {
     setState(() => _isLoadingFolderContents = true);
     try {
@@ -1295,7 +1286,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           _currentFolderContents = contents;
           _currentFolderId = folderId;
           _currentFolderName = folderName;
-          // Manter o breadcrumb persistido (não sobrescrever)
+          // Keep the persisted breadcrumb (do not overwrite)
           _isLoadingFolderContents = false;
         });
       }
@@ -1307,12 +1298,12 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     }
   }
 
-  /// Carrega o conteúdo da pasta Private (ID: 5) — a raiz efetiva onde se podem criar pastas.
+  /// Loads the contents of the Private folder (id: 5) — the effective root where folders can be created.
   Future<void> _loadRootFolders() async {
     setState(() => _isLoadingFolderContents = true);
     try {
-      // Listar conteúdo da pasta Private (id=5) em vez da raiz do kDrive (id=1)
-      // pois a API não permite criar pastas diretamente na raiz
+      // List contents of the Private folder (id=5) instead of the kDrive root (id=1)
+      // because the API does not allow creating folders directly at the root
       final contents = await _storage.listFolderContents('5');
       if (mounted) {
         setState(() {
@@ -1321,7 +1312,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           _currentFolderName = 'Private';
           _breadcrumb = [];
           _isLoadingFolderContents = false;
-          // Pasta padrão de destino: Private (id=5)
+          // Default destination folder: Private (id=5)
           if (_selectedFolderId.isEmpty) {
             _selectedFolderId = '5';
             _selectedFolderName = 'Private';
@@ -1342,8 +1333,8 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     }
   }
 
-  /// Diálogo de passphrase com confirmação e toggle de visibilidade.
-  /// Retorna true se o utilizador confirmou, false se cancelou.
+  /// Passphrase dialog with confirmation and visibility toggle.
+  /// Returns true if the user confirmed, false if cancelled.
   Future<bool> _showPassphraseDialog() async {
     _passphraseController.clear();
     final confirmed = await showDialog<bool>(
@@ -1357,7 +1348,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   }
 }
 
-/// Diálogo de passphrase com confirmação e toggle de visibilidade.
+/// Passphrase dialog with confirmation and visibility toggle.
 class _PassphraseDialog extends StatefulWidget {
   final TextEditingController passphraseController;
   final double dialogWidth;
@@ -1384,18 +1375,16 @@ class _PassphraseDialogState extends State<_PassphraseDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Passphrase de encriptação'),
+      title: Text(AppLocalizations.of(context)!.encryptionPassphrase),
       content: SizedBox(
         width: widget.dialogWidth,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Defina uma passphrase para encriptar as suas notas. '
-              'Sem ela, não será possível recuperar os dados.',
+            Text(AppLocalizations.of(context)!.definePassphrase,
               style: TextStyle(fontSize: 13),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             TextField(
               controller: widget.passphraseController,
               decoration: InputDecoration(
@@ -1411,7 +1400,7 @@ class _PassphraseDialogState extends State<_PassphraseDialog> {
               obscureText: !_showPassphrase,
               maxLines: 1,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextField(
               controller: _confirmController,
               decoration: InputDecoration(
@@ -1433,14 +1422,14 @@ class _PassphraseDialogState extends State<_PassphraseDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancelar'),
+          child: Text(AppLocalizations.of(context)!.cancel),
         ),
         TextButton(
           onPressed: () {
             if (widget.passphraseController.text.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Insira uma passphrase'),
+                SnackBar(
+                  content: Text(AppLocalizations.of(context)!.enterPassphrase),
                   backgroundColor: Colors.red,
                 ),
               );
@@ -1448,8 +1437,8 @@ class _PassphraseDialogState extends State<_PassphraseDialog> {
             }
             if (widget.passphraseController.text != _confirmController.text) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('As passphrases não coincidem'),
+                SnackBar(
+                  content: Text(AppLocalizations.of(context)!.passphrasesDoNotMatch),
                   backgroundColor: Colors.red,
                 ),
               );
@@ -1457,7 +1446,7 @@ class _PassphraseDialogState extends State<_PassphraseDialog> {
             }
             Navigator.pop(context, true);
           },
-          child: const Text('Confirmar'),
+          child: Text(AppLocalizations.of(context)!.confirm),
         ),
       ],
     );

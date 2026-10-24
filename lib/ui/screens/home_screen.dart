@@ -13,6 +13,7 @@ import 'memo_detail_screen.dart';
 import 'archive_screen.dart';
 import 'trash_screen.dart';
 import 'settings_screen.dart';
+import 'package:kmemo/l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -46,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           await _openNoteFromWidget(uuid);
         }
       } else if (call.method == 'getPendingNoteUuid') {
-        // O Android consulta aqui se há um UUID pendente
+        // the Android consulta aqui if há the uuid pendente
         final prefs = await SharedPreferences.getInstance();
         final uuid = prefs.getString('flutter.clicked_note_uuid');
         if (uuid != null && uuid.isNotEmpty) {
@@ -83,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           builder: (context) => MemoDetailScreen(memo: memo),
         ),
       ).then((_) {
-        // Limpar a flag quando voltar
+        // Limpar the flag quando voltar
         _isOpeningNote = false;
         debugPrint('[HomeScreen] Returned from note detail');
       });
@@ -96,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     try {
       debugPrint('[HomeScreen] _checkWidgetLaunch called');
       
-      // Verificar se há um flag para criar nova nota
+      // Verificar if há the flag for create nova note
       bool createNewNote = false;
       try {
         createNewNote = await _widgetChannel.invokeMethod<bool>('getCreateNoteFlag') ?? false;
@@ -111,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         return;
       }
       
-      // Tentar obter o UUID via MethodChannel (mais fiável que SharedPreferences)
+      // Tentar obter the uuid via MethodChannel (more fiável that SharedPreferences)
       String? clickedUuid;
       try {
         clickedUuid = await _widgetChannel.invokeMethod<String>('getPendingNoteUuid');
@@ -120,7 +121,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         debugPrint('[HomeScreen] MethodChannel error: $e');
       }
       
-      // Fallback: tentar ler diretamente do SharedPreferences
+      // Fallback: try reading directly from SharedPreferences
       if (clickedUuid == null || clickedUuid.isEmpty) {
         final prefs = await SharedPreferences.getInstance();
         clickedUuid = prefs.getString('flutter.clicked_note_uuid');
@@ -133,7 +134,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (clickedUuid != null && clickedUuid.isNotEmpty) {
         if (!mounted) return;
         
-        // Verificar se já estamos a abrir uma nota
+        // Verificar if já estamos the abrir the note
         if (_isOpeningNote) {
           debugPrint('[HomeScreen] Already opening note, skipping _checkWidgetLaunch');
           return;
@@ -153,7 +154,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               builder: (context) => MemoDetailScreen(memo: memo),
             ),
           ).then((_) {
-            // Limpar a flag quando voltar
+            // Limpar the flag quando voltar
             _isOpeningNote = false;
             debugPrint('[HomeScreen] Returned from note detail');
           });
@@ -161,10 +162,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           debugPrint('[HomeScreen] Memo not found for uuid: $clickedUuid');
         }
       } else {
-        debugPrint('[HomeScreen] No pending UUID found');
+        debugPrint('[HomeScreen] in pending UUID found');
       }
     } catch (e) {
-      debugPrint('[HomeScreen] Erro ao abrir nota via widget: $e');
+      debugPrint('[HomeScreen] error ao abrir note via widget: $e');
     }
   }
 
@@ -196,11 +197,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       });
     } catch (e) {
       _isOpeningNote = false;
-      debugPrint('[HomeScreen] Erro ao criar nota via widget: $e');
+      debugPrint('[HomeScreen] error ao create note via widget: $e');
     }
   }
 
-  /// Verifica se há texto partilhado de outra aplicação e cria uma nova nota com esse conteúdo.
+  /// Verifica if há text partilhado of outra aplicação and cria the nova note with esse conteúdo.
   Future<void> _checkSharedText() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -214,19 +215,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final provider = context.read<MemoProvider>();
         final now = DateTime.now();
 
-        // Usa a primeira linha como título, ou "Nota partilhada" se estiver vazio
+        // Usa the primeira linha como título, or "note partilhada" if estiver vazio
         final lines = sharedText.split('\n');
         final title = lines.first.trim().isNotEmpty
             ? lines.first.trim()
             : 'Nota partilhada';
 
-        // O corpo é o resto (ou o texto completo se for uma linha só)
+        // the body is the rest (or the full text if it's the only line)
         final body = lines.length > 1
             ? lines.sublist(1).join('\n')
             : '';
 
         final memo = Memo(
-          uuid: const Uuid().v4(),
+          uuid: Uuid().v4(),
           title: title,
           createdAt: now,
           updatedAt: now,
@@ -242,7 +243,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         final block = Block(
           id: 0,
-          uuid: const Uuid().v4(),
+          uuid: Uuid().v4(),
           memoUuid: memo.uuid,
           type: BlockType.text,
           content: {'text': body},
@@ -261,10 +262,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         );
 
-        debugPrint('[HomeScreen] Nova nota criada a partir de texto partilhado: $title');
+        debugPrint('[HomeScreen] Nova note criada the partir of text partilhado: $title');
       }
     } catch (e) {
-      debugPrint('[HomeScreen] Erro ao processar texto partilhado: $e');
+      debugPrint('[HomeScreen] error ao processar text partilhado: $e');
     }
   }
 
@@ -278,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
-      // A app voltou ao foreground (ex.: ao clicar no widget enquanto já estava aberta)
+      // the app returned to foreground (e.g. when clicking the widget while already open)
       _checkWidgetLaunch();
       _checkSharedText();
     }
@@ -303,7 +304,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _showStyleMenu(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    // Paleta para o tema claro (tons suaves/pastel)
     final List<Color> lightColorsPalette = [
       Colors.white,
       Colors.red.shade100,
@@ -320,27 +320,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       Colors.amber.shade100,
       Colors.lightGreen.shade100,
       Colors.cyan.shade100,
-      const Color(0xFFF5F5F5),
+      Color(0xFFF5F5F5),
     ];
 
-    // Paleta para o tema escuro (tons profundos e suaves)
     final List<Color> darkColorsPalette = [
-      const Color(0xFF1E1E1E),
-      const Color(0xFF3B1A1A),
-      const Color(0xFF3D2C1E),
-      const Color(0xFF3D361E),
-      const Color(0xFF1E3322),
-      const Color(0xFF1E3331),
-      const Color(0xFF1E2A3B),
-      const Color(0xFF261E3B),
-      const Color(0xFF331E3B),
-      const Color(0xFF3B1E32),
-      const Color(0xFF2E2621),
-      const Color(0xFF252B2E),
-      const Color(0xFF3B2E1E),
-      const Color(0xFF27331E),
-      const Color(0xFF1E3338),
-      const Color(0xFF2C2C2C),
+      Color(0xFF1E1E1E),
+      Color(0xFF3B1A1A),
+      Color(0xFF3D2C1E),
+      Color(0xFF3D361E),
+      Color(0xFF1E3322),
+      Color(0xFF1E3331),
+      Color(0xFF1E2A3B),
+      Color(0xFF261E3B),
+      Color(0xFF331E3B),
+      Color(0xFF3B1E32),
+      Color(0xFF2E2621),
+      Color(0xFF252B2E),
+      Color(0xFF3B2E1E),
+      Color(0xFF27331E),
+      Color(0xFF1E3338),
+      Color(0xFF2C2C2C),
     ];
 
     final colorsPalette = isDarkMode ? darkColorsPalette : lightColorsPalette;
@@ -370,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               return Scaffold(
                 appBar: AppBar(
                   automaticallyImplyLeading: false,
-                  title: const TabBar(
+                  title: TabBar(
                     tabs: [
                       Tab(text: 'Cores (16)'),
                       Tab(text: 'Imagens (16)'),
@@ -380,9 +379,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 body: TabBarView(
                   children: [
                     GridView.builder(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16),
                       gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
+                          SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 4,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
@@ -421,9 +420,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       },
                     ),
                     GridView.builder(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16),
                       gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
+                          SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 4,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
@@ -499,7 +498,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       appBar: isSelectionMode
           ? AppBar(
               backgroundColor: isDarkMode
-                  ? const Color(0xFF3B2E1E)
+                  ? Color(0xFF3B2E1E)
                   : Colors.amber.shade100,
               leading: IconButton(
                 icon: Icon(
@@ -557,7 +556,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 ? '${uuidsToArchive.length} notas arquivadas'
                                 : 'Nota arquivada',
                           ),
-                          duration: const Duration(seconds: 8),
+                          duration: Duration(seconds: 8),
                           action: SnackBarAction(
                             label: 'Anular',
                             textColor: Colors.amberAccent,
@@ -574,7 +573,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                       );
 
-                      Future.delayed(const Duration(seconds: 8), () {
+                      Future.delayed(Duration(seconds: 8), () {
                         try {
                           snackBarController.close();
                         } catch (_) {}
@@ -597,7 +596,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 ? '${uuidsToDelete.length} notas enviadas para a lixeira'
                                 : 'Nota enviada para a lixeira',
                           ),
-                          duration: const Duration(seconds: 8),
+                          duration: Duration(seconds: 8),
                           action: SnackBarAction(
                             label: 'Anular',
                             textColor: Colors.amberAccent,
@@ -609,7 +608,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                       );
 
-                      Future.delayed(const Duration(seconds: 8), () {
+                      Future.delayed(Duration(seconds: 8), () {
                         try {
                           snackBarController.close();
                         } catch (_) {}
@@ -622,29 +621,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     }
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'archive',
-                      child: Text('Arquivar'),
+                      child: Text(AppLocalizations.of(context)!.archive),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'delete',
-                      child: Text('Eliminar'),
+                      child: Text(AppLocalizations.of(context)!.delete),
                     ),
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'copy',
-                      child: Text('Fazer cópia'),
+                      child: Text(AppLocalizations.of(context)!.makeCopy2),
                     ),
-                    const PopupMenuItem(value: 'share', child: Text('Enviar')),
-                    const PopupMenuItem(
+                    PopupMenuItem(value: 'share', child: Text(AppLocalizations.of(context)!.send)),
+                    PopupMenuItem(
                       value: 'kdrive',
-                      child: Text('Copiar para kDrive'),
+                      child: Text(AppLocalizations.of(context)!.copyToKdrive),
                     ),
                   ],
                 ),
               ],
             )
           : AppBar(
-              title: const Text(
+              title: Text(
                 'kMemo',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
@@ -657,7 +656,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             DrawerHeader(
               decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF3B2E1E) : Colors.amber,
+                color: isDarkMode ? Color(0xFF3B2E1E) : Colors.amber,
               ),
               child: Text(
                 'kMemo',
@@ -669,44 +668,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.lightbulb_outline),
-              title: const Text('Notas'),
+              leading: Icon(Icons.lightbulb_outline),
+              title: Text(AppLocalizations.of(context)!.notes),
               onTap: () => Navigator.pop(context),
             ),
             ListTile(
-              leading: const Icon(Icons.archive_outlined),
-              title: const Text('Arquivo'),
+              leading: Icon(Icons.archive_outlined),
+              title: Text(AppLocalizations.of(context)!.archiveScreen),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const ArchiveScreen(),
+                    builder: (context) => ArchiveScreen(),
                   ),
                 );
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline),
-              title: const Text('Lixeira'),
+              leading: Icon(Icons.delete_outline),
+              title: Text(AppLocalizations.of(context)!.trash),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const TrashScreen()),
+                  MaterialPageRoute(builder: (context) => TrashScreen()),
                 );
               },
             ),
             ListTile(
-              leading: const Icon(Icons.settings_outlined),
-              title: const Text('Definições'),
+              leading: Icon(Icons.settings_outlined),
+              title: Text(AppLocalizations.of(context)!.settings),
               // SettingsScreen
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
+                    builder: (context) => SettingsScreen(),
                   ),
                 );
               },
@@ -715,20 +714,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       ),
       body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator())
           : activeMemos.isEmpty
           ? Center(
               child: Text(
-                'Nenhuma nota ativa',
+                AppLocalizations.of(context)!.noActiveNotes,
                 style: TextStyle(
                   color: isDarkMode ? Colors.white38 : Colors.black45,
                 ),
               ),
             )
           : Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+              padding: EdgeInsets.symmetric(horizontal: 12.0),
               child: ListView.builder(
-                padding: const EdgeInsets.only(bottom: 120.0),
+                padding: EdgeInsets.only(bottom: 120.0),
                 itemCount: activeMemos.length,
                 itemBuilder: (context, index) {
                   final memo = activeMemos[index];
@@ -739,15 +738,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     children: [
                       Positioned.fill(
                         child: Container(
-                          margin: const EdgeInsets.symmetric(
+                          margin: EdgeInsets.symmetric(
                             vertical: 4,
                             horizontal: 2,
                           ),
                           alignment: Alignment.centerLeft,
-                          padding: const EdgeInsets.only(left: 20),
+                          padding: EdgeInsets.only(left: 20),
                           decoration: BoxDecoration(
                             color: isDarkMode
-                                ? const Color(0xFF3B2E1E)
+                                ? Color(0xFF3B2E1E)
                                 : Colors.amber,
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -760,7 +759,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       Dismissible(
                         key: Key(memo.uuid),
                         direction: DismissDirection.startToEnd,
-                        background: const SizedBox.shrink(),
+                        background: SizedBox.shrink(),
                         onDismissed: (direction) async {
                           final uuidToArchive = memo.uuid;
 
@@ -776,8 +775,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           final snackBarController = scaffoldMessenger
                               .showSnackBar(
                                 SnackBar(
-                                  content: const Text('Nota arquivada'),
-                                  duration: const Duration(seconds: 8),
+                                  content: Text(AppLocalizations.of(context)!.noteArchived),
+                                  duration: Duration(seconds: 8),
                                   action: SnackBarAction(
                                     label: 'Anular',
                                     textColor: Colors.amberAccent,
@@ -792,7 +791,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 ),
                               );
 
-                          Future.delayed(const Duration(seconds: 8), () {
+                          Future.delayed(Duration(seconds: 8), () {
                             try {
                               snackBarController.close();
                             } catch (_) {}
@@ -826,7 +825,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ? null
           : FloatingActionButton(
               backgroundColor: isDarkMode
-                  ? const Color(0xFF3B2E1E)
+                  ? Color(0xFF3B2E1E)
                   : Colors.amber,
               onPressed: () async {
                 final newMemo = await provider.createNewMemo();

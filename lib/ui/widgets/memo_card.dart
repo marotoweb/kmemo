@@ -24,7 +24,6 @@ class MemoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    // Paleta de cores claras (tons suaves/pastel)
     final List<Color> lightColorsPalette = [
       Colors.white,
       Colors.red.shade50,
@@ -41,36 +40,34 @@ class MemoCard extends StatelessWidget {
       Colors.amber.shade100,
       Colors.lightGreen.shade100,
       Colors.cyan.shade50,
-      const Color(0xFFF5F5F5),
+      Color(0xFFF5F5F5),
     ];
 
-    // Paleta de cores escuras (tons profundos, dessaturados e suaves para o Dark Mode)
     final List<Color> darkColorsPalette = [
-      const Color(0xFF1E1E1E), // Fundo base escuro
-      const Color(0xFF3B1A1A), // Vermelho escuro suave
-      const Color(0xFF3D2C1E), // Laranja escuro suave
-      const Color(0xFF3D361E), // Amarelo/Âmbar escuro suave
-      const Color(0xFF1E3322), // Verde escuro suave
-      const Color(0xFF1E3331), // Teal escuro suave
-      const Color(0xFF1E2A3B), // Azul escuro suave
-      const Color(0xFF261E3B), // Índigo escuro suave
-      const Color(0xFF331E3B), // Roxo escuro suave
-      const Color(0xFF3B1E32), // Rosa escuro suave
-      const Color(0xFF2E2621), // Castanho escuro suave
-      const Color(0xFF252B2E), // Azul-acinzentado escuro suave
-      const Color(0xFF3B2E1E), // Âmbar profundo suave
-      const Color(0xFF27331E), // Verde-lima escuro suave
-      const Color(0xFF1E3338), // Ciano escuro suave
-      const Color(0xFF2C2C2C), // Cinzento escuro secundário
+      Color(0xFF3B1A1A), // Vermelho escuro suave
+      Color(0xFF3D2C1E), // Laranja escuro suave
+      Color(0xFF3D361E), // Amarelo/Âmbar escuro suave
+      Color(0xFF1E3322), // Verde escuro suave
+      Color(0xFF1E3331), // Teal escuro suave
+      Color(0xFF1E2A3B), // Azul escuro suave
+      Color(0xFF261E3B), // Índigo escuro suave
+      Color(0xFF331E3B), // Roxo escuro suave
+      Color(0xFF3B1E32), // Rosa escuro suave
+      Color(0xFF2E2621), // Castanho escuro suave
+      Color(0xFF252B2E), // Azul-acinzentado escuro suave
+      Color(0xFF3B2E1E), // Âmbar profundo suave
+      Color(0xFF27331E), // Verde-lima escuro suave
+      Color(0xFF1E3338), // Ciano escuro suave
+      Color(0xFF2C2C2C), // Cinzento escuro secundário
     ];
 
     final colorsPalette = isDarkMode ? darkColorsPalette : lightColorsPalette;
 
     final cardColor = isSelected
-        ? (isDarkMode ? const Color(0xFF4A3810) : Colors.amber.shade50)
+        ? (isDarkMode ? Color(0xFF4A3810) : Colors.amber.shade50)
         : (memo.colorIndex < colorsPalette.length
               ? colorsPalette[memo.colorIndex]
-              : (isDarkMode ? const Color(0xFF1E1E1E) : Colors.white));
+              : (isDarkMode ? Color(0xFF1E1E1E) : Colors.white));
 
     final textColor = isDarkMode ? Colors.white70 : Colors.black87;
     final subtitleColor = isDarkMode ? Colors.white60 : Colors.black45;
@@ -84,8 +81,8 @@ class MemoCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+        duration: Duration(milliseconds: 200),
+        margin: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
         decoration: BoxDecoration(
           color: cardColor,
           borderRadius: BorderRadius.circular(12),
@@ -101,13 +98,13 @@ class MemoCard extends StatelessWidget {
           onTap: onTap,
           onLongPress: onLongPress,
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: EdgeInsets.all(12.0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (isSelected) ...[
                   Padding(
-                    padding: const EdgeInsets.only(top: 2.0),
+                    padding: EdgeInsets.only(top: 2.0),
                     child: Icon(
                       Icons.check_circle,
                       color: isDarkMode
@@ -116,7 +113,7 @@ class MemoCard extends StatelessWidget {
                       size: 22,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                 ],
                 Expanded(
                   child: Column(
@@ -133,7 +130,7 @@ class MemoCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 6),
+                        SizedBox(height: 6),
                       ],
                       FutureBuilder<List<Block>>(
                         future: context.read<MemoProvider>().loadBlocks(
@@ -141,7 +138,7 @@ class MemoCard extends StatelessWidget {
                         ),
                         builder: (context, snapshot) {
                           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                            return const SizedBox.shrink();
+                            return SizedBox.shrink();
                           }
                           final blocks = snapshot.data!;
                           final isChecklist = blocks.any(
@@ -155,7 +152,7 @@ class MemoCard extends StatelessWidget {
                             final hasMoreThanEight = sortedBlocks.length > 8;
                             final visibleBlocks = sortedBlocks.take(8).toList();
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 6.0),
+                              padding: EdgeInsets.only(bottom: 6.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -177,7 +174,7 @@ class MemoCard extends StatelessWidget {
                                               ? mutedTextColor
                                               : subtitleColor,
                                         ),
-                                        const SizedBox(width: 6),
+                                        SizedBox(width: 6),
                                         Expanded(
                                           child: Text(
                                             text.isEmpty
@@ -201,7 +198,7 @@ class MemoCard extends StatelessWidget {
                                   }),
                                   if (hasMoreThanEight)
                                     Padding(
-                                      padding: const EdgeInsets.only(
+                                      padding: EdgeInsets.only(
                                         left: 20.0,
                                         top: 2.0,
                                       ),
@@ -222,7 +219,7 @@ class MemoCard extends StatelessWidget {
                                 .map((b) => b.content['text']?.toString() ?? '')
                                 .join('\n');
                             if (contentText.trim().isEmpty) {
-                              return const SizedBox.shrink();
+                              return SizedBox.shrink();
                             }
                             final lines = contentText.split('\n');
                             final hasMoreThanEight = lines.length > 8;
@@ -230,7 +227,7 @@ class MemoCard extends StatelessWidget {
                                 ? '${lines.take(8).join('\n')}\n...'
                                 : contentText;
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 6.0),
+                              padding: EdgeInsets.only(bottom: 6.0),
                               child: Text(
                                 visibleText,
                                 style: TextStyle(
@@ -249,7 +246,7 @@ class MemoCard extends StatelessWidget {
                         Row(
                           children: [
                             Icon(Icons.image, size: 13, color: subtitleColor),
-                            const SizedBox(width: 4),
+                            SizedBox(width: 4),
                             Text(
                               'Anexos de imagem (${images.length})',
                               style: TextStyle(
@@ -259,7 +256,7 @@ class MemoCard extends StatelessWidget {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                       ],
                       Text(
                         'Atualizado: ${_formatDate(memo.updatedAt)}',

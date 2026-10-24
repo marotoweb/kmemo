@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../providers/theme_provider.dart';
 import 'sync_settings_screen.dart';
+import 'package:kmemo/l10n/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -14,7 +15,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  String _appVersion = 'Carregando...';
+  String _appVersion = 'Loading...';
 
   @override
   void initState() {
@@ -43,30 +44,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Definições',
+        title: Text(
+          AppLocalizations.of(context)!.settings,
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         elevation: 0,
         backgroundColor: Colors.transparent,
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.0),
         children: [
           // SECÇÃO: APARENCIA
-          const Text(
-            'APARÊNCIA',
+          Text(
+            AppLocalizations.of(context)!.appearance,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
               color: Colors.grey,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
               color: isDarkMode
-                  ? const Color(0xFF1E1E1E)
+                  ? Color(0xFF1E1E1E)
                   : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
@@ -74,9 +75,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             child: ListTile(
-              title: const Text('Tema'),
+              title: Text(AppLocalizations.of(context)!.theme),
               trailing: Container(
-                padding: const EdgeInsets.all(4),
+                padding: EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: isDarkMode ? Colors.black : Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(20),
@@ -107,22 +108,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
 
-          // SECÇÃO: SINCRONIZAÇÃO
-          const Text(
-            'SINCRONIZAÇÃO',
+          // SECÇÃO: IDIOMA
+          Text(
+            AppLocalizations.of(context)!.language,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
               color: Colors.grey,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
               color: isDarkMode
-                  ? const Color(0xFF1E1E1E)
+                  ? Color(0xFF1E1E1E)
                   : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
@@ -130,15 +131,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             child: ListTile(
-              title: const Text('Armazenamento remoto'),
-              subtitle: const Text(
+              title: Text(AppLocalizations.of(context)!.language),
+              trailing: DropdownButton<String>(
+                value: themeProvider.locale?.languageCode ?? 'pt',
+                underline: SizedBox.shrink(),
+                items: [
+                  DropdownMenuItem(value: 'pt', child: Text('Português')),
+                  DropdownMenuItem(value: 'en', child: Text('English')),
+                  DropdownMenuItem(value: 'fr', child: Text('Français')),
+                  DropdownMenuItem(value: 'de', child: Text('Deutsch')),
+                  DropdownMenuItem(value: 'it', child: Text('Italiano')),
+                  DropdownMenuItem(value: 'es', child: Text('Español')),
+                ],
+                onChanged: (code) {
+                  if (code == null) return;
+                  themeProvider.setLocale(Locale(code));
+                },
+              ),
+            ),
+          ),
+          SizedBox(height: 24),
+
+          // SECÇÃO: SINCRONIZAÇÃO
+          Text(
+            AppLocalizations.of(context)!.syncSection,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? Color(0xFF1E1E1E)
+                  : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+              ),
+            ),
+            child: ListTile(
+              title: Text(AppLocalizations.of(context)!.remoteStorage),
+              subtitle: Text(
                 'Sincronize as suas notas com kDrive ou WebDAV',
                 style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: Icon(Icons.chevron_right),
               onTap: () async {
                 final changed = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute(builder: (_) => const SyncSettingsScreen()),
+                  MaterialPageRoute(builder: (_) => SyncSettingsScreen()),
                 );
                 if (changed == true && context.mounted) {
                   setState(() {});
@@ -146,22 +189,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
 
           // SECÇÃO: ISSUE REPORTING
-          const Text(
-            'REPORTAR PROBLEMA',
+          Text(
+            AppLocalizations.of(context)!.reportProblem,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
               color: Colors.grey,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
               color: isDarkMode
-                  ? const Color(0xFF1E1E1E)
+                  ? Color(0xFF1E1E1E)
                   : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
@@ -171,35 +214,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 ListTile(
-                  title: const Text('Enviar feedback'),
-                  subtitle: const Text(
+                  title: Text(AppLocalizations.of(context)!.sendFeedback),
+                  subtitle: Text(
                     'Reporte um bug, sugira uma funcionalidade, ou deixe um comentário',
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: Icon(Icons.chevron_right),
                   onTap: () => _launchUrl(
-                    'https://github.com/marotoweb/kmemo/issues/new',
+                    'https://github.with/marotoweb/kmemo/issues/new',
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
 
           // SECÇÃO: ABOUT
-          const Text(
-            'SOBRE',
+          Text(
+            AppLocalizations.of(context)!.about,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
               color: Colors.grey,
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
               color: isDarkMode
-                  ? const Color(0xFF1E1E1E)
+                  ? Color(0xFF1E1E1E)
                   : Colors.grey.shade100,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
@@ -209,9 +252,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 ListTile(
-                  title: const Text('Open source'),
-                  trailing: const Icon(Icons.north_east, size: 18),
-                  onTap: () => _launchUrl('https://github.com/marotoweb/kmemo'),
+                  title: Text(AppLocalizations.of(context)!.openSource),
+                  trailing: Icon(Icons.north_east, size: 18),
+                  onTap: () => _launchUrl('https://github.with/marotoweb/kmemo'),
                 ),
                 Divider(
                   height: 1,
@@ -220,10 +263,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       : Colors.grey.shade300,
                 ),
                 ListTile(
-                  title: const Text('Version'),
+                  title: Text(AppLocalizations.of(context)!.version),
                   trailing: Text(
                     _appVersion,
-                    style: const TextStyle(color: Colors.grey),
+                    style: TextStyle(color: Colors.grey),
                   ),
                 ),
               ],
@@ -245,7 +288,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Provider.of<ThemeProvider>(context, listen: false).setThemeMode(mode);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? Colors.amber.shade700 : Colors.transparent,
           borderRadius: BorderRadius.circular(16),

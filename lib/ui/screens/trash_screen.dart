@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
 import 'memo_detail_screen.dart';
+import 'package:kmemo/l10n/app_localizations.dart';
 
 class TrashScreen extends StatefulWidget {
   const TrashScreen({super.key});
@@ -98,37 +99,37 @@ class _TrashScreenState extends State<TrashScreen> {
                     }
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'delete_permanent',
-                      child: Text('Eliminar definitivamente'),
+                      child: Text(AppLocalizations.of(context)!.deletePermanently),
                     ),
                   ],
                 ),
               ],
             )
           : AppBar(
-              title: const Text(
-                'Lixeira',
+              title: Text(
+                AppLocalizations.of(context)!.trash,
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               elevation: 0,
               backgroundColor: Colors.transparent,
             ),
       body: provider.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator())
           : deletedMemos.isEmpty
           ? Center(
               child: Text(
-                'A lixeira está vazia.',
+                AppLocalizations.of(context)!.trashIsEmpty,
                 style: TextStyle(
                   color: isDarkMode ? Colors.white38 : Colors.black45,
                 ),
               ),
             )
           : Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+              padding: EdgeInsets.symmetric(horizontal: 12.0),
               child: ListView.builder(
-                padding: const EdgeInsets.only(bottom: 120.0),
+                padding: EdgeInsets.only(bottom: 120.0),
                 itemCount: deletedMemos.length,
                 itemBuilder: (context, index) {
                   final memo = deletedMemos[index];
@@ -139,12 +140,12 @@ class _TrashScreenState extends State<TrashScreen> {
                     children: [
                       Positioned.fill(
                         child: Container(
-                          margin: const EdgeInsets.symmetric(
+                          margin: EdgeInsets.symmetric(
                             vertical: 4,
                             horizontal: 2,
                           ),
                           alignment: Alignment.centerLeft,
-                          padding: const EdgeInsets.only(left: 20),
+                          padding: EdgeInsets.only(left: 20),
                           decoration: BoxDecoration(
                             color: isDarkMode
                                 ? Colors.amber.shade900
@@ -160,15 +161,15 @@ class _TrashScreenState extends State<TrashScreen> {
                       Dismissible(
                         key: Key(memo.uuid),
                         direction: DismissDirection.startToEnd,
-                        background: const SizedBox.shrink(),
+                        background: SizedBox.shrink(),
                         onDismissed: (direction) async {
                           final uuidToRestore = memo.uuid;
                           await provider.restoreMultiple([uuidToRestore]);
 
                           if (!context.mounted) return;
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Nota restaurada'),
+                            SnackBar(
+                              content: Text(AppLocalizations.of(context)!.noteRestored),
                               duration: Duration(seconds: 4),
                             ),
                           );

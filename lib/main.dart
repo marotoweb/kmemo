@@ -7,12 +7,13 @@ import 'providers/memo_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/kdrive_storage.dart';
 import 'ui/screens/home_screen.dart';
+import 'l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final database = AppDatabase();
   final storage = KDriveStorage();
-  // Carrega configuração guardada (token, drive) antes de criar o provider
+  // Load saved configuration (token, drive) before creating the provider
   await storage.init();
 
   runApp(
@@ -40,7 +41,9 @@ class KMemoApp extends StatelessWidget {
     return MaterialApp(
       title: 'kmemo',
       debugShowCheckedModeBanner: false,
-      // Define o tema claro (Light Theme)
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      // Define the light theme
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -49,7 +52,7 @@ class KMemoApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: Colors.white,
       ),
-      // Define o tema escuro (Dark Theme)
+      // Define the dark theme
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -59,7 +62,8 @@ class KMemoApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.grey[900],
       ),
       themeMode: themeProvider.themeMode,
-      home: const HomeScreen(),
+      locale: themeProvider.locale,
+      home: HomeScreen(),
     );
   }
 }

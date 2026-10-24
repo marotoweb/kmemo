@@ -8,8 +8,9 @@ import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
+import 'package:kmemo/l10n/app_localizations.dart';
 
-/// Captura de estado do editor para suporte a desfazer/refazer.
+/// Captures editor state to support undo/redo.
 class _MemoEditorSnapshot {
   final String title;
   final String text;
@@ -17,7 +18,7 @@ class _MemoEditorSnapshot {
   final List<String> listTexts;
   final List<bool> listCheckStates;
 
-  const _MemoEditorSnapshot({
+  _MemoEditorSnapshot({
     required this.title,
     required this.text,
     required this.isChecklistMode,
@@ -36,7 +37,7 @@ class _MemoEditorSnapshot {
   }
 }
 
-// ---------- Regiões e resultados de busca ----------
+// ---------- Regiões and resultados of busca ----------
 class _SearchRegion {
   final TextEditingController controller;
   final FocusNode? focusNode;
@@ -68,18 +69,18 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   bool _isRestoring = false;
   bool _isSearchActive = false;
 
-  // Foco do campo de texto (modo nota corrida)
+  // Focus of the text field (running note mode)
   late FocusNode _textFocusNode;
 
-  // Foco do campo de pesquisa
+  // Focus of the search field
   late FocusNode _searchFocusNode;
 
-  // Estado da pesquisa inline
+  // Inline search state
   final TextEditingController _searchQueryController = TextEditingController();
   int _searchMatchIndex = -1;
   List<_Match> _searchMatches = [];
 
-  // Histórico de desfazer/refazer
+  // Undo/redo history
   final List<_MemoEditorSnapshot> _history = [];
   int _historyIndex = -1;
   static const int _maxHistorySize = 50;
@@ -87,26 +88,25 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   bool get _canUndo => _historyIndex > 0;
   bool get _canRedo => _historyIndex >= 0 && _historyIndex < _history.length - 1;
 
-  // Controladores do Modo Texto e Lista Sequencial
+  // Controllers for text and sequential list modes
   late TextEditingController _textNoteController;
   final List<TextEditingController> _listControllers = [];
   final List<FocusNode> _listFocusNodes = [];
   final List<bool> _listCheckStates = [];
 
-  // Abordagem Joplin: IDs estáticos e persistentes por elemento
+  // Abordagem Joplin: IDs estáticos and persistentes by elemento
   final List<String> _listUuids = [];
   final List<int> _listIds = [];
   late String _textBlockUuid;
   int _textBlockId = 0;
 
-  // Listas de Anexos Locais
+  // Listas of Anexos Locais
   List<String> _imageAttachments = [];
   List<String> _audioAttachments = [];
   List<String> _linksValues = [];
 
-  final _uuidGenerator = const Uuid();
+  final _uuidGenerator = Uuid();
 
-  // Paleta de cores claras (tons suaves/pastel)
   final List<Color> _lightColorsPalette = [
     Colors.white,
     Colors.red.shade100,
@@ -123,30 +123,29 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     Colors.amber.shade100,
     Colors.lightGreen.shade100,
     Colors.cyan.shade100,
-    const Color(0xFFF5F5F5),
+    Color(0xFFF5F5F5),
   ];
 
-  // Paleta de cores escuras (tons profundos e suaves para o Dark Mode)
   final List<Color> _darkColorsPalette = [
-    const Color(0xFF1E1E1E),
-    const Color(0xFF3B1A1A),
-    const Color(0xFF3D2C1E),
-    const Color(0xFF3D361E),
-    const Color(0xFF1E3322),
-    const Color(0xFF1E3331),
-    const Color(0xFF1E2A3B),
-    const Color(0xFF261E3B),
-    const Color(0xFF331E3B),
-    const Color(0xFF3B1E32),
-    const Color(0xFF2E2621),
-    const Color(0xFF252B2E),
-    const Color(0xFF3B2E1E),
-    const Color(0xFF27331E),
-    const Color(0xFF1E3338),
-    const Color(0xFF2C2C2C),
+    Color(0xFF1E1E1E),
+    Color(0xFF3B1A1A),
+    Color(0xFF3D2C1E),
+    Color(0xFF3D361E),
+    Color(0xFF1E3322),
+    Color(0xFF1E3331),
+    Color(0xFF1E2A3B),
+    Color(0xFF261E3B),
+    Color(0xFF331E3B),
+    Color(0xFF3B1E32),
+    Color(0xFF2E2621),
+    Color(0xFF252B2E),
+    Color(0xFF3B2E1E),
+    Color(0xFF27331E),
+    Color(0xFF1E3338),
+    Color(0xFF2C2C2C),
   ];
 
-  // Lista de 16 caminhos de imagens predefinidas (assets da app)
+  // List of 16 predefined image paths (app assets)
   final List<String> _bgImagesPalette = List.generate(
     16,
     (i) => 'assets/backgrounds/bg_$i.png',
@@ -161,14 +160,14 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     _textFocusNode = FocusNode();
     _searchFocusNode = FocusNode();
 
-    // ID fixo para o bloco de texto caso a nota se mantenha em texto corrido
+    // Fixed id for the text block when the note stays in running text mode
     _textBlockUuid = '${_currentMemo.uuid}_text_fixed';
     _loadMemoData();
   }
 
   @override
   void dispose() {
-    // Tenta guardar os dados antes de fechar a tela
+    // Tenta save the dados antes of fechar the screen
     if (!_isLoading) {
       _persistData();
     }
@@ -325,13 +324,13 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     _persistData();
   }
 
-  // Captura os blocos persistidos e sincroniza os IDs reais do SQLite
+  // Captures persisted blocks and syncs real SQLite IDs
   void _pushSnapshot() {
     if (_isRestoring || !mounted) return;
 
     final snapshot = _MemoEditorSnapshot.fromEditor(this);
 
-    // Evita duplicatas consecutivas do mesmo estado
+    // Avoids consecutive duplicates of the same state
     if (_historyIndex >= 0 &&
         _history[_historyIndex].title == snapshot.title &&
         _history[_historyIndex].text == snapshot.text &&
@@ -341,7 +340,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       return;
     }
 
-    // Descarta o histórico futuro quando um novo estado é criado
+    // Discards future history when a new state is created
     if (_historyIndex < _history.length - 1) {
       _history.removeRange(_historyIndex + 1, _history.length);
     }
@@ -349,7 +348,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     _history.add(snapshot);
     _historyIndex = _history.length - 1;
 
-    // Limita o tamanho do histórico
+    // Limits history size
     while (_history.length > _maxHistorySize) {
       _history.removeAt(0);
       _historyIndex--;
@@ -468,18 +467,18 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       context: context,
       // ignore: use_build_context_synchronously
       builder: (context) => AlertDialog(
-        title: const Text('Adicionar Link'),
+        title: Text(AppLocalizations.of(context)!.addLink),
         content: TextField(
           controller: linkTextController,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'https://exemplo.com'),
+          decoration: InputDecoration(hintText: 'https://exemplo.with'),
         ),
         actions: [
           TextButton(
             // ignore: use_build_context_synchronously
             // ignore: use_build_context_synchronously
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text(AppLocalizations.of(context)!.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -493,7 +492,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
               // ignore: use_build_context_synchronously
               Navigator.pop(context);
             },
-            child: const Text('Adicionar'),
+            child: Text(AppLocalizations.of(context)!.add),
           ),
         ],
       ),
@@ -512,31 +511,31 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.camera_alt_outlined),
-                title: const Text('Tirar foto'),
+                leading: Icon(Icons.camera_alt_outlined),
+                title: Text(AppLocalizations.of(context)!.takePhoto),
                 onTap: () => Navigator.pop(ctx),
               ),
               ListTile(
-                leading: const Icon(Icons.image_outlined),
-                title: const Text('Adicionar imagem da galeria'),
+                leading: Icon(Icons.image_outlined),
+                title: Text(AppLocalizations.of(context)!.addImageFromGallery),
                 onTap: () => Navigator.pop(ctx),
               ),
               ListTile(
-                leading: const Icon(Icons.mic_none_outlined),
-                title: const Text('Gravar nota de áudio'),
+                leading: Icon(Icons.mic_none_outlined),
+                title: Text(AppLocalizations.of(context)!.recordAudioNote),
                 onTap: () => Navigator.pop(ctx),
               ),
               ListTile(
-                leading: const Icon(Icons.link_outlined),
-                title: const Text('Adicionar link'),
+                leading: Icon(Icons.link_outlined),
+                title: Text(AppLocalizations.of(context)!.addLinkLower),
                 onTap: () {
                   Navigator.pop(ctx);
                   _promptLinkInsertion();
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.check_box_outlined),
-                title: const Text('Alternar para Caixas de verificação'),
+                leading: Icon(Icons.check_box_outlined),
+                title: Text(AppLocalizations.of(context)!.toggleCheckboxes),
                 onTap: () {
                   Navigator.pop(ctx);
                   _switchMode(true);
@@ -568,7 +567,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
               child: Scaffold(
                 appBar: AppBar(
                   automaticallyImplyLeading: false,
-                  title: const TabBar(
+                  title: TabBar(
                     tabs: [
                       Tab(text: 'Cores (16)'),
                       Tab(text: 'Imagens (16)'),
@@ -578,9 +577,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                 body: TabBarView(
                   children: [
                     GridView.builder(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16),
                       gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
+                          SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 4,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
@@ -628,9 +627,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                       },
                     ),
                     GridView.builder(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16),
                       gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
+                          SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 4,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
@@ -746,8 +745,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       _searchMatches = [];
       _searchMatchIndex = -1;
     });
-    // Pequeno atraso para dar tempo do layout renderizar antes de pedir foco
-    Future.delayed(const Duration(milliseconds: 100), () {
+    // Small delay to let the layout render before requesting focus
+    Future.delayed(Duration(milliseconds: 100), () {
       if (mounted) {
         _searchFocusNode.requestFocus();
       }
@@ -761,7 +760,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       _searchMatches = [];
       _searchMatchIndex = -1;
     });
-    // Devolve foco ao editor de texto
+    // Returns focus to the text editor
     if (_isChecklistMode && _listFocusNodes.isNotEmpty) {
       _listFocusNodes.last.requestFocus();
     } else {
@@ -779,7 +778,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     });
   }
 
-  // ---------- Menu de opções (três pontos) ----------
+  // ---------- Menu of opções (três pontos) ----------
   Future<void> _showOptionsMenu() async {
     // ignore: use_build_context_synchronously
     // ignore: use_build_context_synchronously
@@ -794,28 +793,28 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.search_outlined),
-              title: const Text('Localizar na nota'),
+              leading: Icon(Icons.search_outlined),
+              title: Text(AppLocalizations.of(context)!.findInNote),
               onTap: () => Navigator.pop(ctx, 'find'),
             ),
             ListTile(
-              leading: const Icon(Icons.delete_outline),
-              title: const Text('Eliminar'),
+              leading: Icon(Icons.delete_outline),
+              title: Text(AppLocalizations.of(context)!.delete),
               onTap: () => Navigator.pop(ctx, 'delete'),
             ),
             ListTile(
-              leading: const Icon(Icons.share_outlined),
-              title: const Text('Enviar'),
+              leading: Icon(Icons.share_outlined),
+              title: Text(AppLocalizations.of(context)!.send),
               onTap: () => Navigator.pop(ctx, 'share'),
             ),
             ListTile(
-              leading: const Icon(Icons.content_copy_outlined),
-              title: const Text('Fazer copia'),
+              leading: Icon(Icons.content_copy_outlined),
+              title: Text(AppLocalizations.of(context)!.makeCopy),
               onTap: () => Navigator.pop(ctx, 'copy'),
             ),
             ListTile(
-              leading: const Icon(Icons.access_time_outlined),
-              title: const Text('Última edição'),
+              leading: Icon(Icons.access_time_outlined),
+              title: Text(AppLocalizations.of(context)!.lastEdited),
               subtitle: Text(
                 '${_currentMemo.updatedAt.day}/${_currentMemo.updatedAt.month}/${_currentMemo.updatedAt.year} '
                 '${_currentMemo.updatedAt.hour.toString().padLeft(2, '0')}:${_currentMemo.updatedAt.minute.toString().padLeft(2, '0')}',
@@ -837,16 +836,16 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
         // ignore: use_build_context_synchronously
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Eliminar nota'),
-          content: const Text('Esta nota será movida para a lixeira. Deseja continuar?'),
+          title: Text(AppLocalizations.of(context)!.deleteNote),
+          content: Text(AppLocalizations.of(context)!.noteWillBeMovedToTrash),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
+              child: Text(AppLocalizations.of(context)!.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Eliminar', style: TextStyle(color: Colors.redAccent)),
+              child: Text(AppLocalizations.of(context)!.delete, style: TextStyle(color: Colors.redAccent)),
             ),
           ],
         ),
@@ -883,7 +882,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
   // ignore: use_build_context_synchronously
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     // ignore: use_build_context_synchronously
@@ -905,7 +904,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
     final hintColor = isDarkMode ? Colors.white38 : Colors.black38;
     final iconColor = isDarkMode ? Colors.white70 : Colors.black87;
     final footerBgColor = isDarkMode
-        ? const Color(0xFF1E1E1E).withValues(alpha: 0.9)
+        ? Color(0xFF1E1E1E).withValues(alpha: 0.9)
         : Colors.white.withValues(alpha: 0.9);
 
     return Container(
@@ -914,7 +913,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
         canPop: false,
         onPopInvokedWithResult: (didPop, result) async {
           if (didPop) return;
-          // Garante que os dados são guardados antes de sair da tela
+          // Ensures data is saved before leaving the screen
           await _persistData();
           // ignore: use_build_context_synchronously
           final navigator = Navigator.of(context);
@@ -966,7 +965,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
             if (_linksValues.isNotEmpty || _audioAttachments.isNotEmpty)
               _buildMetadataWidgets(),
             Padding(
-              padding: const EdgeInsets.only(left: 16.0, right: 4.0),
+              padding: EdgeInsets.only(left: 16.0, right: 4.0),
               child: Row(
                 children: [
                   Expanded(
@@ -994,9 +993,9 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                       },
                       // ignore: use_build_context_synchronously
                       itemBuilder: (BuildContext context) => [
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'clear_checklist',
-                          child: Text('Limpar caixas de verificação'),
+                          child: Text(AppLocalizations.of(context)!.clearCheckboxes),
                         ),
                       ],
                     ),
@@ -1005,7 +1004,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
             ),
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
                 child: _isChecklistMode
                     ? _buildChecklistLayout(textColor, hintColor, isDarkMode)
                     : _buildTextLayout(textColor, hintColor),
@@ -1015,7 +1014,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               top: false,
               child: Container(
                 height: 50,
-                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                padding: EdgeInsets.symmetric(horizontal: 4.0),
                 decoration: BoxDecoration(
                   color: footerBgColor,
                   border: Border(
@@ -1042,7 +1041,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
   Widget _buildBottomToolbar(bool isDarkMode, Color footerBgColor) {
     return Container(
       height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      padding: EdgeInsets.symmetric(horizontal: 4.0),
       decoration: BoxDecoration(
         color: footerBgColor,
         border: Border(
@@ -1078,7 +1077,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
             // ignore: use_build_context_synchronously
             onPressed: () => _showStyleMenu(context),
           ),
-          const Spacer(),
+          Spacer(),
           IconButton(
             icon: Icon(
               Icons.undo,
@@ -1115,7 +1114,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
 
     return Container(
       height: 50,
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      padding: EdgeInsets.symmetric(horizontal: 8.0),
       decoration: BoxDecoration(
         color: footerBgColor,
         border: Border(
@@ -1130,7 +1129,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
         children: [
           Expanded(
             child: TextField(
-              key: const ValueKey('search_field'),
+              key: ValueKey('search_field'),
               controller: _searchQueryController,
               focusNode: _searchFocusNode,
               style: TextStyle(color: textColor, fontSize: 16),
@@ -1145,7 +1144,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                 prefixIcon: Icon(Icons.search_outlined, size: 20, color: hintColor),
                 suffixIcon: _searchQueryController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.highlight_remove, size: 18),
+                        icon: Icon(Icons.highlight_remove, size: 18),
                         color: hintColor,
                         onPressed: () {
                           _searchQueryController.clear();
@@ -1156,7 +1155,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               ),
               onChanged: (value) {
                 _performSearch(value);
-                // Restaurar foco após rebuild para evitar que o cursor salte
+                // Restaurar foco após rebuild for evitar that the cursor salte
                 Future.delayed(Duration.zero, () {
                   if (mounted && _isSearchActive) {
                     _searchFocusNode.requestFocus();
@@ -1173,9 +1172,9 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                 color: isDarkMode ? Colors.white54 : Colors.black54,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             IconButton(
-              icon: const Icon(Icons.arrow_upward, size: 18),
+              icon: Icon(Icons.arrow_upward, size: 18),
               color: _searchMatchIndex <= 0 ? Colors.grey : textColor,
               onPressed: _searchMatchIndex <= 0
                   ? null
@@ -1187,7 +1186,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                     },
             ),
             IconButton(
-              icon: const Icon(Icons.arrow_downward, size: 18),
+              icon: Icon(Icons.arrow_downward, size: 18),
               color: _searchMatchIndex >= _searchMatches.length - 1
                   ? Colors.grey
                   : textColor,
@@ -1202,7 +1201,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
             ),
           ],
           IconButton(
-            icon: const Icon(Icons.close, size: 20),
+            icon: Icon(Icons.close, size: 20),
             color: isDarkMode ? Colors.white60 : Colors.black54,
             onPressed: _deactivateSearch,
           ),
@@ -1244,7 +1243,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
 
         return Padding(
           key: ValueKey('item_row_${blockId}_$blockUuid'),
-          padding: const EdgeInsets.symmetric(vertical: 2.0),
+          padding: EdgeInsets.symmetric(vertical: 2.0),
           child: Row(
             children: [
               SizedBox(
@@ -1261,7 +1260,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                   },
                 ),
               ),
-              const SizedBox(width: 8.0),
+              SizedBox(width: 8.0),
               Expanded(
                 child: TextField(
                   key: ValueKey('input_${blockId}_$blockUuid'),
@@ -1283,7 +1282,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                     hintText: 'Item de lista',
                     border: InputBorder.none,
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 6.0),
+                    contentPadding: EdgeInsets.symmetric(vertical: 6.0),
                     hintStyle: TextStyle(color: hintColor),
                   ),
                   onSubmitted: (_) {
@@ -1319,12 +1318,12 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
       height: 110,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.all(8),
+        padding: EdgeInsets.all(8),
         itemCount: _imageAttachments.length,
         // ignore: use_build_context_synchronously
         itemBuilder: (context, index) {
           return Padding(
-            padding: const EdgeInsets.only(right: 8.0),
+            padding: EdgeInsets.only(right: 8.0),
             child: Stack(
               children: [
                 ClipRRect(
@@ -1345,12 +1344,12 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                       _persistData();
                     },
                     child: Container(
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         color: Colors.black54,
                         shape: BoxShape.circle,
                       ),
-                      padding: const EdgeInsets.all(2),
-                      child: const Icon(
+                      padding: EdgeInsets.all(2),
+                      child: Icon(
                         Icons.close,
                         color: Colors.white,
                         size: 14,
@@ -1368,14 +1367,14 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
 
   Widget _buildMetadataWidgets() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
       child: Wrap(
         spacing: 8.0,
         children: [
           ..._linksValues.map(
             (l) => Chip(
-              avatar: const Icon(Icons.link, size: 14),
-              label: Text(l, style: const TextStyle(fontSize: 12)),
+              avatar: Icon(Icons.link, size: 14),
+              label: Text(l, style: TextStyle(fontSize: 12)),
               onDeleted: () {
                 setState(() => _linksValues.remove(l));
                 _persistData();
@@ -1384,9 +1383,9 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
           ),
           ..._audioAttachments.map(
             (a) => Chip(
-              avatar: const Icon(Icons.mic, size: 14),
-              label: const Text(
-                'Gravação de voz',
+              avatar: Icon(Icons.mic, size: 14),
+              label: Text(
+                AppLocalizations.of(context)!.voiceRecording,
                 style: TextStyle(fontSize: 12),
               ),
               onDeleted: () {
