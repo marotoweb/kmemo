@@ -533,4 +533,17 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get widgetEmptyNote => 'Leere Notiz';
+
+  @override
+  String get emptyNoteRejected => 'Leere Notiz abgelehnt';
+
+  @override
+  String get webdavComingSoon =>
+      'Demnächst verfügbar — WebDAV-Protokoll noch nicht implementiert.';
+
+  @override
+  String get languageSetting => 'Sprache';
+
+  @override
+  String get system => 'System';
 }

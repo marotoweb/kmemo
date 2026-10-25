@@ -327,5 +327,9 @@
     }
   },
   "widgetUntitled": "Sem título",
-  "widgetEmptyNote": "Nota vazia"
+  "widgetEmptyNote": "Nota vazia",
+  "emptyNoteRejected": "Nota vazia rejeitada",
+  "webdavComingSoon": "Em breve — protocolo WebDAV ainda não implementado.",
+  "languageSetting": "Idioma",
+  "system": "Sistema"
 }

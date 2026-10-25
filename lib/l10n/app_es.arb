@@ -153,5 +153,9 @@
   "searchCounter": "{current} de {total}",
   "decryptionFailuresCount": "{count} archivo(s) no se pudieron descifrar. Comprueba la passphrase.",
   "widgetUntitled": "Sin título",
-  "widgetEmptyNote": "Nota vacía"
+  "widgetEmptyNote": "Nota vacía",
+  "emptyNoteRejected": "Nota vacía rechazada",
+  "webdavComingSoon": "Próximamente — protocolo WebDAV aún no implementado.",
+  "languageSetting": "Idioma",
+  "system": "Sistema"
 }

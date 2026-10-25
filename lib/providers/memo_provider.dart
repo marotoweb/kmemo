@@ -1,7 +1,6 @@
 // lib/providers/memo_provider.dart
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database.dart';
@@ -470,6 +469,19 @@ class MemoProvider extends ChangeNotifier {
 
   Future<void> deleteMemo(String memoUuid) async {
     await softDeleteMultiple([memoUuid]);
+  }
+
+  /// Rejects an empty note: permanently removes it from the database
+  /// and shows feedback to the user. Used when a new note is created
+  /// but left completely empty (no title, content, or attachments).
+  Future<void> rejectEmptyMemo(String memoUuid) async {
+    try {
+      await deleteMultiplePermanent([memoUuid]);
+    } catch (_) {
+      // Memo may not be in _memos yet (stream not delivered); delete directly
+      await _db.deleteMemoCascading(memoUuid);
+    }
+    _scheduleSync();
   }
 
   /// Disables sync: marks all notes as not synced

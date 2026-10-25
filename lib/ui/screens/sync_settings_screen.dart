@@ -30,6 +30,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   String _remoteFolder = 'kmemo/notes';
   bool _encryptionEnabled = false;
 
+  // Selected sync protocol: 'kdrive' or 'webdav'
+  String _selectedProtocol = 'kdrive';
+
   // Discovered drives list
   List<Map<String, dynamic>> _drives = [];
   bool _isLoadingDrives = false;
@@ -121,11 +124,14 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       if (_drives.isEmpty) {
         await _discoverAccountsAndDrives();
       }
+      if (!mounted) return;
       // Show the persisted destination folder (or the Private root by default)
       if (_selectedFolderId.isNotEmpty && _selectedFolderId != '5') {
         await _loadFolderById(
           _selectedFolderId,
-          _selectedFolderName.isNotEmpty ? _selectedFolderName : 'Pasta',
+          _selectedFolderName.isNotEmpty
+              ? _selectedFolderName
+              : AppLocalizations.of(context)!.folderWord,
         );
       } else {
         await _loadRootFolders();
@@ -392,265 +398,313 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           : ListView(
               padding: EdgeInsets.all(16.0).copyWith(bottom: 100),
               children: [
-                // Current status
-                Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: configured
-                        ? (isDarkMode
-                              ? Color(0xFF1E1E1E) // Configurado + Dark
-                              : Colors.grey.shade100) // Configurado + Light
-                        : (isDarkMode
-                              ? Color(
-                                  0xFF2C2C2C,
-                                ) // Not configured + Dark (example)
-                              : Colors
-                                    .white), // Not configured + Light (example)
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isDarkMode
-                          ? Colors.grey.shade800
-                          : Colors.grey.shade300,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            configured ? Icons.cloud_done : Icons.cloud_off,
-                            color: isDarkMode
-                                ? Colors.amber.shade300
-                                : Colors.amber.shade700,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            configured
-                                ? AppLocalizations.of(context)!.activeSyncTitle
-                                : AppLocalizations.of(context)!.inactiveSyncTitle,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: configured
-                                  ? Colors.amber.shade700
-                                  : Colors.grey,
-                            ),
-                          ),
-                        ],
+                Center(
+                  child: SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment<String>(
+                        value: 'kdrive',
+                        label: Text('kDrive'),
+                        icon: Icon(Icons.cloud),
                       ),
-                      SizedBox(height: 8),
-                      if (configured) ...[
-                        Text(
-                          '${AppLocalizations.of(context)!.drive}: ${_storage.storageName}\n'
-                          '${AppLocalizations.of(context)!.destinationFolder}: $_selectedFolderName\n'
-                          '${AppLocalizations.of(context)!.encryption}: ${_encryptionEnabled ? AppLocalizations.of(context)!.active : AppLocalizations.of(context)!.inactive}\n'
-                          '${AppLocalizations.of(context)!.lastSync}: ${_formatLastSync()}',
-                          style: TextStyle(fontSize: 13),
-                        ),
-                      ] else
-                        Text(
-                          AppLocalizations.of(context)!.configureRemoteStorage,
-                          style: TextStyle(fontSize: 13, color: Colors.grey),
-                        ),
+                      ButtonSegment<String>(
+                        value: 'webdav',
+                        label: Text('WebDAV'),
+                        icon: Icon(Icons.storage),
+                      ),
                     ],
+                    selected: {_selectedProtocol},
+                    onSelectionChanged: (selected) {
+                      setState(() => _selectedProtocol = selected.first);
+                    },
                   ),
                 ),
-                SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-                // Configuration section
-                Text(
-                  AppLocalizations.of(context)!.configureRemoteSection,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                  ),
-                ),
-                SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: isDarkMode
-                        ? Color(0xFF1E1E1E)
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isDarkMode
-                          ? Colors.grey.shade800
-                          : Colors.grey.shade300,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      // token
-                      ListTile(
-                        title: Text(AppLocalizations.of(context)!.infomaniakToken),
-                        subtitle: Text(
-                          AppLocalizations.of(context)!.generateTokenAtManager,
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                        trailing: Icon(Icons.chevron_right),
-                        onTap: _editToken,
-                      ),
-                      Divider(
-                        height: 1,
+                if (_selectedProtocol == 'kdrive') ...[
+                  // Current status
+                  Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: configured
+                          ? (isDarkMode
+                                ? Color(0xFF1E1E1E) // Configured + Dark
+                                : Colors.grey.shade100) // Configured + Light
+                          : (isDarkMode
+                                ? Color(
+                                    0xFF2C2C2C,
+                                  ) // Not configured + Dark (example)
+                                : Colors
+                                      .white), // Not configured + Light (example)
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
                         color: isDarkMode
                             ? Colors.grey.shade800
                             : Colors.grey.shade300,
                       ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              configured ? Icons.cloud_done : Icons.cloud_off,
+                              color: isDarkMode
+                                  ? Colors.amber.shade300
+                                  : Colors.amber.shade700,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              configured
+                                  ? AppLocalizations.of(context)!.activeSyncTitle
+                                  : AppLocalizations.of(context)!.inactiveSyncTitle,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: configured
+                                    ? Colors.amber.shade700
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        if (configured) ...[
+                          Text(
+                            '${AppLocalizations.of(context)!.drive}: ${_storage.storageName}\n'
+                            '${AppLocalizations.of(context)!.destinationFolder}: $_selectedFolderName\n'
+                            '${AppLocalizations.of(context)!.encryption}: ${_encryptionEnabled ? AppLocalizations.of(context)!.active : AppLocalizations.of(context)!.inactive}\n'
+                            '${AppLocalizations.of(context)!.lastSync}: ${_formatLastSync()}',
+                            style: TextStyle(fontSize: 13),
+                          ),
+                        ] else
+                          Text(
+                            AppLocalizations.of(context)!.configureRemoteStorage,
+                            style: TextStyle(fontSize: 13, color: Colors.grey),
+                          ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 24),
 
-                      // drive
-                      if (_isLoadingDrives)
+                  // Configuration section
+                  Text(
+                    AppLocalizations.of(context)!.configureRemoteSection,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDarkMode
+                          ? Color(0xFF1E1E1E)
+                          : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDarkMode
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        // token
                         ListTile(
-                          title: Text(AppLocalizations.of(context)!.discoveringDrives),
-                          trailing: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        )
-                      else if (_tokenController.text.isNotEmpty &&
-                          _drives.isEmpty)
-                        ListTile(
-                          title: Text(AppLocalizations.of(context)!.kdriveDrive),
+                          title: Text(AppLocalizations.of(context)!.infomaniakToken),
                           subtitle: Text(
-                            AppLocalizations.of(context)!.noKdriveInAccount,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.orange,
-                            ),
-                          ),
-                          trailing: Icon(
-                            Icons.info_outline,
-                            color: Colors.orange,
-                          ),
-                          onTap: null,
-                        )
-                      else
-                        ListTile(
-                          title: Text(AppLocalizations.of(context)!.kdriveDrive),
-                          subtitle: Text(
-                            _selectedDriveId.isEmpty
-                                ? AppLocalizations.of(context)!.selectDrive
-                                : '$_selectedDriveName ($_selectedDriveId)',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
+                            AppLocalizations.of(context)!.generateTokenAtManager,
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                           trailing: Icon(Icons.chevron_right),
-                          onTap: _selectDrive,
+                          onTap: _editToken,
                         ),
-                      Divider(
-                        height: 1,
-                        color: isDarkMode
-                            ? Colors.grey.shade800
-                            : Colors.grey.shade300,
-                      ),
-
-                      // Destination folder inside the drive
-                      if (_selectedDriveId.isNotEmpty) ...[
-                        if (_isLoadingFolderContents)
-                          ListTile(
-                            title: Text(AppLocalizations.of(context)!.discoveringFolders),
-                            trailing: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        else
-                          _buildDestinationFolderSection(isDarkMode),
                         Divider(
                           height: 1,
                           color: isDarkMode
                               ? Colors.grey.shade800
                               : Colors.grey.shade300,
                         ),
-                      ],
 
-                      // Encryption
-                      ListTile(
-                        title: Text(AppLocalizations.of(context)!.encryptNotes),
-                        subtitle: Text(
-                          AppLocalizations.of(context)!.encryptNotesOnClient,
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        // drive
+                        if (_isLoadingDrives)
+                          ListTile(
+                            title: Text(AppLocalizations.of(context)!.discoveringDrives),
+                            trailing: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          )
+                        else if (_tokenController.text.isNotEmpty &&
+                            _drives.isEmpty)
+                          ListTile(
+                            title: Text(AppLocalizations.of(context)!.kdriveDrive),
+                            subtitle: Text(
+                              AppLocalizations.of(context)!.noKdriveInAccount,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange,
+                              ),
+                            ),
+                            trailing: Icon(
+                              Icons.info_outline,
+                              color: Colors.orange,
+                            ),
+                            onTap: null,
+                          )
+                        else
+                          ListTile(
+                            title: Text(AppLocalizations.of(context)!.kdriveDrive),
+                            subtitle: Text(
+                              _selectedDriveId.isEmpty
+                                  ? AppLocalizations.of(context)!.selectDrive
+                                  : '$_selectedDriveName ($_selectedDriveId)',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            trailing: Icon(Icons.chevron_right),
+                            onTap: _selectDrive,
+                          ),
+                        Divider(
+                          height: 1,
+                          color: isDarkMode
+                              ? Colors.grey.shade800
+                              : Colors.grey.shade300,
                         ),
-                        trailing: Switch(
-                          value: _encryptionEnabled,
-                          activeThumbColor: isDarkMode
-                              ? Colors.amber.shade300
-                              : Colors.amber.shade700,
-                          activeTrackColor:
-                              (isDarkMode
-                                      ? Colors.amber.shade300
-                                      : Colors.amber.shade700)
-                                  .withValues(alpha: 0.5),
-                          onChanged: (value) async {
-                            if (value) {
-                              // Prompt for passphrase before enabling
-                              final confirmed = await _showPassphraseDialog();
-                              if (!confirmed) {
-                                // User cancelled, do not enable
+
+                        // Destination folder inside the drive
+                        if (_selectedDriveId.isNotEmpty) ...[
+                          if (_isLoadingFolderContents)
+                            ListTile(
+                              title: Text(AppLocalizations.of(context)!.discoveringFolders),
+                              trailing: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          else
+                            _buildDestinationFolderSection(isDarkMode),
+                          Divider(
+                            height: 1,
+                            color: isDarkMode
+                                ? Colors.grey.shade800
+                                : Colors.grey.shade300,
+                          ),
+                        ],
+
+                        // Encryption
+                        ListTile(
+                          title: Text(AppLocalizations.of(context)!.encryptNotes),
+                          subtitle: Text(
+                            AppLocalizations.of(context)!.encryptNotesOnClient,
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          trailing: Switch(
+                            value: _encryptionEnabled,
+                            activeThumbColor: isDarkMode
+                                ? Colors.amber.shade300
+                                : Colors.amber.shade700,
+                            activeTrackColor:
+                                (isDarkMode
+                                        ? Colors.amber.shade300
+                                        : Colors.amber.shade700)
+                                    .withValues(alpha: 0.5),
+                            onChanged: (value) async {
+                              if (value) {
+                                // Prompt for passphrase before enabling
+                                final confirmed = await _showPassphraseDialog();
+                                if (!confirmed) {
+                                  // User cancelled, do not enable
+                                  return;
+                                }
+                              } else {
+                                // Disable encryption and clear passphrase
+                                _passphraseController.clear();
+                              }
+
+                              if (!context.mounted) return;
+
+                              // Ask the user whether to sync all notes
+                              // ignore: use_build_context_synchronously
+                              final confirmedSync = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: Text(AppLocalizations.of(context)!.syncAllNotes),
+                                  content: Text(
+                                    AppLocalizations.of(context)!.wantToSyncAllNotes,
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      child: Text(AppLocalizations.of(context)!.cancel),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: Text(AppLocalizations.of(context)!.sync),
+                                    ),
+                                  ],
+                                ),
+                              );
+
+                              if (confirmedSync != true) {
+                                // User cancelled, do not change encryption
                                 return;
                               }
-                            } else {
-                              // Disable encryption and clear passphrase
-                              _passphraseController.clear();
-                            }
 
-                            if (!context.mounted) return;
-
-                            // Ask the user whether to sync all notes
-                            // ignore: use_build_context_synchronously
-                            final confirmedSync = await showDialog<bool>(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: Text(AppLocalizations.of(context)!.syncAllNotes),
-                                content: Text(
-                                  AppLocalizations.of(context)!.wantToSyncAllNotes,
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, false),
-                                    child: Text(AppLocalizations.of(context)!.cancel),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(ctx, true),
-                                    child: Text(AppLocalizations.of(context)!.sync),
-                                  ),
-                                ],
-                              ),
-                            );
-
-                            if (confirmedSync != true) {
-                              // User cancelled, do not change encryption
-                              return;
-                            }
-
-                            if (mounted) {
-                              setState(() => _encryptionEnabled = value);
-                              await _saveCurrentConfig(
-                                sync: confirmedSync == true,
-                              );
-                            }
-                          },
+                              if (mounted) {
+                                setState(() => _encryptionEnabled = value);
+                                await _saveCurrentConfig(
+                                  sync: confirmedSync == true,
+                                );
+                              }
+                            },
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                SizedBox(height: 24),
+                  SizedBox(height: 24),
 
+                ] else ...[
+                  // WebDAV - coming soon
+                  Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.storage, size: 64, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text(
+                            'WebDAV',
+                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            AppLocalizations.of(context)!.webdavComingSoon,
+                            style: TextStyle(fontSize: 13, color: Colors.grey),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 // Action buttons
-                if (!configured) ...[
-                  // If not configured, show instructions
+                if (_selectedProtocol == 'kdrive' && !configured) ...[
+                  // If not configured, show instructions (kDrive only)
                   Container(
                     padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: configured
                           ? (isDarkMode
-                                ? Color(0xFF1E1E1E) // Configurado + Dark
-                                : Colors.grey.shade100) // Configurado + Light
+                                ? Color(0xFF1E1E1E) // Configured + Dark
+                                : Colors.grey.shade100) // Configured + Light
                           : (isDarkMode
                                 ? Color(
                                     0xFF2C2C2C,
@@ -782,7 +836,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           ),
           subtitle: Text(
             _selectedFolderId.isNotEmpty
-                ? AppLocalizations.of(context)!.selectedFolder('$_selectedFolderName')
+                ? AppLocalizations.of(context)!.selectedFolder(_selectedFolderName)
                 : AppLocalizations.of(context)!.selectFolderToStoreNotes,
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
@@ -860,7 +914,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   } else {
                     // Selecting a file does not make sense for storing notes
                     _showError(
-                      AppLocalizations.of(context)!.cannotCreateInFile('$rawType'),
+                      AppLocalizations.of(context)!.cannotCreateInFile(rawType),
                     );
                   }
                 },
@@ -966,7 +1020,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppLocalizations.of(context)!.createInFolder('$createParentName'),
+                  AppLocalizations.of(context)!.createInFolder(createParentName),
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 SizedBox(height: 12),
@@ -1031,7 +1085,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                 } catch (e) {
                   if (mounted) {
                     _showError(
-                      AppLocalizations.of(context)!.errorCreatingFolderIn('$_currentFolderName', '$e'),
+                      AppLocalizations.of(context)!.errorCreatingFolderIn(_currentFolderName, '$e'),
                     );
                   }
                 }

@@ -1029,6 +1029,30 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Nota vazia'**
   String get widgetEmptyNote;
+
+  /// No description provided for @emptyNoteRejected.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nota vazia rejeitada'**
+  String get emptyNoteRejected;
+
+  /// No description provided for @webdavComingSoon.
+  ///
+  /// In pt, this message translates to:
+  /// **'Em breve — protocolo WebDAV ainda não implementado.'**
+  String get webdavComingSoon;
+
+  /// No description provided for @languageSetting.
+  ///
+  /// In pt, this message translates to:
+  /// **'Idioma'**
+  String get languageSetting;
+
+  /// No description provided for @system.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sistema'**
+  String get system;
 }
 
 class _AppLocalizationsDelegate

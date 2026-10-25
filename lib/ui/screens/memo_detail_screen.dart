@@ -54,8 +54,9 @@ class _Match {
 
 class MemoDetailScreen extends StatefulWidget {
   final Memo memo;
+  final bool isNew;
 
-  const MemoDetailScreen({super.key, required this.memo});
+  const MemoDetailScreen({super.key, required this.memo, this.isNew = false});
 
   @override
   State<MemoDetailScreen> createState() => _MemoDetailScreenState();
@@ -114,10 +115,32 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   String _originalImageAttachments = '[]';
   String _originalAudioAttachments = '[]';
   String _originalLinkAttachments = '[]';
+  int _originalColorIndex = 0;
+  int _originalBgImageIndex = -1;
+
+  /// Returns true if the note has no title, content, or attachments.
+  bool _isEmpty() {
+    if (_titleController.text.trim().isNotEmpty) return false;
+    if (_isChecklistMode) {
+      for (var c in _listControllers) {
+        if (c.text.trim().isNotEmpty) return false;
+      }
+    } else {
+      if (_textNoteController.text.trim().isNotEmpty) return false;
+    }
+    if (_imageAttachments.isNotEmpty ||
+        _audioAttachments.isNotEmpty ||
+        _linksValues.isNotEmpty) {
+      return false;
+    }
+    return true;
+  }
 
   bool get _isDirty {
     if (_originalTitle == null || _originalText == null) return false;
     if (_titleController.text != _originalTitle) return true;
+    if (_currentMemo.colorIndex != _originalColorIndex) return true;
+    if (_currentMemo.bgImageIndex != _originalBgImageIndex) return true;
     if (_isChecklistMode) {
       if (_listControllers.length != _originalChecklists.length) return true;
       for (int i = 0; i < _listControllers.length; i++) {
@@ -147,6 +170,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     _originalImageAttachments = jsonEncode(_imageAttachments);
     _originalAudioAttachments = jsonEncode(_audioAttachments);
     _originalLinkAttachments = jsonEncode(_linksValues);
+    _originalColorIndex = _currentMemo.colorIndex;
+    _originalBgImageIndex = _currentMemo.bgImageIndex;
   }
 
   final List<Color> _lightColorsPalette = [
@@ -187,11 +212,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     Color(0xFF2C2C2C),
   ];
 
-  // List of 16 predefined image paths (app assets)
-  final List<String> _bgImagesPalette = List.generate(
-    16,
-    (i) => 'assets/backgrounds/bg_$i.png',
-  );
+  // List of predefined background image paths (app assets)
+  // Only images that exist in the bundle are included.
+  List<String> _bgImagesPalette = [];
 
   @override
   void initState() {
@@ -204,13 +227,38 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
 
     // Fixed id for the text block when the note stays in running text mode
     _textBlockUuid = '${_currentMemo.uuid}_text_fixed';
+    _loadAvailableBgImages();
     _loadMemoData();
+  }
+
+  Future<void> _loadAvailableBgImages() async {
+    final bundle = DefaultAssetBundle.of(context);
+    final available = <String>[];
+    for (int i = 0; i < 16; i++) {
+      final path = 'assets/backgrounds/bg_$i.png';
+      try {
+        await bundle.load(path);
+        available.add(path);
+      } catch (_) {
+        // Image does not exist, skipping
+      }
+    }
+    if (mounted) {
+      setState(() => _bgImagesPalette = available);
+    }
   }
 
   @override
   void dispose() {
-    // Try to save the data before closing the screen
-    if (!_isLoading) {
+    // Reject empty notes when closing the screen (e.g. app backgrounded)
+    if (!_isLoading && widget.isNew && !_isDirty && _isEmpty()) {
+      try {
+        context.read<MemoProvider>().rejectEmptyMemo(widget.memo.uuid);
+      } catch (_) {
+        // Context may no longer be available; ignore
+      }
+    } else if (!_isLoading) {
+      // Try to save the data before closing the screen
       _persistData();
     }
     _titleController.dispose();
@@ -559,21 +607,24 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                leading: Icon(Icons.camera_alt_outlined),
-                title: Text(AppLocalizations.of(context)!.takePhoto),
-                onTap: () => Navigator.pop(ctx),
-              ),
-              ListTile(
-                leading: Icon(Icons.image_outlined),
-                title: Text(AppLocalizations.of(context)!.addImageFromGallery),
-                onTap: () => Navigator.pop(ctx),
-              ),
-              ListTile(
-                leading: Icon(Icons.mic_none_outlined),
-                title: Text(AppLocalizations.of(context)!.recordAudioNote),
-                onTap: () => Navigator.pop(ctx),
-              ),
+              // TODO: implementar captura de foto (Take photo)
+              // ListTile(
+              //   leading: Icon(Icons.camera_alt_outlined),
+              //   title: Text(AppLocalizations.of(context)!.takePhoto),
+              //   onTap: () => Navigator.pop(ctx),
+              // ),
+              // TODO: implementar seleção de imagem da galeria (Add image from gallery)
+              // ListTile(
+              //   leading: Icon(Icons.image_outlined),
+              //   title: Text(AppLocalizations.of(context)!.addImageFromGallery),
+              //   onTap: () => Navigator.pop(ctx),
+              // ),
+              // TODO: implementar gravação de áudio (Record audio note)
+              // ListTile(
+              //   leading: Icon(Icons.mic_none_outlined),
+              //   title: Text(AppLocalizations.of(context)!.recordAudioNote),
+              //   onTap: () => Navigator.pop(ctx),
+              // ),
               ListTile(
                 leading: Icon(Icons.link_outlined),
                 title: Text(AppLocalizations.of(context)!.addLinkLower),
@@ -875,6 +926,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       ),
     );
 
+    if (!mounted) return;
     if (action == 'find') {
       _activateSearch();
     } else if (action == 'delete') {
@@ -962,6 +1014,22 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
         canPop: false,
         onPopInvokedWithResult: (didPop, result) async {
           if (didPop) return;
+          // Reject only brand-new notes that were never edited and are still empty.
+          // Notes that were edited and then cleared are kept (persisted normally).
+          if (widget.isNew && !_isDirty && _isEmpty()) {
+            await context.read<MemoProvider>().rejectEmptyMemo(widget.memo.uuid);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    AppLocalizations.of(context)!.emptyNoteRejected,
+                  ),
+                ),
+              );
+              Navigator.of(context).pop();
+            }
+            return;
+          }
           // Ensures data is saved before leaving the screen
           await _persistData();
           // ignore: use_build_context_synchronously
@@ -978,6 +1046,20 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
             leading: IconButton(
               icon: Icon(Icons.arrow_back, color: iconColor),
               onPressed: () async {
+                if (widget.isNew && !_isDirty && _isEmpty()) {
+                  await context.read<MemoProvider>().rejectEmptyMemo(widget.memo.uuid);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          AppLocalizations.of(context)!.emptyNoteRejected,
+                        ),
+                      ),
+                    );
+                    Navigator.of(context).pop();
+                  }
+                  return;
+                }
                 await _persistData();
                 // ignore: use_build_context_synchronously
                 final navigator = Navigator.of(context);
@@ -986,14 +1068,16 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               },
             ),
           actions: [
-            IconButton(
-              icon: Icon(Icons.push_pin_outlined, color: iconColor),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: Icon(Icons.notification_add_outlined, color: iconColor),
-              onPressed: () {},
-            ),
+            // TODO: implementar fixar nota (pin)
+            // IconButton(
+            //   icon: Icon(Icons.push_pin_outlined, color: iconColor),
+            //   onPressed: () {},
+            // ),
+            // TODO: implementar notificação/lembrete (notification)
+            // IconButton(
+            //   icon: Icon(Icons.notification_add_outlined, color: iconColor),
+            //   onPressed: () {},
+            // ),
             IconButton(
               icon: Icon(Icons.archive_outlined, color: iconColor),
               onPressed: () async {
@@ -1083,8 +1167,8 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
           ],
         ),
       ),
-    ), // Fecha WillPopScope
-  ); // Fecha Container
+    ), // Closes WillPopScope
+  ); // Closes Container
   }
 
   Widget _buildBottomToolbar(bool isDarkMode, Color footerBgColor) {
@@ -1118,14 +1202,15 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
             // ignore: use_build_context_synchronously
             onPressed: () => _showStyleMenu(context),
           ),
-          IconButton(
-            icon: Icon(
-              Icons.text_format_outlined,
-              color: isDarkMode ? Colors.white60 : Colors.black54,
-            ),
-            // ignore: use_build_context_synchronously
-            onPressed: () => _showStyleMenu(context),
-          ),
+          // TODO: implementar formatação de texto (negrito, itálico, etc.)
+          // IconButton(
+          //   icon: Icon(
+          //     Icons.text_format_outlined,
+          //     color: isDarkMode ? Colors.white60 : Colors.black54,
+          //   ),
+          //   // ignore: use_build_context_synchronously
+          //   onPressed: () => _showStyleMenu(context),
+          // ),
           Spacer(),
           IconButton(
             icon: Icon(

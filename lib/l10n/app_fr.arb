@@ -153,5 +153,9 @@
   "searchCounter": "{current} sur {total}",
   "decryptionFailuresCount": "{count} fichier(s) n’ont pas pu être déchiffrés. Vérifiez la phrase secrète.",
   "widgetUntitled": "Sans titre",
-  "widgetEmptyNote": "Note vide"
+  "widgetEmptyNote": "Note vide",
+  "emptyNoteRejected": "Note vide rejetée",
+  "webdavComingSoon": "Bientôt disponible — protocole WebDAV pas encore implémenté.",
+  "languageSetting": "Langue",
+  "system": "Système"
 }
