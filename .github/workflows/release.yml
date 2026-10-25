@@ -1,0 +1,65 @@
+name: Build Android Release APK
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build-android:
+    name: Build Flutter App for Android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.6'
+          channel: 'stable'
+          cache: false
+
+      - name: Install dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Decode Keystore and Create Properties
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > upload-keystore.jks
+          echo "storePassword=${{ secrets.ANDROID_STORE_PASSWORD }}" > android/key.properties
+          echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
+          echo "storeFile=../../upload-keystore.jks" >> android/key.properties
+
+      - name: Build APK
+        run: |
+          export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+          flutter build apk --release --no-tree-shake-icons
+
+      - name: Rename APK
+        run: mv build/app/outputs/flutter-apk/app-release.apk kMemo-${{ github.ref_name }}.apk
+
+      - name: Extract current release notes
+        run: |
+          TAG="${{ github.ref_name }}"
+          VERSION=$(echo "$TAG" | sed 's/^v//')
+          echo "A extrair notas para a versão: $VERSION"
+          echo "RELEASE_BODY<<EOF_MARKER" >> $GITHUB_ENV
+          sed -n "/^## $VERSION/,/^## /p" CHANGELOG.md | sed '1d;$d' >> $GITHUB_ENV
+          echo "EOF_MARKER" >> $GITHUB_ENV
+
+      - name: Upload APK to Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: kMemo-${{ github.ref_name }}.apk
+          name: "kMemo ${{ github.ref_name }}"
+          tag_name: ${{ github.ref_name }}
+          body: ${{ env.RELEASE_BODY }}

@@ -1,24 +1,25 @@
 # kMemo
 
-O **kMemo** é uma aplicação móvel de notas minimalista e ultra-focada na produtividade, desenvolvida em Flutter. A sua interface afasta-se dos editores de texto tradicionais, adotando uma estrutura inteiramente orientada a blocos dinâmicos, permitindo mutar e reordenar conteúdos de forma fluida e sem distrações visuais.
+O **kMemo** é uma aplicação móvel de notas minimalista e focada na produtividade, criada na Europa e desenvolvida em Flutter. A sua interface afasta-se dos editores de texto tradicionais, adotando uma estrutura inteiramente orientada a blocos dinâmicos, permitindo mutar e reordenar conteúdos de forma fluida e sem distrações visuais. O **kMemo** nasceu da necessidade de mantemos as nossas notas soberanas sem sermos o produto e depender das grandes tecnológicas.
 
-**Versão atual: 0.1.4+5**
+**Versão atual: 0.1.6+7**
 
 ---
 
 ## 🚀 Características Principais
 
-- **Escrita Sem Distrações:** Interface limpa, contínua e sem bordas mecânicas. Cada elemento integra-se como se fosse uma folha de papel única.
-- **Estrutura Baseada em Blocos:** O conteúdo de cada nota é composto por blocos independentes (Texto, Listas de Tarefas, Cabeçalhos) que podem ser manipulados individualmente.
-- **Persistência Offline-First:** Toda a gestão de dados é feita localmente através do SQLite (via Drift), garantindo velocidade instantânea e privacidade absoluta.
-- **Tema Escuro Automático (Dark Mode):** Suporte completo e dinâmico adaptado às definições do sistema, incluindo paletas de cores escuras, profundas e dessaturadas para o fundo das notas e cartões em todas as vistas.
-- **Ecossistema Reativo:** Utilização do ecossistema `Provider` combinado com streams nativos do Drift para atualizações em tempo real na interface e no widget do ecrã principal.
-- **Home Screen Widget (4×3):** Widget nativo Android que exibe as últimas notas diretamente no ecrã principal, com fundo colorido por nota, preview de texto e ícones de checkbox para checklists.
-- **Ícone Personalizado:** Ícone próprio com cérebro e lâmpada sobre fundo laranja, aplicado a Android, iOS, Web, Windows e macOS.
-- **Internacionalização:** Suporte a português, inglês, francês, alemão, italiano e espanhol.
-- **Partilha de Texto:** Recebe texto partilhado de outras aplicações (Share Plus) e cria automaticamente uma nova nota.
+- **Escrita sem distrações:** Interface limpa, contínua e sem bordas mecânicas. Cada elemento integra-se como se fosse uma folha de papel única.
+- **Estrutura baseada em blocos:** O conteúdo de cada nota é composto por blocos independentes (Texto, Listas de Tarefas, Cabeçalhos) que podem ser manipulados individualmente.
+- **Persistência offline-first:** Toda a gestão de dados é feita localmente através do SQLite (via Drift), garantindo velocidade instantânea e privacidade absoluta.
+- **Tema escuro automático (Dark Mode):** Suporte completo e dinâmico adaptado às definições do sistema, incluindo paletas de cores escuras, profundas e dessaturadas para o fundo das notas e cartões em todas as vistas.
+- **Ecossistema reativo:** Utilização do ecossistema `Provider` combinado com streams nativos do Drift para atualizações em tempo real na interface e no widget do ecrã principal.
+- **Home screen widget (4×3):** Widget nativo Android que exibe as últimas notas diretamente no ecrã principal, com fundo colorido por nota, pré-visualização de texto e ícones de caixas de verificação para listas.
+- **Internacionalização:** Suporte a português, inglês, francês, alemão, italiano e espanhol, com opção "Sistema" para seguir o idioma do dispositivo.
+- **Partilha de texto:** Recebe texto partilhado de outras aplicações (Share Plus) e cria automaticamente uma nova nota ou partilhe as suas notas com outras aplicações externas
+- **Rejeição de notas vazias:** Notas criadas mas deixadas vazias são automaticamente eliminadas ao sair, evitando acumulação de notas sem conteúdo.
 - **Sincronização com kDrive (Infomaniak):** Envio e descarga de notas para a nuvem com encriptação opcional AES no cliente.
-- **Integração com Home Screen Widget:** Sincronização automática com um widget nativo do sistema para visualização rápida das últimas notas diretamente no ambiente de trabalho do dispositivo.
+- **Integração com Home Screen Widget:** Sincronização automática com um widget nativo do sistema para visualização rápida das últimas notas e respetiva edição rápida diretamente a partir do ambiente de trabalho do dispositivo.
+- **APP link**: Suporte a abertura de notas via APP link  *kmemo://*
 
 ---
 
@@ -54,6 +55,7 @@ A aplicação organiza a persistência através de duas tabelas relacionais com 
 | `isArchived` | Boolean | Estado de arquivamento |
 | `isDeleted` | Boolean | Estado de lixeira (soft delete) |
 
+
 ### 2. Blocks (Componentes Dinâmicos)
 | Campo | Tipo | Descrição |
 |-------|------|-----------|
@@ -66,6 +68,71 @@ A aplicação organiza a persistência através de duas tabelas relacionais com 
 
 > **Nota sobre sincronização remota:** Os campos `isSynced` e `remoteFileId` são estado local do Drift e não são enviados no payload JSON para o kDrive.
 
+
+---
+
+## 📱 Widget do Ecrã Principal
+
+O widget nativo Android exibe as notas ativas diretamente no ecrã principal:
+
+- **Tamanho:** 4×3 células.
+- **Conteúdo:** Título da nota e pré-visualização do conteúdo
+- **Cores:** Cada cartão usa a cor de fundo definida em cada nota respeitando a palete de cores em cada tema definido nas definições (Claro e Escuro)
+- **Edição:** Clicar numa nota do widget abre a aplicação em modo edição da nota selecionada
+
+---
+
+## ☁️ Sincronização Remota (kDrive / Infomaniak)
+
+A partir da versão 0.1.3+, o kMemo suporta sincronização remota de notas através do **kDrive**, o serviço de armazenamento soberano em nuvem da Infomaniak.
+
+### Modelo de negócio
+1. **Colocar token:** O utilizador insere o token de API Infomaniak.
+2. **Descobrir drives:** A aplicação tenta encontrar as drives disponíveis; caso exista apenas uma, pré-seleciona essa drive.
+3. **Navegar pastas:** O utilizador navega sobre a pasta privada onde pode criar novas pastas.
+4. **Encriptação:** Define se pretende encriptação ou não.
+5. **Sincronizar:** Carrega em "Sincronizar agora"; todas as configurações são guardadas e tenta o primeiro sincronismo com a cloud.
+6. **Notas encriptadas na cloud:** Se existirem notas na cloud encriptadas, o utilizador será informado e questionado pela passphrase da nota em questão por um novo diálogo. Após duas tentativas falhadas de desencriptação, pode escolher ignorar ou eliminar a nota remota.
+7. **Re-encriptação:** Se for possível desencriptar uma nota anteriormente encriptada, ela será regravada conforme a configuração geral de encriptação (sem encriptação se desativada, ou com nova passphrase se ativada).
+8. **Alterar encriptação:** Quando o utilizador desativa/reactiva a encriptação, todas as notas são marcadas como não sincronizadas localmente e o utilizador é questionado se pretende reenviar todas as notas locais para a nuvem encriptadas ou desencriptadas conforme a configuração geral.
+
+### Como funciona
+
+- **Offline-first:** Todas as notas continuam a ser armazenadas localmente em SQLite havendo o risco de perda de notas se acidentalmente desinstalar a aplicação. A sincronização é uma camada assíncrona que não bloqueia a interface e permite que as suas notas sejam salvas de forma soberana num servidor remoto.
+- **Push:** Notas criadas, editadas, arquivadas ou eliminadas são enviadas para o kDrive
+- **Pull:** Notas existentes no kDrive mas não no dispositivo são baixadas automaticamente.
+- **Conflitos:** Resolvidos por "last-write-wins" com base na data de atualização (`updatedAt`).
+- **Encriptação opcional:** Pode ativar encriptação AES no cliente com uma passphrase definida por si. Sem essa passphrase, não é possível recuperar os dados encriptados.
+- **Pasta de destino:** As notas são guardadas dentro de uma pasta específica (não na raiz), navegável hierarquicamente. A pasta "Private" (id=5) é usada como raiz efetiva, pois a API kDrive não permite escrita na raiz (id=1).
+
+### Configuração
+
+1. Vá a **Definições → Sincronização**.
+2. Gere um token de API em [manager.infomaniak.com](https://manager.infomaniak.com/v3/ng/accounts/token/list) com os escopos `drive`, `user_info`, `accounts`.
+3. Cole o token na aplicação;
+4. Selecione o drive kDrive onde deseja guardar as notas, a drive é descoberta e pré-selecionada se for a única.
+5. Escolha o local onde deseja guardar as notas, pode criar novas pastas.
+6. (Opcional) Ative a encriptação e defina uma passphrase.
+7. Clique em **"Sincronizar agora"** para guardar a configuração e executar o primeiro sincronismo.
+
+### Limitações conhecidas
+
+- O rate limit da API Infomaniak é de 60 pedidos por minuto.
+- A sincronização requer ligação à internet.
+- A pasta de destino deve ser selecionada antes do primeiro sincronismo.
+
+---
+
+## ☁️ Sincronização Remota (WebDAV)
+
+- Protocolo WebDAV em desenvolvimento. O seletor de protocolo está disponível nas Definições → Sincronização, mas a implementação do protocolo WebDAV ainda não está concluída. Atualmente, apenas o kDrive (Infomaniak) está funcional. 
+
+---
+
+### ⚠️ Aviso Importante
+
+O kMemo **não é afiliado, endossado ou patrocinado pela Infomaniak**. O serviço **kDrive** é uma marca registada da **Infomaniak**. A utilização da API do kDrive é feita através de tokens gerados pelo próprio utilizador no gestor de conta da Infomaniak, de acordo com os termos de serviço dessa empresa.
+
 ---
 
 ## 📦 Como Executar o Projeto
@@ -74,6 +141,8 @@ A aplicação organiza a persistência através de duas tabelas relacionais com 
 - Flutter SDK instalado (versão `^3.10.7` ou superior).
 - Dispositivo ou Emulador Android/iOS configurado.
 - Android SDK com API nível 21+.
+
+> [Veja o meu artigo de instalação em Linux](https://medium.com/@marotoweb/how-to-install-flutter-on-ubuntu-24-04-3-lts-without-android-studio-17a41ee29468)
 
 ### Passos para inicialização
 
@@ -90,90 +159,18 @@ A aplicação organiza a persistência através de duas tabelas relacionais com 
 
 3. **Executar a geração de código (Drift/Build Runner):**
    ```bash
-   flutter pub run build_runner build --delete-conflicting-outputs
+   flutter pub run build_runner build --force-jit
    ```
 
-4. **Gerar código de localização (se alterar ficheiros .arb):**
-   ```bash
-   flutter gen-l10n
-   ```
-
-5. **Gerar ícones da aplicação (opcional, se alterar o ícone):**
+4. **Gerar ícones da aplicação (opcional, se alterar o ícone):**
    ```bash
    flutter pub run flutter_launcher_icons
    ```
 
-6. **Compilar e correr a aplicação:**
+5. **Compilar e correr a aplicação:**
    ```bash
    flutter run
    ```
-
----
-
-## 📱 Widget do Ecrã Principal
-
-O widget nativo Android exibe as notas ativas diretamente no ecrã principal:
-
-- **Tamanho:** 4×3 células.
-- **Conteúdo:** Título da nota + preview do conteúdo (até 7 linhas de texto ou 8 itens de checklist).
-- **Cores:** Cada card usa a cor de fundo definida na nota.
-- **Cantos:** Arredondados (16dp), iguais ao fundo do widget.
-- **Espaçamento:** 6dp nas laterais, 1dp vertical entre cards.
-
-> **Nota:** Clicar numa nota do widget abre diretamente essa nota em modo de edição (MemoDetailScreen). O fluxo `PendingIntentTemplate`/`fillInIntent` está funcional: o `note_uuid` é extraído do `data` URI (`kmemo://note/<uuid>`) ou do extra `note_uuid` no `MainActivity`, guardado em SharedPreferences e lido pelo Flutter via MethodChannel.
-
----
-
-## ☁️ Sincronização Remota (kDrive / Infomaniak)
-
-A partir da versão 0.1.3+, o kMemo suporta sincronização remota de notas através do **kDrive**, o serviço de armazenamento em nuvem da Infomaniak.
-
-### Modelo de negócio
-1. **Colocar token:** O utilizador insere o token de API Infomaniak.
-2. **Descobrir drives:** A aplicação tenta encontrar as drives disponíveis; caso exista apenas uma, pré-seleciona essa drive.
-3. **Navegar pastas:** O utilizador navega sobre a pasta privada onde pode criar novas pastas.
-4. **Encriptação:** Define se pretende encriptação ou não.
-5. **Sincronizar:** Carrega em "Sincronizar agora"; todas as configurações são guardadas e tenta o primeiro sincronismo com a cloud.
-6. **Notas encriptadas na cloud:** Se existirem notas na cloud encriptadas, o utilizador será informado e questionado pela passphrase da nota em questão por um novo diálogo. Após duas tentativas falhadas de desencriptação, pode escolher ignorar ou eliminar a nota remota.
-7. **Re-encriptação:** Se for possível desencriptar uma nota anteriormente encriptada, ela será regravada conforme a configuração geral de encriptação (sem encriptação se desativada, ou com nova passphrase se ativada).
-8. **Alterar encriptação:** Quando o utilizador desativa/reactiva a encriptação, todas as notas são marcadas como não sincronizadas localmente e o utilizador é questionado se pretende reenviar todas as notas locais para a nuvem encriptadas ou desencriptadas conforme a configuração geral.
-
-### Como funciona (técnico)
-- **Offline-first:** Todas as notas continuam a ser armazenadas localmente em SQLite. A sincronização é uma camada assíncrona que não bloqueia a interface.
-- **Push:** Notas criadas, editadas, arquivadas ou eliminadas são enviadas para o kDrive com um pequeno atraso (debounce de 3 segundos).
-- **Pull:** Notas existentes no kDrive mas não no dispositivo são baixadas automaticamente.
-- **Conflitos:** Resolvidos por "last-write-wins" com base na data de atualização (`updatedAt`).
-- **Encriptação opcional:** Pode ativar encriptação AES no cliente com uma passphrase definida por si. Sem essa passphrase, não é possível recuperar os dados encriptados.
-- **Pasta de destino:** As notas são guardadas dentro de uma pasta específica (não na raiz), navegável hierarquicamente. A pasta "Private" (id=5) é usada como raiz efetiva, pois a API kDrive não permite escrita na raiz (id=1).
-
-### Configuração
-
-1. Vá a **Definições → Sincronização**.
-2. Gere um token de API em [manager.infomaniak.com](https://manager.infomaniak.com/v3/ng/accounts/token/list) com os scopes `drive`, `user_info` e `accounts`.
-3. Cole o token na aplicação; a drive é descoberta e pré-selecionada se for a única.
-4. Navegue na pasta privada e selecione a pasta de destino (pode criar novas pastas).
-5. (Opcional) Ative a encriptação e defina uma passphrase.
-6. Clique em **"Sincronizar agora"** para guardar a configuração e executar o primeiro sincronismo.
-
-### Limitações conhecidas
-
-- A pasta `kmemo/notes` deve existir no kDrive (ou será criada automaticamente se a API permitir).
-- O rate limit da API Infomaniak é de 60 pedidos por minuto.
-- A sincronização requer ligação à internet.
-- A pasta de destino deve ser selecionada antes do primeiro sincronismo.
-
----
-
-### ⚠️ Aviso Importante
-
-O kMemo **não é afiliado, endossado ou patrocinado pela Infomaniak**. O serviço **kDrive** é uma marca registada da **Infomaniak**. A utilização da API do kDrive é feita através de tokens gerados pelo próprio utilizador no gestor de conta da Infomaniak, de acordo com os termos de serviço dessa empresa.
-
----
-
-## 📝 Licença
-
-Este projeto é distribuído sob a licença **GNU General Public License v3.0 (GPLv3)**.
-
 ---
 
 ## 🧭 Navegação Rápida
@@ -198,7 +195,14 @@ Este projeto é distribuído sob a licença **GNU General Public License v3.0 (G
 | `android/app/src/main/kotlin/com/marotoweb/kmemo/MainActivity.kt` | Tratamento de intents (widget + shared text) |
 | `android/app/src/main/kotlin/com/marotoweb/kmemo/KMemoWidgetService.kt` | Fábrica de views do widget nativo |
 | `android/app/src/main/kotlin/com/marotoweb/kmemo/KMemoWidgetProvider.kt` | Lifecycle do AppWidget |
-| `assets/icon/icon.png` | Ícone da aplicação (cérebro + lâmpada + K) |
-| `assets/images/` | Pasta para imagens de fundo das notas (16 imagens) |
+| `assets/icon/icon.png` | Ícone da aplicação |
+| `assets/backgrounds/` | Pasta para imagens de fundo das notas |
 
 ---
+
+## 📝 Licença
+
+Este projeto é distribuído sob a licença **GNU General Public License v3.0 (GPLv3)**.
+
+## 📄 Isenção de responsabilidade
+A aplicação kMemo é fornecida "COMO ESTÁ", sem garantias de qualquer tipo. O autor não se responsabiliza por qualquer mau funcionamento, perda de dados ou erros  que possam surgir do uso desta aplicação.

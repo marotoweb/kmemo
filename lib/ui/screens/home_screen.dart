@@ -183,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         debugPrint('[HomeScreen] in pending UUID found');
       }
     } catch (e) {
-      debugPrint('[HomeScreen] error ao abrir note via widget: $e');
+      debugPrint('[HomeScreen] error opening note via widget: $e');
     }
   }
 
@@ -207,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => MemoDetailScreen(memo: newMemo),
+          builder: (context) => MemoDetailScreen(memo: newMemo, isNew: true),
         ),
       ).then((_) {
         _isOpeningNote = false;
@@ -215,7 +215,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       });
     } catch (e) {
       _isOpeningNote = false;
-      debugPrint('[HomeScreen] error ao create note via widget: $e');
+      debugPrint('[HomeScreen] error creating note via widget: $e');
     }
   }
 
@@ -262,16 +262,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final sanitized = _sanitizeSharedText(sharedText);
         if (sanitized.isEmpty) return;
 
-        // Use the first line as title, or "shared note" if empty
         final lines = sanitized.split('\n');
-        final title = lines.first.trim().isNotEmpty
-            ? lines.first.trim()
-            : AppLocalizations.of(context)!.sharedNote;
 
-        // the body is the rest (or the full text if it's the only line)
-        final body = lines.length > 1
-            ? lines.sublist(1).join('\n').trim()
-            : '';
+        // Detect checklist pattern: if the FIRST line is a checklist item,
+        // treat the entire text as a checklist (first line becomes first item,
+        // title defaults to "shared note").
+        final checklistRegex = RegExp(r'^\s*[-*]?\s*\[([xX ]?)\]\s*(.*)$');
+        final firstLine = lines.first.trim();
+        final firstLineIsChecklist = firstLine.isNotEmpty &&
+            checklistRegex.hasMatch(firstLine);
+
+        String title;
+        List<String> bodyLines;
+        if (firstLineIsChecklist) {
+          title = AppLocalizations.of(context)!.sharedNote;
+          bodyLines = lines; // all lines are checklist items
+        } else {
+          title = firstLine.isNotEmpty
+              ? firstLine
+              : AppLocalizations.of(context)!.sharedNote;
+          // the body is the rest (or the full text if it's the only line)
+          bodyLines = lines.length > 1
+              ? lines.sublist(1)
+              : [];
+        }
+
+        debugPrint('[HomeScreen] title: "$title"');
+        debugPrint('[HomeScreen] firstLineIsChecklist: $firstLineIsChecklist');
+        debugPrint('[HomeScreen] bodyLines: $bodyLines');
 
         final memo = Memo(
           uuid: Uuid().v4(),
@@ -288,24 +306,68 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           isDeleted: false,
         );
 
-        final block = Block(
-          id: 0,
-          uuid: Uuid().v4(),
-          memoUuid: memo.uuid,
-          type: BlockType.text,
-          content: {'text': body},
-          sortOrder: 0,
-          isDeleted: false,
-        );
+        final List<Block> blocks = [];
+        int sortOrder = 0;
+        for (final line in bodyLines) {
+          if (line.trim().isEmpty) continue;
+          final match = checklistRegex.firstMatch(line);
+          if (match != null) {
+            final marker = match.group(1) ?? '';
+            final text = match.group(2) ?? '';
+            blocks.add(
+              Block(
+                id: 0,
+                uuid: Uuid().v4(),
+                memoUuid: memo.uuid,
+                type: BlockType.checklist,
+                content: {
+                  'text': text.trim(),
+                  'checked': marker.toLowerCase() == 'x',
+                },
+                sortOrder: sortOrder++,
+                isDeleted: false,
+              ),
+            );
+          } else if (line.trim().isNotEmpty) {
+            // Non-checklist line: keep as checklist item with original text
+            blocks.add(
+              Block(
+                id: 0,
+                uuid: Uuid().v4(),
+                memoUuid: memo.uuid,
+                type: BlockType.checklist,
+                content: {
+                  'text': line.trim(),
+                  'checked': false,
+                },
+                sortOrder: sortOrder++,
+                isDeleted: false,
+              ),
+            );
+          }
+        }
+        if (blocks.isEmpty) {
+          blocks.add(
+            Block(
+              id: 0,
+              uuid: Uuid().v4(),
+              memoUuid: memo.uuid,
+              type: BlockType.text,
+              content: {'text': bodyLines.join('\n')},
+              sortOrder: 0,
+              isDeleted: false,
+            ),
+          );
+        }
 
-        await provider.saveMemo(memo, [block]);
+        await provider.saveMemo(memo, blocks);
 
         if (!mounted) return;
 
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => MemoDetailScreen(memo: memo),
+            builder: (context) => MemoDetailScreen(memo: memo, isNew: true),
           ),
         );
 
@@ -350,7 +412,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-  void _showStyleMenu(BuildContext context) {
+  Future<void> _showStyleMenu(BuildContext context) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     final List<Color> lightColorsPalette = [
@@ -393,11 +455,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     final colorsPalette = isDarkMode ? darkColorsPalette : lightColorsPalette;
 
-    final List<String> bgImagesPalette = List.generate(
-      16,
-      (i) => 'assets/backgrounds/bg_$i.png',
-    );
+    final List<String> bgImagesPalette = [];
+    final bundle = DefaultAssetBundle.of(context);
+    for (int i = 0; i < 16; i++) {
+      final path = 'assets/backgrounds/bg_$i.png';
+      try {
+        await bundle.load(path);
+        bgImagesPalette.add(path);
+      } catch (_) {
+        // Image does not exist, skipping
+      }
+    }
 
+    if (!context.mounted) return;
     final provider = context.read<MemoProvider>();
     Memo? singleSelectedMemo;
     if (_selectedUuids.length == 1) {
@@ -882,7 +952,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => MemoDetailScreen(memo: newMemo),
+                      builder: (context) => MemoDetailScreen(memo: newMemo, isNew: true),
                     ),
                   );
                 }

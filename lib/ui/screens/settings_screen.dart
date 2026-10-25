@@ -131,11 +131,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             child: ListTile(
-              title: Text(AppLocalizations.of(context)!.language),
-              trailing: DropdownButton<String>(
-                value: themeProvider.locale?.languageCode ?? 'pt',
+              title: Text(AppLocalizations.of(context)!.languageSetting),
+              trailing: DropdownButton<String?>(
+                value: themeProvider.locale?.languageCode,
                 underline: SizedBox.shrink(),
                 items: [
+                  DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text(AppLocalizations.of(context)!.system),
+                  ),
                   DropdownMenuItem(value: 'pt', child: Text('Português')),
                   DropdownMenuItem(value: 'en', child: Text('English')),
                   DropdownMenuItem(value: 'fr', child: Text('Français')),
@@ -144,8 +148,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   DropdownMenuItem(value: 'es', child: Text('Español')),
                 ],
                 onChanged: (code) {
-                  if (code == null) return;
-                  themeProvider.setLocale(Locale(code));
+                  if (code == null) {
+                    themeProvider.setLocale(null);
+                  } else {
+                    themeProvider.setLocale(Locale(code));
+                  }
                 },
               ),
             ),

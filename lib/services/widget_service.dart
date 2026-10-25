@@ -84,11 +84,11 @@ class WidgetService {
                 ]))
               .get();
 
-      debugPrint('[WidgetService] Memos activos encontrados: ${memos.length}');
+      debugPrint('[WidgetService] Active memos found: ${memos.length}');
 
       final prefs = await SharedPreferences.getInstance();
-      final untitledLabel = prefs.getString(_labelUntitledKey) ?? 'Sem título';
-      final emptyLabel = prefs.getString(_labelEmptyKey) ?? 'Nota vazia';
+      final untitledLabel = prefs.getString(_labelUntitledKey) ?? 'Untitled';
+      final emptyLabel = prefs.getString(_labelEmptyKey) ?? 'Empty note';
       final listItemLabel = prefs.getString(_labelListItemKey) ?? 'Item de lista';
 
       final List<String> idsList = [];
