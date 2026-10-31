@@ -51,6 +51,8 @@ dependencies:
   url_launcher: ^6.2.6
   http: ^1.2.0
   package_info_plus: ^8.0.0
+  docx_template: ^0.4.0
+  archive: ^3.6.1
 
 dev_dependencies:
   flutter_test:

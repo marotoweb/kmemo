@@ -600,6 +600,96 @@ class KDriveStorage extends StorageRepository {
   // Upload / Download notes (memos) and their blocks
   // ------------------------------------------------------------------------
 
+  /// Uploads an arbitrary file (e.g. a .docx export) to the configured kDrive folder.
+  Future<String?> uploadMemoBytes({
+    required String fileName,
+    required List<int> bytes,
+  }) async {
+    if (_token == null || _driveId == null) {
+      debugPrint('[KDriveStorage] uploadMemoBytes: NOT CONFIGURED');
+      return null;
+    }
+
+    final driveIdValue = _driveId!.toString();
+    final apiBase = 'https://api.infomaniak.com';
+
+    final paramsBase = <String, String>{
+      'total_size': bytes.length.toString(),
+      'file_name': fileName,
+      'conflict': 'version',
+    };
+
+    final dirIdsToTry = <String>[];
+    if (_folderId != null && _folderId!.isNotEmpty) {
+      final dirIdInt = int.tryParse(_folderId!);
+      if (dirIdInt != null) dirIdsToTry.add(_folderId!);
+    }
+    if (_remoteFolder.isNotEmpty && _remoteFolder != _defaultRemoteFolder) {
+      final dirIdInt = int.tryParse(_remoteFolder);
+      if (dirIdInt != null && !dirIdsToTry.contains(_remoteFolder)) {
+        dirIdsToTry.add(_remoteFolder);
+      }
+    }
+    dirIdsToTry.add('none');
+    dirIdsToTry.add(_rootFolderId);
+
+    String? lastError;
+    for (final dirId in dirIdsToTry) {
+      if (dirId == 'none') {
+        final uri = Uri.parse(
+          '$apiBase/3/drive/$driveIdValue/upload',
+        ).replace(queryParameters: paramsBase);
+        debugPrint('[KDriveStorage] uploadMemoBytes: POST without directory_id to $uri');
+        var response = await _client.post(
+          uri,
+          headers: {
+            'Authorization': 'Bearer $_token',
+            'Content-Type': 'application/octet-stream',
+          },
+          body: bytes,
+        );
+        debugPrint(
+          '[KDriveStorage] uploadMemoBytes: status=${response.statusCode} body=${response.body}',
+        );
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final remoteId = _extractFileIdFromUploadResponse(response.body);
+          debugPrint('[KDriveStorage] uploadMemoBytes: remoteId=$remoteId');
+          return remoteId;
+        }
+        lastError =
+            'Failed to upload file (without directory_id): ${response.statusCode} ${response.body}';
+        continue;
+      }
+
+      final params = <String, String>{...paramsBase, 'directory_id': dirId};
+      final uri = Uri.parse(
+        '$apiBase/3/drive/$driveIdValue/upload',
+      ).replace(queryParameters: params);
+      debugPrint('[KDriveStorage] uploadMemoBytes: POST directory_id=$dirId to $uri');
+      var response = await _client.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $_token',
+          'Content-Type': 'application/octet-stream',
+        },
+        body: bytes,
+      );
+      debugPrint(
+        '[KDriveStorage] uploadMemoBytes: status=${response.statusCode} body=${response.body}',
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final remoteId = _extractFileIdFromUploadResponse(response.body);
+        debugPrint('[KDriveStorage] uploadMemoBytes: remoteId=$remoteId');
+        return remoteId;
+      }
+      lastError =
+          'Failed to upload file (directory_id=$dirId): ${response.statusCode} ${response.body}';
+    }
+
+    debugPrint('[KDriveStorage] uploadMemoBytes: all attempts failed: $lastError');
+    throw Exception(lastError ?? 'Unknown upload error');
+  }
+
   @override
   Future<String?> uploadMemo(Memo memo, List<Block> blocks) async {
     if (!isConfigured) {

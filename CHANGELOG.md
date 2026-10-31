@@ -1,165 +1,167 @@
 # Changelog
 
-## Não lançado
+## Unreleased
 
-### ✨ Novidades
-- **Opções do editor (Definições → Editor):** quebra de linha automática em títulos e itens de lista, e rasura opcional dos itens de checklist marcados.
-- **Reordenação de listas:** arrastar itens de checklist (handle `⋮≡`) para reordenar, com persistência automática.
-- **Pré-visualização de links:** URLs no corpo da nota ficam sublinhados. Ao tocar num link: Pré-visualizar, Abrir ou Editar. A pré-visualização mostra miniatura, título e domínio (Open Graph).
-  - Sem pedidos automáticos: os metadados só são obtidos após ação do utilizador.
-  - Cache local por nota (não sincronizada); a pré-visualização reaparece ao reabrir a nota.
-  - Menu do cartão: Abrir URL, Copiar URL, Remover (com ação **Anular**).
-  - A home mostra a pré-visualização no fundo do cartão da nota.
-- **Widget do ecrã principal:** a pré-visualização respeita as opções do editor (quebra de linha e rasura).
+### ✨ Features
+- **Editor options (Settings → Editor):** automatic line wrapping in titles and list items, and optional strikethrough for checked checklist items.
+- **List reordering:** drag checklist items (`⋮≡` handle) to reorder, with automatic persistence.
+- **Link previews:** URLs in the note body are underlined. Tapping a link offers Preview, Open or Edit. The preview shows thumbnail, title and domain (Open Graph).
+  - No automatic requests: metadata is only fetched after a user action.
+  - Local cache per note (not synced); the preview reappears when the note is reopened.
+  - Card menu: Open URL, Copy URL, Remove (with an **Undo** action).
+  - The home screen shows the preview at the bottom of the note card.
+- **Home screen widget:** the preview respects the editor options (line wrapping and strikethrough).
+- **Export notes to kDrive (.docx):** from the note options menu, "Copy to kDrive" generates a `.docx` file with the title and body and uploads it to the configured kDrive folder.
+- **Home multi-selection actions:** with multiple notes selected, the top bar menu allows **Send** (Share Plus) and **Copy to kDrive** (a single `.docx` with all notes grouped together).
+- **Individual sharing:** in the editor, the **Send** option shares the note via Share Plus.
+- **kDrive-not-configured warning:** export actions show a snackbar with a direct shortcut to the sync Settings.
 
-### 🛠️ Alterações
-- **Adicionar link:** insere o URL no corpo da nota (deixa de usar os chips de links).
-- **Comentários em inglês:** todos os comentários de código-fonte (Dart, Kotlin, XML, testes) traduzidos para inglês.
+### 🛠️ Changes
+- **Add link:** inserts the URL into the note body (no longer uses link chips).
+- **Comments in English:** all source-code comments (Dart, Kotlin, XML, tests) translated to English.
 
 ## 0.1.6
-# 🚀 Novidades da Versão 0.1.6 — Primeira Release Pública
+# 🚀 What's New in 0.1.6 — First Public Release
 
-Esta versão marca o lançamento público do **kMemo**, uma aplicação de notas minimalista e focada na produtividade, desenvolvida em Flutter com persistência local SQLite (Drift).
+This version marks the public launch of **kMemo**, a minimalist, productivity-focused note-taking app built with Flutter and local SQLite (Drift) persistence.
 
-### ✨ Novidades
-- **Editor baseado em blocos:** Notas compostas por blocos de texto e listas de tarefas (checklists), manipuláveis individualmente.
-- **Tema claro/escuro automático:** Suporte completo com paletas de cores customizadas para ambos os temas.
-- **Home Screen Widget (4×3):** Widget nativo Android que exibe as últimas notas com fundo colorido por nota, pré-visualização de texto e ícones de caixas de verificação.
-- **Sincronização remota com kDrive (Infomaniak):** Envio e descarga de notas para a nuvem com encriptação AES opcional no cliente.
-- **Internacionalização:** Suporte a 6 idiomas (Português, Inglês, Francês, Alemão, Italiano, Espanhol) com opção "Sistema" para seguir o idioma do dispositivo.
-- **Partilha de texto:** Recebe texto partilhado de outras aplicações e cria automaticamente uma nova nota.
-- **Rejeição de notas vazias:** Notas criadas mas deixadas vazias são automaticamente eliminadas ao sair, evitando acumulação de notas sem conteúdo.
-- **Detecção de checkboxes no texto partilhado:** Texto partilhado com itens `[ ]` / `[X]` é convertido automaticamente em modo checklist.
-- **App links:** Suporte a abertura de notas via `kmemo://note/{uuid}`.
+### ✨ Features
+- **Block-based editor:** Notes made of text blocks and task lists (checklists), each independently editable.
+- **Automatic light/dark theme:** Full support with custom color palettes for both themes.
+- **Home Screen Widget (4×3):** Native Android widget showing the latest notes with a colored background per note, text preview and checkbox icons.
+- **Remote sync with kDrive (Infomaniak):** Upload and download notes to the cloud with optional client-side AES encryption.
+- **Internationalization:** Support for 6 languages (Portuguese, English, French, German, Italian, Spanish) with a "System" option to follow the device language.
+- **Text sharing:** Receives text shared from other apps and automatically creates a new note.
+- **Empty note rejection:** Notes created but left empty are automatically deleted on exit, avoiding the accumulation of empty notes.
+- **Checkbox detection in shared text:** Shared text with `[ ]` / `[X]` items is automatically converted to checklist mode.
+- **App links:** Support for opening notes via `kmemo://note/{uuid}`.
 
-### 🛠️ Correções e Ajustes
-- **Persistência inteligente:** A nota só é guardada se houver alterações reais (dirty-checking).
-- **Widget click fix:** Clicar numa nota do widget abre diretamente essa nota em modo de edição.
-- **Card de ajuda kDrive:** O card de instruções só aparece na aba kDrive, reservando espaço para WebDAV.
-- **Correção de avisos de lint:** Todos os avisos do analisador estático resolvidos.
-- **Comentários e logs em inglês:** Todos os comentários e mensagens de debug traduzidos para inglês.
+### 🛠️ Fixes and Adjustments
+- **Smart persistence:** The note is only saved when there are real changes (dirty-checking).
+- **Widget click fix:** Tapping a note in the widget opens that note directly in edit mode.
+- **kDrive help card:** The instructions card only appears on the kDrive tab, leaving room for WebDAV.
+- **Lint warnings fixed:** All static analyzer warnings resolved.
+- **Comments and logs in English:** All comments and debug messages translated to English.
 
-### 🔒 Segurança e Privacidade
-- **Encriptação AES opcional:** As notas podem ser encriptadas no cliente antes de serem enviadas para a nuvem.
-- **Offline-first:** Todas as notas são armazenadas localmente em SQLite; a sincronização é assíncrona e não bloqueia a interface.
-- **Sem telemetria:** A aplicação não recolhe nem envia dados de utilização.
+### 🔒 Security and Privacy
+- **Optional AES encryption:** Notes can be encrypted on the client before being sent to the cloud.
+- **Offline-first:** All notes are stored locally in SQLite; sync is asynchronous and does not block the UI.
+- **No telemetry:** The app does not collect or send usage data.
 
-### 📦 Build e Distribuição
-- **Ícones gerados** para Android, iOS, Web, Windows e macOS via `flutter_launcher_icons`.
-- **APK de release** disponível para instalação direta.
+### 📦 Build and Distribution
+- **Generated icons** for Android, iOS, Web, Windows and macOS via `flutter_launcher_icons`.
+- **Release APK** available for direct installation.
 
-### ⚠️ Limitações conhecidas
-- **Widget Android-only:** O widget do ecrã principal é exclusivo para Android.
-- **Versão Web não suportada:** A aplicação usa SQLite via FFI, que não é compatível com web.
-- **WebDAV em desenvolvimento:** O seletor de protocolo está disponível, mas a implementação WebDAV ainda não está concluída.
-- **Features não implementadas:** Captura de foto, seleção de imagem da galeria, gravação de áudio, fixar nota (pin), notificações/lembretes e formatação de texto (negrito, itálico, etc.) estão comentadas no código como TODOs.
+### ⚠️ Known limitations
+- **Android-only widget:** The home screen widget is Android-exclusive.
+- **Web version not supported:** The app uses SQLite via FFI, which is not web-compatible.
+- **WebDAV under development:** The protocol selector is available, but the WebDAV implementation is not yet complete.
+- **Unimplemented features:** Photo capture, gallery image selection, audio recording, pinning notes (pin), notifications/reminders and text formatting (bold, italic, etc.) are commented out in the code as TODOs.
 
 ---
 
 ## 0.1.5
-# 🚀 Novidades da Versão 0.1.5
+# 🚀 What's New in 0.1.5
 
-### ✨ Novidades
-- **Internacionalização:** Suporte a 6 idiomas (Português, Inglês, Francês, Alemão, Italiano, Espanhol) com 152 chaves de localização.
-- **Seletor de idioma:** Disponível nas Definições para testar todos os locales.
-- **Partilha de texto:** Recebe texto partilhado de outras aplicações e cria automaticamente uma nova nota.
-- **Sanitização de texto partilhado:** Remoção de caracteres de controlo e normalização de espaços.
-- **Preparação para release pública:** README e AGENTS.md consolidados para release.
-- **Ícones atualizados:** Novo ícone da aplicação (cérebro + lâmpada + K) aplicado a todas as plataformas.
+### ✨ Features
+- **Internationalization:** Support for 6 languages (Portuguese, English, French, German, Italian, Spanish) with 152 localization keys.
+- **Language selector:** Available in Settings to test all locales.
+- **Text sharing:** Receives text shared from other apps and automatically creates a new note.
+- **Shared text sanitization:** Removal of control characters and whitespace normalization.
+- **Public release preparation:** README consolidated for release.
+- **Updated icons:** New app icon (brain + lightbulb + K) applied to all platforms.
 
-### 🛠️ Correções e Ajustes
-- **Dirty-checking:** A nota não é marcada como modificada ao ser aberta; só persiste se houver alterações reais.
-- **Sync business logic:** A sincronização não inicia automaticamente quando o token é inserido; o utilizador deve selecionar a pasta de destino e clicar em "Sincronizar agora".
-- **Comentários e logs traduzidos:** Todos os comentários e mensagens de debug corrigidos para inglês.
-- **Paleta de cores:** Alinhamento da paleta de cores escuras entre editor e cartão de nota.
+### 🛠️ Fixes and Adjustments
+- **Dirty-checking:** The note is not marked as modified when opened; it only persists when there are real changes.
+- **Sync business logic:** Sync does not start automatically when the token is entered; the user must select the destination folder and tap "Sync now".
+- **Translated comments and logs:** All comments and debug messages corrected to English.
+- **Color palette:** Alignment of the dark color palette between editor and note card.
 
 ---
 
 ## 0.1.4
-# 🚀 Novidades da Versão 0.1.4
+# 🚀 What's New in 0.1.4
 
-### ✨ Novidades
-- **Sincronização remota com kDrive (Infomaniak):** Envio e descarga de notas para a nuvem.
-- **Encriptação AES opcional:** As notas podem ser encriptadas no cliente antes de serem enviadas para a nuvem.
-- **Navegação hierárquica de pastas:** O utilizador pode navegar e criar pastas dentro do kDrive.
-- **Push + Pull:** Notas criadas/editadas/arquivadas/eliminadas são enviadas; notas remotas não presentes localmente são baixadas.
-- **Resolução de conflitos:** Last-write-wins com base na data de atualização (`updatedAt`).
-- **Rate limit:** Respeito do limite de 60 pedidos por minuto da API Infomaniak.
+### ✨ Features
+- **Remote sync with kDrive (Infomaniak):** Upload and download notes to the cloud.
+- **Optional AES encryption:** Notes can be encrypted on the client before being sent to the cloud.
+- **Hierarchical folder navigation:** The user can browse and create folders inside kDrive.
+- **Push + Pull:** Created/edited/archived/deleted notes are sent; remote notes not present locally are downloaded.
+- **Conflict resolution:** Last-write-wins based on the update date (`updatedAt`).
+- **Rate limit:** Respects the Infomaniak API limit of 60 requests per minute.
 
-### 🛠️ Correções e Ajustes
-- **Pasta Private (id=5) como root efetivo:** A API kDrive não permite escrita na raiz (id=1).
-- **Debounce de 3 segundos:** Evita chamadas excessivas à API.
-- **Notas encriptadas na cloud:** Diálogo de passphrase com até 2 tentativas; opção de ignorar ou eliminar nota remota.
-- **Re-encriptação:** Notas desencriptadas são regravadas conforme a configuração geral de encriptação.
+### 🛠️ Fixes and Adjustments
+- **Private folder (id=5) as effective root:** The kDrive API does not allow writing to the root (id=1).
+- **3-second debounce:** Avoids excessive API calls.
+- **Encrypted notes in the cloud:** Passphrase dialog with up to 2 attempts; option to ignore or delete the remote note.
+- **Re-encryption:** Decrypted notes are rewritten according to the global encryption configuration.
 
 ---
 
 ## 0.1.3
-# 🚀 Novidades da Versão 0.1.3
+# 🚀 What's New in 0.1.3
 
-### ✨ Novidades
-- **Home Screen Widget (4×3):** Widget nativo Android com fundo colorido por nota, pré-visualização de texto e ícones de caixas de verificação.
-- **Click-to-open:** Clicar numa nota do widget abre diretamente essa nota em modo de edição.
-- **App links:** Suporte a abertura de notas via `kmemo://note/{uuid}`.
-- **Ícone personalizado:** Cérebro com lâmpada e K, aplicado a Android, iOS, Web, Windows e macOS.
+### ✨ Features
+- **Home Screen Widget (4×3):** Native Android widget with a colored background per note, text preview and checkbox icons.
+- **Click-to-open:** Tapping a note in the widget opens that note directly in edit mode.
+- **App links:** Support for opening notes via `kmemo://note/{uuid}`.
+- **Custom icon:** Brain with lightbulb and K, applied to Android, iOS, Web, Windows and macOS.
 
-### 🛠️ Correções e Ajustes
-- **Widget click fix:** Uso de `FLAG_MUTABLE` para `PendingIntentTemplate` e extração de `note_uuid` do `data` URI.
-- **Prevenção de abertura duplicada:** Flag `_isOpeningNote` para evitar navegação duplicada.
+### 🛠️ Fixes and Adjustments
+- **Widget click fix:** Use of `FLAG_MUTABLE` for `PendingIntentTemplate` and extraction of `note_uuid` from the `data` URI.
+- **Duplicate opening prevention:** `_isOpeningNote` flag to avoid duplicate navigation.
 
 ---
 
 ## 0.1.2
-# 🚀 Novidades da Versão 0.1.2
+# 🚀 What's New in 0.1.2
 
-### ✨ Novidades
-- **Tema escuro automático:** Suporte completo com paletas de cores customizadas para ambos os temas.
-- **Undo/redo:** Histórico de edições no editor de notas.
-- **Barra de pesquisa:** Pesquisa inline no editor de notas.
-- **Arquivo de notas:** Gestão completa de notas arquivadas.
-- **Lixeira (Trash):** Soft delete com restauro e eliminação permanente.
-- **Pré-visualização de conteúdos:** No MemoCard, com indicador de reticências.
+### ✨ Features
+- **Automatic dark theme:** Full support with custom color palettes for both themes.
+- **Undo/redo:** Edit history in the note editor.
+- **Search bar:** Inline search in the note editor.
+- **Note archive:** Full management of archived notes.
+- **Trash:** Soft delete with restore and permanent deletion.
+- **Content preview:** In MemoCard, with an ellipsis indicator.
 
-### 🛠️ Correções e Ajustes
-- **Persistência e foco:** Correção de perda de foco com IDs persistentes por bloco.
-- **Quebra de linha:** Correção de quebra de linha/foco ao digitar.
-- **Capitalização automática:** Por frase no título e itens da checklist.
+### 🛠️ Fixes and Adjustments
+- **Persistence and focus:** Fixed focus loss with persistent IDs per block.
+- **Line break:** Fixed line break/focus while typing.
+- **Automatic capitalization:** Sentence-based in the title and checklist items.
 
 ---
 
 ## 0.1.1
-# 🚀 Novidades da Versão 0.1.1
+# 🚀 What's New in 0.1.1
 
-### ✨ Novidades
-- **Editor de notas baseado em blocos:** Texto e listas de tarefas (checklists).
-- **Gestão de cores:** 16 cores de fundo por nota.
-- **Anexos:** Imagens, áudio e links associados à nota.
-- **Arquivar notas:** Estado de arquivamento com restauro.
+### ✨ Features
+- **Block-based note editor:** Text and task lists (checklists).
+- **Color management:** 16 background colors per note.
+- **Attachments:** Images, audio and links associated with the note.
+- **Archive notes:** Archive state with restore.
 
-### 🛠️ Correções e Ajustes
-- **Migração Isar → Drift:** Mudança do motor de persistência de Isar para Drift (SQLite).
-- **Correção de parâmetros:** BottomAppBar e opacidade de cores na UI.
-- **API withValues:** Atualização para a API `withValues` no Material 3.
+### 🛠️ Fixes and Adjustments
+- **Isar → Drift migration:** Persistence engine changed from Isar to Drift (SQLite).
+- **Parameter fixes:** BottomAppBar and color opacity in the UI.
+- **withValues API:** Updated to the `withValues` API in Material 3.
 
 ---
 
 ## 0.1.0
-# 🎉 Lançamento inicial do kMemo! (v0.1.0)
+# 🎉 Initial launch of kMemo! (v0.1.0)
 
-É com grande entusiasmo que anunciamos a primeira versão do **kMemo**, uma aplicação de notas minimalista e focada na produtividade!
+We are thrilled to announce the first version of **kMemo**, a minimalist, productivity-focused note-taking app!
 
-O objetivo desta aplicação é proporcionar uma experiência de escrita sem distrações, com uma estrutura baseada em blocos dinâmicos e persistência offline-first.
+The goal of this app is to provide a distraction-free writing experience, with a dynamic block-based structure and offline-first persistence.
 
-## ✨ Funcionalidades Principais Nesta Versão:
+## ✨ Key Features in This Version:
 
-*   **Persistência offline-first:** Toda a gestão de dados é feita localmente através do SQLite (via Drift).
-*   **Estrutura baseada em blocos:** Texto e listas de tarefas manipuláveis individualmente.
-*   **Gestão de estado reativa:** Utilização do ecossistema `Provider` combinado com streams nativos do Drift.
-*   **Tema claro/escuro:** Suporte completo com paletas de cores customizadas.
-*   **Licença GPLv3:** Distribuído sob a licença GNU General Public License v3.0.
+*   **Offline-first persistence:** All data management is local through SQLite (via Drift).
+*   **Block-based structure:** Text and task lists, each independently editable.
+*   **Reactive state management:** Uses `Provider` combined with native Drift streams.
+*   **Light/dark theme:** Full support with custom color palettes.
+*   **GPLv3 license:** Distributed under the GNU General Public License v3.0.
 
 ---
 
-Este é apenas o começo! O futuro do kMemo será moldado pelo feedback da comunidade. Se encontrar algum problema ou tiver sugestões, por favor, abra uma [Issue](https://github.com/marotoweb/kmemo/issues).
-
-Obrigado por experimentar o kMemo!
+This is just the beginning! The future of kMemo will be shaped by community feedback. If you find any problem or have suggestions, please open an [Issue](https://github.com/marotoweb/kmemo/issues).

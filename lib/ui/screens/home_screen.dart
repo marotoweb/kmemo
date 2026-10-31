@@ -4,16 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
+import '../../services/docx_export_service.dart';
+import '../../services/kdrive_storage.dart';
 import '../../services/widget_service.dart';
 import 'memo_detail_screen.dart';
 import 'archive_screen.dart';
 import 'trash_screen.dart';
 import 'settings_screen.dart';
+import 'sync_settings_screen.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -412,6 +416,114 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
+  List<Memo> _selectedMemos(MemoProvider provider) {
+    final selected = <Memo>[];
+    for (final uuid in _selectedUuids) {
+      for (final memo in provider.memos) {
+        if (memo.uuid == uuid) {
+          selected.add(memo);
+          break;
+        }
+      }
+    }
+    return selected;
+  }
+
+  Future<void> _shareSelectedNotes() async {
+    final provider = context.read<MemoProvider>();
+    final l10n = AppLocalizations.of(context)!;
+    final memos = _selectedMemos(provider);
+    if (memos.isEmpty) return;
+
+    final buffer = StringBuffer();
+    for (var i = 0; i < memos.length; i++) {
+      final memo = memos[i];
+      final blocks = await provider.loadBlocks(memo.uuid);
+      final body = blocks
+          .map((b) => b.content['text']?.toString() ?? '')
+          .join('\n');
+      final title = memo.title.trim().isEmpty ? l10n.note : memo.title.trim();
+      if (i > 0) buffer.write('\n\n');
+      buffer.write('$title\n$body');
+    }
+
+    if (!mounted) return;
+    await SharePlus.instance.share(
+      ShareParams(
+        text: buffer.toString().trim(),
+        title: memos.length == 1
+            ? (memos.first.title.trim().isEmpty
+                ? l10n.note
+                : memos.first.title.trim())
+            : l10n.sharedNote,
+      ),
+    );
+  }
+
+  Future<void> _exportSelectedNotesToKDrive() async {
+    final provider = context.read<MemoProvider>();
+    final storage = context.read<KDriveStorage>();
+    final l10n = AppLocalizations.of(context)!;
+    final memos = _selectedMemos(provider);
+    if (memos.isEmpty) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (!storage.isConfigured) {
+      final navigator = Navigator.of(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.kdriveNotConfigured),
+          action: SnackBarAction(
+            label: l10n.settings,
+            onPressed: () => navigator.push(
+              MaterialPageRoute(builder: (_) => SyncSettingsScreen()),
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
+    final sections = <DocxSection>[];
+    for (final memo in memos) {
+      final blocks = await provider.loadBlocks(memo.uuid);
+      final body = blocks
+          .map((b) => b.content['text']?.toString() ?? '')
+          .join('\n');
+      sections.add(
+        DocxSection(
+          title: memo.title.trim().isEmpty ? l10n.note : memo.title.trim(),
+          body: body,
+        ),
+      );
+    }
+
+    final docxBytes = DocxExportService.buildDocx(sections: sections);
+    final fileName = sections.length == 1
+        ? '${sections.first.title}.docx'
+        : 'kMemo-${sections.length}-notes.docx';
+
+    try {
+      await storage.uploadMemoBytes(fileName: fileName, bytes: docxBytes);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.copiedToKdrive),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('${l10n.copyToKdriveFailed}: $e'),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
+  }
+
   Future<void> _showStyleMenu(BuildContext context) async {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -735,6 +847,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     } else if (value == 'copy') {
                       await memoProvider.duplicateMultiple(_selectedUuids);
                       _clearSelection();
+                    } else if (value == 'share') {
+                      await _shareSelectedNotes();
+                    } else if (value == 'kdrive') {
+                      await _exportSelectedNotesToKDrive();
                     } else {
                       _clearSelection();
                     }
