@@ -275,7 +275,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   trailing: Icon(Icons.chevron_right),
                   onTap: () => _launchUrl(
-                    'https://github.with/marotoweb/kmemo/issues/new',
+                    'https://github.com/marotoweb/kmemo/issues/new',
                   ),
                 ),
               ],
@@ -308,7 +308,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ListTile(
                   title: Text(AppLocalizations.of(context)!.openSource),
                   trailing: Icon(Icons.north_east, size: 18),
-                  onTap: () => _launchUrl('https://github.with/marotoweb/kmemo'),
+                  onTap: () => _launchUrl('https://github.com/marotoweb/kmemo'),
                 ),
                 Divider(
                   height: 1,
