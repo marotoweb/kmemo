@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.10
+
+### 🐛 Fixes
+- **Release signing:** use the release keystore from `android/key.properties` instead of the debug signing config, so published APKs have a stable signing certificate and can be updated.
+- **Reproducible build:** keep the `jni` build path and build-id normalization from 0.1.9.
+
 ## 0.1.9
 
 ### 📦 F-Droid
