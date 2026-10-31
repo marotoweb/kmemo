@@ -8,11 +8,14 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
+import '../../services/docx_export_service.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/kdrive_storage.dart';
 import '../../services/link_preview_service.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
+import 'sync_settings_screen.dart';
 
 /// Captures editor state to support undo/redo.
 class _MemoEditorSnapshot {
@@ -999,6 +1002,11 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
               onTap: () => Navigator.pop(ctx, 'copy'),
             ),
             ListTile(
+              leading: Icon(Icons.cloud_upload_outlined),
+              title: Text(AppLocalizations.of(context)!.copyToKdrive),
+              onTap: () => Navigator.pop(ctx, 'copyToKdrive'),
+            ),
+            ListTile(
               leading: Icon(Icons.access_time_outlined),
               title: Text(AppLocalizations.of(context)!.lastEdited),
               subtitle: Text(
@@ -1062,6 +1070,71 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
       final navigator = Navigator.of(context);
                  await _persistData();
                  if (mounted) navigator.pop();
+    } else if (action == 'copyToKdrive') {
+      await _copyToKDrive();
+    }
+  }
+
+  /// Generates a .docx file from the note content and uploads it to kDrive.
+  Future<void> _copyToKDrive() async {
+    final storage = context.read<KDriveStorage>();
+    if (!storage.isConfigured) {
+      if (mounted) {
+        final navigator = Navigator.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.kdriveNotConfigured),
+            action: SnackBarAction(
+              label: AppLocalizations.of(context)!.settings,
+              onPressed: () => navigator.push(
+                MaterialPageRoute(builder: (_) => SyncSettingsScreen()),
+              ),
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    final blocks = await context.read<MemoProvider>().loadBlocks(widget.memo.uuid);
+    final textContent = blocks
+        .map((b) => b.content['text']?.toString() ?? '')
+        .join('\n');
+    final docTitle = _titleController.text.isNotEmpty
+        ? _titleController.text
+        : AppLocalizations.of(context)!.note;
+
+    final docxBytes = DocxExportService.buildDocx(
+      sections: [DocxSection(title: docTitle, body: textContent)],
+    );
+    debugPrint('[DocxExport] Generated docx size: ${docxBytes.length} bytes');
+    debugPrint('[DocxExport] Text content length: ${textContent.length} chars');
+    debugPrint('[DocxExport] Title: ${_titleController.text}');
+
+    final fileName = '$docTitle.docx';
+
+    try {
+      await storage.uploadMemoBytes(
+        fileName: fileName,
+        bytes: docxBytes,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.copiedToKdrive),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${AppLocalizations.of(context)!.copyToKdriveFailed}: $e'),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 

@@ -586,4 +586,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get editLink => 'Editar';
+
+  @override
+  String get kdriveNotConfigured => 'kDrive no configurado';
+
+  @override
+  String get copiedToKdrive => 'Copiado en kDrive';
+
+  @override
+  String get copyToKdriveFailed => 'Error al copiar en kDrive';
 }

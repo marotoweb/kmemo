@@ -170,5 +170,8 @@
   "copyLink": "Copiar URL",
   "removePreview": "Eliminar",
   "openLinkShort": "Abrir",
-  "editLink": "Editar"
+  "editLink": "Editar",
+  "kdriveNotConfigured": "kDrive no configurado",
+  "copiedToKdrive": "Copiado en kDrive",
+  "copyToKdriveFailed": "Error al copiar en kDrive"
 }

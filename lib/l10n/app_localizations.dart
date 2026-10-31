@@ -1131,6 +1131,24 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Editar'**
   String get editLink;
+
+  /// No description provided for @kdriveNotConfigured.
+  ///
+  /// In pt, this message translates to:
+  /// **'kDrive não está configurado'**
+  String get kdriveNotConfigured;
+
+  /// No description provided for @copiedToKdrive.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiado para kDrive'**
+  String get copiedToKdrive;
+
+  /// No description provided for @copyToKdriveFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Falha ao copiar para kDrive'**
+  String get copyToKdriveFailed;
 }
 
 class _AppLocalizationsDelegate

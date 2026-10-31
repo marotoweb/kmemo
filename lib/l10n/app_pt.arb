@@ -344,5 +344,8 @@
   "copyLink": "Copiar URL",
   "removePreview": "Remover",
   "openLinkShort": "Abrir",
-  "editLink": "Editar"
+  "editLink": "Editar",
+  "kdriveNotConfigured": "kDrive não está configurado",
+  "copiedToKdrive": "Copiado para kDrive",
+  "copyToKdriveFailed": "Falha ao copiar para kDrive"
 }
