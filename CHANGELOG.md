@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.7
 
 ### ✨ Features
 - **Editor options (Settings → Editor):** automatic line wrapping in titles and list items, and optional strikethrough for checked checklist items.
