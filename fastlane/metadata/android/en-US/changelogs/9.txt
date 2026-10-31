@@ -1,0 +1,6 @@
+F-Droid release.
+
+- Added Fastlane metadata and prepared the app for F-Droid.
+- Editor options: automatic line wrapping and optional strikethrough for checked items.
+- Link previews with Open Graph metadata, local cache and HTML entity decoding.
+- Export notes to kDrive as .docx and multi-selection share.

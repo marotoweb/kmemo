@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.8
+
+### 📦 F-Droid
+- **F-Droid metadata:** added Fastlane metadata (short/full description, icon, changelog) and prepared the app for F-Droid inclusion via `fdroiddata`.
+
 ## 0.1.7
 
 ### ✨ Features
@@ -23,6 +28,7 @@
 ### 🛠️ Changes
 - **Add link:** inserts the URL into the note body (no longer uses link chips).
 - **Comments in English:** all source-code comments (Dart, Kotlin, XML, tests) translated to English.
+- **AGENTS.md:** explicit rule that code comments are always in English, regardless of the conversation language.
 
 ## 0.1.6
 # 🚀 What's New in 0.1.6 — First Public Release
@@ -72,7 +78,7 @@ This version marks the public launch of **kMemo**, a minimalist, productivity-fo
 - **Language selector:** Available in Settings to test all locales.
 - **Text sharing:** Receives text shared from other apps and automatically creates a new note.
 - **Shared text sanitization:** Removal of control characters and whitespace normalization.
-- **Public release preparation:** README consolidated for release.
+- **Public release preparation:** README and AGENTS.md consolidated for release.
 - **Updated icons:** New app icon (brain + lightbulb + K) applied to all platforms.
 
 ### 🛠️ Fixes and Adjustments
