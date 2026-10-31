@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.12
+
+### 🐛 Fixes
+- **Reproducible build:** align the Android build for reproducible output: packaging excludes, R8/resource shrinking, FOSS Play dependency block, disabled ArtProfile tasks and Java 21.
+
 ## 0.1.11
 
 ### 🐛 Fixes

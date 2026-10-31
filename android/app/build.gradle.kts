@@ -8,61 +8,92 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-val keystoreProperties = Properties()
-val keystorePropertiesFile = rootProject.file("key.properties")
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-}
-
 android {
     namespace = "com.marotoweb.kmemo"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
-    dependenciesInfo {
-        includeInApk = false
-        includeInBundle = false
-    }
-
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+        jvmTarget = JavaVersion.VERSION_21.toString()
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.marotoweb.kmemo"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    // Reproducibility: remove files that vary between builds and break the SHA-256 hash.
+    packaging {
+        resources {
+            excludes += "assets/dexopt/*"
+            excludes += "META-INF/*.kotlin_module"
+        }
+    }
+
+    val keystorePropertiesFile = rootProject.file("key.properties")
+    val keystoreProperties = Properties()
+    val hasKeyProperties = keystorePropertiesFile.exists()
+    if (hasKeyProperties) {
+        keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    }
+
     signingConfigs {
         create("release") {
-            if (keystorePropertiesFile.exists()) {
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
+            if (hasKeyProperties) {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
+                storePassword = keystoreProperties.getProperty("storePassword")
             }
         }
     }
 
     buildTypes {
-        release {
-            signingConfig = if (keystorePropertiesFile.exists()) {
+        getByName("release") {
+            signingConfig = if (hasKeyProperties) {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
             }
+
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+            )
         }
+    }
+
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+}
+
+// FOSS compliance: block proprietary transitive Google Play dependencies.
+configurations.all {
+    resolutionStrategy {
+        force("dev.flutter:empty:1.0")
+        eachDependency {
+            if (requested.group == "com.google.android.play") {
+                useTarget("dev.flutter:empty:1.0")
+            }
+        }
+    }
+}
+
+// Deterministic build: disable profile tasks that produce inconsistent binary data.
+tasks.withType<org.gradle.api.Task>().configureEach {
+    if (name.contains("ArtProfile", ignoreCase = true)) {
+        enabled = false
     }
 }
 
