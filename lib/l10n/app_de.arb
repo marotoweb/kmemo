@@ -162,5 +162,13 @@
   "autoWrapLines": "Automatischer Zeilenumbruch",
   "autoWrapLinesSubtitle": "Lange Zeilen in Titeln und Listenelementen umbrechen.",
   "strikethroughChecked": "Durchgestrichener Text bei abgehakten Elementen",
-  "strikethroughCheckedSubtitle": "Streicht Listenelemente durch, die als erledigt markiert sind."
+  "strikethroughCheckedSubtitle": "Streicht Listenelemente durch, die als erledigt markiert sind.",
+  "previewLink": "Vorschau",
+  "linkCopied": "Link kopiert",
+  "linkPreviewRemoved": "Vorschau entfernt",
+  "openLink": "URL öffnen",
+  "copyLink": "URL kopieren",
+  "removePreview": "Entfernen",
+  "openLinkShort": "Öffnen",
+  "editLink": "Bearbeiten"
 }

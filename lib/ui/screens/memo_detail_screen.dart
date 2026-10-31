@@ -3,12 +3,15 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/link_preview_service.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
 /// Captures editor state to support undo/redo.
@@ -106,6 +109,13 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   List<String> _imageAttachments = [];
   List<String> _audioAttachments = [];
   List<String> _linksValues = [];
+
+  // Link previews shown below the text body.
+  final Map<String, LinkPreview?> _linkPreviews = {};
+  final Set<String> _linkPreviewLoading = {};
+  final Set<String> _linkPreviewRemoved = {};
+  Offset? _pointerDownPosition;
+  DateTime? _pointerDownTime;
 
   final _uuidGenerator = Uuid();
 
@@ -339,6 +349,25 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       _isLoading = false;
       _pushSnapshot();
       _captureOriginalState();
+    });
+    _restoreLinkPreviews();
+  }
+
+  /// Loads cached previews (no network) and the removed-card state for this note.
+  Future<void> _restoreLinkPreviews() async {
+    final removed = await LinkPreviewService.loadRemoved(_currentMemo.uuid);
+    final urls = LinkPreviewService.extractUrls(_textNoteController.text);
+    final cached = <String, LinkPreview>{};
+    for (final url in urls) {
+      final preview = await LinkPreviewService.loadCached(url);
+      if (preview != null) cached[url] = preview;
+    }
+    if (!mounted) return;
+    setState(() {
+      _linkPreviewRemoved
+        ..clear()
+        ..addAll(removed);
+      _linkPreviews.addAll(cached);
     });
   }
 
@@ -588,8 +617,14 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     }
   }
 
-  void _promptLinkInsertion() {
-    final linkTextController = TextEditingController();
+  /// Shows the add/edit link dialog. When [replaceStart]/[replaceEnd] are
+  /// given, the URL in that range is replaced (edit mode) instead of inserted.
+  void _promptLinkInsertion({
+    String? initialUrl,
+    int? replaceStart,
+    int? replaceEnd,
+  }) {
+    final linkTextController = TextEditingController(text: initialUrl ?? '');
     showDialog(
       // ignore: use_build_context_synchronously
       // ignore: use_build_context_synchronously
@@ -611,10 +646,29 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
           ),
           TextButton(
             onPressed: () {
-              if (linkTextController.text.trim().isNotEmpty) {
-                setState(
-                  () => _linksValues.add(linkTextController.text.trim()),
-                );
+              final url = linkTextController.text.trim();
+              if (url.isNotEmpty) {
+                final text = _textNoteController.text;
+                if (replaceStart != null && replaceEnd != null) {
+                  final start = replaceStart.clamp(0, text.length);
+                  final end = replaceEnd.clamp(start, text.length);
+                  _textNoteController.text =
+                      '${text.substring(0, start)}$url${text.substring(end)}';
+                  _textNoteController.selection =
+                      TextSelection.collapsed(offset: start + url.length);
+                } else {
+                  final sel = _textNoteController.selection;
+                  final start = sel.start >= 0 ? sel.start : text.length;
+                  final end = sel.end >= 0 ? sel.end : text.length;
+                  final needsBreak =
+                      start > 0 && !text.substring(0, start).endsWith('\n');
+                  final prefix = needsBreak ? '\n' : '';
+                  _textNoteController.text =
+                      '${text.substring(0, start)}$prefix$url\n${text.substring(end)}';
+                  _textNoteController.selection = TextSelection.collapsed(
+                    offset: start + prefix.length + url.length + 1,
+                  );
+                }
                 _persistData();
               }
               // ignore: use_build_context_synchronously
@@ -1048,6 +1102,8 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
         canPop: false,
         onPopInvokedWithResult: (didPop, result) async {
           if (didPop) return;
+          // Dismiss any pending snackbars (e.g. link preview removed) before leaving.
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           // Reject only brand-new notes that were never edited and are still empty.
           // Notes that were edited and then cleared are kept (persisted normally).
           if (widget.isNew && !_isDirty && _isEmpty()) {
@@ -1379,21 +1435,387 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
     );
   }
 
-  Widget _buildTextLayout(Color textColor, Color hintColor) {
-    return TextField(
-      key: ValueKey('text_input_${_textBlockId}_$_textBlockUuid'),
-      textCapitalization: TextCapitalization.sentences,
-      controller: _textNoteController,
-      focusNode: _textFocusNode,
-      maxLines: null,
-      keyboardType: TextInputType.multiline,
-      style: TextStyle(fontSize: 16, color: textColor),
-      decoration: InputDecoration(
-        hintText: AppLocalizations.of(context)!.note,
-        border: InputBorder.none,
-        hintStyle: TextStyle(color: hintColor),
+  Future<void> _fetchLinkPreview(String url) async {
+    if (_linkPreviewLoading.contains(url) || _linkPreviews.containsKey(url)) {
+      return;
+    }
+    setState(() => _linkPreviewLoading.add(url));
+    final preview = await LinkPreviewService.fetchAndCache(url);
+    if (!mounted) return;
+    setState(() {
+      _linkPreviews[url] = preview;
+      _linkPreviewLoading.remove(url);
+    });
+  }
+
+  void _persistRemovedPreviews() {
+    LinkPreviewService.saveRemoved(_currentMemo.uuid, Set.of(_linkPreviewRemoved));
+  }
+
+  void _removeLinkPreview(String url) {
+    setState(() => _linkPreviewRemoved.add(url));
+    _persistRemovedPreviews();
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final controller = messenger.showSnackBar(
+      SnackBar(
+        content: Text(l10n.linkPreviewRemoved),
+        duration: Duration(seconds: 8),
+        action: SnackBarAction(
+          label: l10n.undo,
+          textColor: Colors.amberAccent,
+          onPressed: () {
+            messenger.hideCurrentSnackBar();
+            setState(() => _linkPreviewRemoved.remove(url));
+            _persistRemovedPreviews();
+          },
+        ),
       ),
-      onChanged: (_) => _persistData(),
+    );
+    Future.delayed(Duration(seconds: 8), () {
+      try {
+        controller.close();
+      } catch (_) {}
+    });
+  }
+
+  Future<void> _openLink(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+    if (!_linkPreviews.containsKey(url) && !_linkPreviewLoading.contains(url)) {
+      _fetchLinkPreview(url);
+    }
+  }
+
+  void _previewLink(String url) {
+    final wasRemoved = _linkPreviewRemoved.remove(url);
+    if (wasRemoved) _persistRemovedPreviews();
+    // If a preview was removed (or cached), force a re-fetch so it shows again.
+    if (_linkPreviews.containsKey(url)) {
+      _linkPreviews.remove(url);
+    }
+    _fetchLinkPreview(url);
+  }
+
+  List<InlineSpan> _bodySpans(String text, TextStyle linkStyle) {
+    final spans = <InlineSpan>[];
+    int last = 0;
+    for (final m in LinkPreviewService.matches(text)) {
+      if (m.start > last) {
+        spans.add(TextSpan(text: text.substring(last, m.start)));
+      }
+      spans.add(TextSpan(text: m.group(0), style: linkStyle));
+      last = m.end;
+    }
+    if (last < text.length) {
+      spans.add(TextSpan(text: text.substring(last)));
+    }
+    return spans;
+  }
+
+  /// Finds the live [EditableTextState] of the body field below [element].
+  EditableTextState? _findEditableState(Element element, String text) {
+    EditableTextState? found;
+    void visit(Element el) {
+      if (el is StatefulElement && el.state is EditableTextState) {
+        final state = el.state as EditableTextState;
+        if (state.widget.controller.text == text) {
+          found = state;
+          return;
+        }
+      }
+      if (found == null) el.visitChildren(visit);
+    }
+
+    element.visitChildren(visit);
+    return found;
+  }
+
+  /// Maps a tap to a character offset using the body field's own render
+  /// object, so the hit test matches exactly what the field draws.
+  /// Runs after a tap on the body. The field has already moved the caret to
+  /// the tapped position, so the caret is the source of truth for the hit.
+  void _handleBodyTap(Element bodyElement, Offset globalPosition) {
+    final text = _textNoteController.text;
+    final selection = _textNoteController.selection;
+    if (!selection.isValid || !selection.isCollapsed) return;
+    final caret = selection.baseOffset;
+    final editable = _findEditableState(bodyElement, text);
+    if (editable == null) return;
+    final render = editable.renderEditable;
+    final local = render.globalToLocal(globalPosition);
+    final caretRect = render.getLocalRectForCaret(TextPosition(offset: caret));
+
+    // Ignore taps that are not next to the caret (e.g. far right of a line).
+    if ((local.dx - caretRect.left).abs() > 16) return;
+    if ((local.dy - caretRect.center.dy).abs() > caretRect.height / 2) return;
+
+    // The character the caret follows is the one that was tapped.
+    final index = caret - 1;
+    for (final m in LinkPreviewService.matches(text)) {
+      if (index >= m.start && index < m.end) {
+        _showLinkMenu(globalPosition, m.group(0)!, m.start, m.end);
+        return;
+      }
+    }
+  }
+
+  Future<void> _showLinkMenu(
+    Offset globalPosition,
+    String url,
+    int start,
+    int end,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final choice = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(globalPosition.dx, globalPosition.dy, 1, 1),
+        Offset.zero & overlay.size,
+      ),
+      items: [
+        PopupMenuItem(value: 'preview', child: Text(l10n.previewLink)),
+        PopupMenuItem(value: 'open', child: Text(l10n.openLinkShort)),
+        PopupMenuItem(value: 'edit', child: Text(l10n.editLink)),
+      ],
+    );
+    if (!mounted || choice == null) return;
+    if (choice == 'preview') {
+      _previewLink(url);
+    } else if (choice == 'open') {
+      _openLink(url);
+    } else if (choice == 'edit') {
+      _promptLinkInsertion(
+        initialUrl: url,
+        replaceStart: start,
+        replaceEnd: end,
+      );
+    }
+  }
+
+  Widget _buildTextLayout(Color textColor, Color hintColor) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    // Shared style and forced strut so the underlined overlay and the
+    // editable field lay out every line at exactly the same height.
+    final bodyStyle = TextStyle(fontSize: 16, height: 1.3, color: textColor);
+    final bodyStrut = StrutStyle.fromTextStyle(bodyStyle, forceStrutHeight: true);
+    final linkStyle = TextStyle(
+      decoration: TextDecoration.underline,
+      color: isDarkMode ? Colors.lightBlue.shade200 : Colors.blue.shade700,
+    );
+    final text = _textNoteController.text;
+    final urls = LinkPreviewService.extractUrls(text)
+        .where((u) => !_linkPreviewRemoved.contains(u))
+        .toList();
+
+    return LayoutBuilder(
+      builder: (viewportContext, viewport) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: viewport.maxHeight),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _textFocusNode.requestFocus(),
+            child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LayoutBuilder(
+            builder: (bodyContext, constraints) {
+              return Listener(
+                onPointerDown: (e) {
+                  _pointerDownPosition = e.position;
+                  _pointerDownTime = DateTime.now();
+                },
+                onPointerUp: (e) {
+                  final down = _pointerDownPosition;
+                  final time = _pointerDownTime;
+                  if (down == null || time == null) return;
+                  final moved = (e.position - down).distance > 12;
+                  final quick =
+                      DateTime.now().difference(time) <
+                      const Duration(milliseconds: 400);
+                  if (!moved && quick) {
+                    final position = e.position;
+                    final bodyElement = bodyContext as Element;
+                    Future.delayed(Duration.zero, () {
+                      if (mounted) _handleBodyTap(bodyElement, position);
+                    });
+                  }
+                },
+                child: Stack(
+                  children: [
+                    IgnorePointer(
+                      child: Text.rich(
+                        TextSpan(
+                          style: bodyStyle,
+                          children: _bodySpans(text, linkStyle),
+                        ),
+                        strutStyle: bodyStrut,
+                      ),
+                    ),
+                    TextField(
+                      key: ValueKey(
+                        'text_input_${_textBlockId}_$_textBlockUuid',
+                      ),
+                      textCapitalization: TextCapitalization.sentences,
+                      controller: _textNoteController,
+                      focusNode: _textFocusNode,
+                      maxLines: null,
+                      keyboardType: TextInputType.multiline,
+                      cursorColor: textColor,
+                      cursorWidth: 2.0,
+                      strutStyle: bodyStrut,
+                      style: bodyStyle.copyWith(color: Colors.transparent),
+                      decoration: InputDecoration(
+                        isCollapsed: true,
+                        hintText: AppLocalizations.of(context)!.note,
+                        border: InputBorder.none,
+                        hintStyle: TextStyle(color: hintColor),
+                      ),
+                      onChanged: (_) {
+                        _persistData();
+                        setState(() {});
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          ...urls.map((url) {
+            return _buildLinkPreviewCard(
+              url,
+              _linkPreviews[url],
+              _linkPreviewLoading.contains(url),
+              textColor,
+              hintColor,
+            );
+          }),
+        ],
+      ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLinkPreviewCard(
+    String url,
+    LinkPreview? preview,
+    bool loading,
+    Color textColor,
+    Color hintColor,
+  ) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final domain = Uri.tryParse(url)?.host ?? url;
+    final placeholderColor =
+        isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200;
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: 6.0),
+      elevation: 1,
+      child: InkWell(
+        onTap: () => _openLink(url),
+        child: Padding(
+          padding: EdgeInsets.all(8.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (loading)
+                SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              else if (preview?.imageUrl != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    preview!.imageUrl!,
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 56,
+                      height: 56,
+                      color: placeholderColor,
+                      child: Icon(Icons.link, color: hintColor),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: placeholderColor,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.link, color: hintColor),
+                ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      preview?.title ?? domain,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      preview?.siteName ?? domain,
+                      style: TextStyle(fontSize: 12, color: hintColor),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert, size: 18, color: hintColor),
+                onSelected: (value) {
+                  if (value == 'open') {
+                    _openLink(url);
+                  } else if (value == 'copy') {
+                    Clipboard.setData(ClipboardData(text: url));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(AppLocalizations.of(context)!.linkCopied),
+                      ),
+                    );
+                  } else if (value == 'remove') {
+                    _removeLinkPreview(url);
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'open',
+                    child: Text(AppLocalizations.of(context)!.openLink),
+                  ),
+                  PopupMenuItem(
+                    value: 'copy',
+                    child: Text(AppLocalizations.of(context)!.copyLink),
+                  ),
+                  PopupMenuItem(
+                    value: 'remove',
+                    child: Text(AppLocalizations.of(context)!.removePreview),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## Não lançado
+
+### ✨ Novidades
+- **Opções do editor (Definições → Editor):** quebra de linha automática em títulos e itens de lista, e rasura opcional dos itens de checklist marcados.
+- **Reordenação de listas:** arrastar itens de checklist (handle `⋮≡`) para reordenar, com persistência automática.
+- **Pré-visualização de links:** URLs no corpo da nota ficam sublinhados. Ao tocar num link: Pré-visualizar, Abrir ou Editar. A pré-visualização mostra miniatura, título e domínio (Open Graph).
+  - Sem pedidos automáticos: os metadados só são obtidos após ação do utilizador.
+  - Cache local por nota (não sincronizada); a pré-visualização reaparece ao reabrir a nota.
+  - Menu do cartão: Abrir URL, Copiar URL, Remover (com ação **Anular**).
+  - A home mostra a pré-visualização no fundo do cartão da nota.
+- **Widget do ecrã principal:** a pré-visualização respeita as opções do editor (quebra de linha e rasura).
+
+### 🛠️ Alterações
+- **Adicionar link:** insere o URL no corpo da nota (deixa de usar os chips de links).
+- **Comentários em inglês:** todos os comentários de código-fonte (Dart, Kotlin, XML, testes) traduzidos para inglês.
+
 ## 0.1.6
 # 🚀 Novidades da Versão 0.1.6 — Primeira Release Pública
 

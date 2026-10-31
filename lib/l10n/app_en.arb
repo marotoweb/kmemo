@@ -162,5 +162,13 @@
   "autoWrapLines": "Automatic line wrapping",
   "autoWrapLinesSubtitle": "Wrap long lines in titles and list items.",
   "strikethroughChecked": "Strikethrough checked list items",
-  "strikethroughCheckedSubtitle": "Apply strikethrough to list items marked as done."
+  "strikethroughCheckedSubtitle": "Apply strikethrough to list items marked as done.",
+  "previewLink": "Preview",
+  "linkCopied": "Link copied",
+  "linkPreviewRemoved": "Preview removed",
+  "openLink": "Open URL",
+  "copyLink": "Copy URL",
+  "removePreview": "Remove",
+  "openLinkShort": "Open",
+  "editLink": "Edit"
 }

@@ -22,6 +22,7 @@ O **kMemo** é uma aplicação móvel de notas minimalista e focada na produtivi
 - **APP link**: Suporte a abertura de notas via APP link  *kmemo://*
 - **Opções do editor:** quebra de linha automática em títulos e itens de lista, e tachado opcional para itens de checklist marcados (configurável nas Definições). O widget do ecrã principal respeita estas opções na pré-visualização.
 - **Reordenação de listas:** arrastar itens de checklist para reordenar, com persistência automática.
+- **Pré-visualização de links:** URLs no corpo da nota são sublinhados; ao tocar num link, o menu permite pré-visualizar (miniatura, título, domínio), abrir ou editar o URL. A pré-visualização só é obtida por ação do utilizador (sem pedidos automáticos), fica em cache local, pode ser removida com "Anular" disponível, e aparece também no cartão da home.
 
 ---
 

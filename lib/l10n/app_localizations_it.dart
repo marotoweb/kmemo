@@ -561,4 +561,28 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get strikethroughCheckedSubtitle =>
       'Applica il barrato agli elementi di lista segnati come completati.';
+
+  @override
+  String get previewLink => 'Anteprima';
+
+  @override
+  String get linkCopied => 'Link copiato';
+
+  @override
+  String get linkPreviewRemoved => 'Anteprima rimossa';
+
+  @override
+  String get openLink => 'Apri URL';
+
+  @override
+  String get copyLink => 'Copia URL';
+
+  @override
+  String get removePreview => 'Rimuovi';
+
+  @override
+  String get openLinkShort => 'Apri';
+
+  @override
+  String get editLink => 'Modifica';
 }

@@ -561,4 +561,28 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get strikethroughCheckedSubtitle =>
       'Aplica tachado aos itens de lista marcados como concluídos.';
+
+  @override
+  String get previewLink => 'Pré-visualizar';
+
+  @override
+  String get linkCopied => 'Link copiado';
+
+  @override
+  String get linkPreviewRemoved => 'Pré-visualização removida';
+
+  @override
+  String get openLink => 'Abrir URL';
+
+  @override
+  String get copyLink => 'Copiar URL';
+
+  @override
+  String get removePreview => 'Remover';
+
+  @override
+  String get openLinkShort => 'Abrir';
+
+  @override
+  String get editLink => 'Editar';
 }
