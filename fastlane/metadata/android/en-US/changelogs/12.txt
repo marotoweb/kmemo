@@ -1,0 +1,4 @@
+F-Droid reproducibility fix.
+
+- Disable the AGP dependency metadata signing block so F-Droid accepts the APK.
+- Keeps release signing with the release keystore.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.11
+
+### 🐛 Fixes
+- **F-Droid reproducibility:** disable the AGP dependency metadata signing block (`dependenciesInfo`), which F-Droid rejects as an extra signing block.
+
 ## 0.1.10
 
 ### 🐛 Fixes
