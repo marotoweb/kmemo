@@ -38,6 +38,11 @@ jobs:
           echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}" >> android/key.properties
           echo "storeFile=../../upload-keystore.jks" >> android/key.properties
 
+      - name: Reproducible build patches
+        run: |
+          find "$PUB_CACHE" -name "CMakeLists.txt" -path "*jni*" -exec sed -i -e '1a add_link_options("LINKER:--build-id=none")' {} \;
+          find "$PUB_CACHE" -name "CMakeLists.txt" -path "*jni*" -exec sed -i -e "1a add_compile_options(\"-ffile-prefix-map=$GITHUB_WORKSPACE=/tmp/build\")" {} \;
+
       - name: Build APK
         run: |
           export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)

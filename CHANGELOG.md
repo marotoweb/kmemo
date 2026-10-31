@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.9
+
+### 📦 F-Droid
+- **Reproducible build:** align the `jni` native library build with F-Droid by disabling the linker build-id and normalizing the build path.
+- **App label:** use `kMemo` as the Android application label so `AutoName` matches the upstream metadata.
+
 ## 0.1.8
 
 ### 📦 F-Droid

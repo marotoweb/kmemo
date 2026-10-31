@@ -1,0 +1,5 @@
+Reproducible build alignment for F-Droid.
+
+- Normalized the native build path and disabled the linker build-id for the `jni` library.
+- Use `kMemo` as the Android application label.
+- No functional changes.
