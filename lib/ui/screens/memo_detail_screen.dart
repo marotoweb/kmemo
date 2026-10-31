@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
+import '../../providers/theme_provider.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
 /// Captures editor state to support undo/redo.
@@ -145,6 +146,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       if (_listControllers.length != _originalChecklists.length) return true;
       for (int i = 0; i < _listControllers.length; i++) {
         final o = _originalChecklists[i];
+        if (_listUuids[i] != (o['uuid'] as String? ?? '')) return true;
         if (_listControllers[i].text != (o['text'] as String? ?? '')) return true;
         if (_listCheckStates[i] != (o['checked'] as bool? ?? false)) return true;
       }
@@ -416,6 +418,36 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     _persistData();
   }
 
+  void _reorderChecklistItem(int oldIndex, int newIndex) {
+    if (oldIndex < 0 ||
+        oldIndex >= _listControllers.length ||
+        newIndex < 0 ||
+        newIndex > _listControllers.length) {
+      return;
+    }
+    if (newIndex > oldIndex) newIndex -= 1;
+    if (newIndex == oldIndex) return;
+
+    setState(() {
+      final controller = _listControllers.removeAt(oldIndex);
+      _listControllers.insert(newIndex, controller);
+
+      final focusNode = _listFocusNodes.removeAt(oldIndex);
+      _listFocusNodes.insert(newIndex, focusNode);
+
+      final checked = _listCheckStates.removeAt(oldIndex);
+      _listCheckStates.insert(newIndex, checked);
+
+      final uuid = _listUuids.removeAt(oldIndex);
+      _listUuids.insert(newIndex, uuid);
+
+      final id = _listIds.removeAt(oldIndex);
+      _listIds.insert(newIndex, id);
+    });
+
+    _persistData();
+  }
+
   // Captures persisted blocks and syncs real SQLite IDs
   void _pushSnapshot() {
     if (_isRestoring || !mounted) return;
@@ -607,19 +639,19 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // TODO: implementar captura de foto (Take photo)
+              // TODO: implement photo capture (Take photo)
               // ListTile(
               //   leading: Icon(Icons.camera_alt_outlined),
               //   title: Text(AppLocalizations.of(context)!.takePhoto),
               //   onTap: () => Navigator.pop(ctx),
               // ),
-              // TODO: implementar seleção de imagem da galeria (Add image from gallery)
+              // TODO: implement gallery image selection (Add image from gallery)
               // ListTile(
               //   leading: Icon(Icons.image_outlined),
               //   title: Text(AppLocalizations.of(context)!.addImageFromGallery),
               //   onTap: () => Navigator.pop(ctx),
               // ),
-              // TODO: implementar gravação de áudio (Record audio note)
+              // TODO: implement audio recording (Record audio note)
               // ListTile(
               //   leading: Icon(Icons.mic_none_outlined),
               //   title: Text(AppLocalizations.of(context)!.recordAudioNote),
@@ -1007,6 +1039,8 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
     final footerBgColor = isDarkMode
         ? Color(0xFF1E1E1E).withValues(alpha: 0.9)
         : Colors.white.withValues(alpha: 0.9);
+    final autoWrap = context.watch<ThemeProvider>().autoWrap;
+    final strikethroughChecked = context.watch<ThemeProvider>().strikethroughChecked;
 
     return Container(
       decoration: noteBackgroundDecoration,
@@ -1068,12 +1102,12 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               },
             ),
           actions: [
-            // TODO: implementar fixar nota (pin)
+            // TODO: implement pinning note (pin)
             // IconButton(
             //   icon: Icon(Icons.push_pin_outlined, color: iconColor),
             //   onPressed: () {},
             // ),
-            // TODO: implementar notificação/lembrete (notification)
+            // TODO: implement notification/reminder (notification)
             // IconButton(
             //   icon: Icon(Icons.notification_add_outlined, color: iconColor),
             //   onPressed: () {},
@@ -1105,6 +1139,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                     child: TextField(
                       controller: _titleController,
                       textCapitalization: TextCapitalization.sentences,
+                      maxLines: autoWrap ? null : 1,
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -1139,7 +1174,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.0),
                 child: _isChecklistMode
-                    ? _buildChecklistLayout(textColor, hintColor, isDarkMode)
+                    ? _buildChecklistLayout(textColor, hintColor, isDarkMode, autoWrap, strikethroughChecked)
                     : _buildTextLayout(textColor, hintColor),
               ),
             ),
@@ -1202,7 +1237,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
             // ignore: use_build_context_synchronously
             onPressed: () => _showStyleMenu(context),
           ),
-          // TODO: implementar formatação de texto (negrito, itálico, etc.)
+          // TODO: implement text formatting (bold, italic, etc.)
           // IconButton(
           //   icon: Icon(
           //     Icons.text_format_outlined,
@@ -1366,17 +1401,26 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
     Color textColor,
     Color hintColor,
     bool isDarkMode,
+    bool autoWrap,
+    bool strikethroughChecked,
   ) {
-    return ListView.builder(
+    return ReorderableListView.builder(
+      buildDefaultDragHandles: false,
       itemCount: _listControllers.length,
-      // ignore: use_build_context_synchronously
+      onReorder: _reorderChecklistItem,
+      proxyDecorator: (child, index, animation) {
+        return Material(
+          color: Colors.transparent,
+          child: child,
+        );
+      },
       itemBuilder: (context, index) {
         final isChecked = _listCheckStates[index];
-        final blockId = index < _listIds.length ? _listIds[index] : 0;
         final blockUuid = index < _listUuids.length ? _listUuids[index] : '';
+        final rowKey = ValueKey('item_row_$blockUuid');
 
         return Padding(
-          key: ValueKey('item_row_${blockId}_$blockUuid'),
+          key: rowKey,
           padding: EdgeInsets.symmetric(vertical: 2.0),
           child: Row(
             children: [
@@ -1397,18 +1441,18 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               SizedBox(width: 8.0),
               Expanded(
                 child: TextField(
-                  key: ValueKey('input_${blockId}_$blockUuid'),
+                  key: ValueKey('input_$blockUuid'),
                   controller: _listControllers[index],
                   focusNode: _listFocusNodes[index],
                   textCapitalization: TextCapitalization.sentences,
-                  maxLines: 1,
+                  maxLines: autoWrap ? null : 1,
                   textInputAction: TextInputAction.next,
                   style: TextStyle(
                     fontSize: 16,
                     color: isChecked
                         ? (isDarkMode ? Colors.white24 : Colors.black38)
                         : textColor,
-                    decoration: isChecked
+                    decoration: (isChecked && strikethroughChecked)
                         ? TextDecoration.lineThrough
                         : TextDecoration.none,
                   ),
@@ -1430,6 +1474,17 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                     _persistData();
                   },
                   onChanged: (_) => _persistData(),
+                ),
+              ),
+              ReorderableDragStartListener(
+                index: index,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 4.0),
+                  child: Icon(
+                    Icons.drag_handle,
+                    size: 20,
+                    color: isDarkMode ? Colors.white38 : Colors.black26,
+                  ),
                 ),
               ),
               IconButton(

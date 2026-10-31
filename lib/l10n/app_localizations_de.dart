@@ -546,4 +546,22 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get system => 'System';
+
+  @override
+  String get editor => 'EDITOR';
+
+  @override
+  String get autoWrapLines => 'Automatischer Zeilenumbruch';
+
+  @override
+  String get autoWrapLinesSubtitle =>
+      'Lange Zeilen in Titeln und Listenelementen umbrechen.';
+
+  @override
+  String get strikethroughChecked =>
+      'Durchgestrichener Text bei abgehakten Elementen';
+
+  @override
+  String get strikethroughCheckedSubtitle =>
+      'Streicht Listenelemente durch, die als erledigt markiert sind.';
 }

@@ -157,5 +157,10 @@
   "emptyNoteRejected": "Empty note rejected",
   "webdavComingSoon": "Coming soon — WebDAV protocol not implemented yet.",
   "languageSetting": "Language",
-  "system": "System"
+  "system": "System",
+  "editor": "EDITOR",
+  "autoWrapLines": "Automatic line wrapping",
+  "autoWrapLinesSubtitle": "Wrap long lines in titles and list items.",
+  "strikethroughChecked": "Strikethrough checked list items",
+  "strikethroughCheckedSubtitle": "Apply strikethrough to list items marked as done."
 }

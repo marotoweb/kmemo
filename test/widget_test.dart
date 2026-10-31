@@ -11,11 +11,11 @@ import 'package:kmemo/main.dart';
 
 void main() {
   testWidgets('kMemo smoke test', (WidgetTester tester) async {
-    // Cria uma instância isolada em memória do Drift exclusiva para o ambiente de testes
+    // Creates an isolated in-memory Drift instance exclusive to the test environment
     final database = AppDatabase();
   final storage = KDriveStorage();
 
-    // Constrói a aplicação injetando os mocks necessários para simular a árvore do main.dart
+    // Builds the app injecting the mocks needed to simulate the main.dart tree
     await tester.pumpWidget(
       MultiProvider(
         providers: [
@@ -27,17 +27,17 @@ void main() {
           Provider<KDriveStorage>.value(value: storage),
         ],
         child:
-            const KMemoApp(), // Correção: Uso da classe correta definida no main.dart
+            const KMemoApp(), // Fix: use the correct class defined in main.dart
       ),
     );
 
-    // Aguarda o processamento dos frames iniciais e carregamento assíncrono da BD
+    // Waits for initial frames processing and async DB loading
     await tester.pump();
 
-    // Verificar se o título da app aparece no AppBar
+    // Verify the app title appears in the AppBar
     expect(find.text('kMemo'), findsOneWidget);
 
-    // Verificar se o botão de adicionar (+) existe no ecrã principal
+    // Verify the add button (+) exists on the home screen
     expect(find.byIcon(Icons.add), findsOneWidget);
   });
 }

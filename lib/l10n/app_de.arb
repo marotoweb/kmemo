@@ -157,5 +157,10 @@
   "emptyNoteRejected": "Leere Notiz abgelehnt",
   "webdavComingSoon": "Demnächst verfügbar — WebDAV-Protokoll noch nicht implementiert.",
   "languageSetting": "Sprache",
-  "system": "System"
+  "system": "System",
+  "editor": "EDITOR",
+  "autoWrapLines": "Automatischer Zeilenumbruch",
+  "autoWrapLinesSubtitle": "Lange Zeilen in Titeln und Listenelementen umbrechen.",
+  "strikethroughChecked": "Durchgestrichener Text bei abgehakten Elementen",
+  "strikethroughCheckedSubtitle": "Streicht Listenelemente durch, die als erledigt markiert sind."
 }

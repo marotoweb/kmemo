@@ -27,7 +27,7 @@ class MainActivity : FlutterActivity() {
                 "getPendingNoteUuid" -> {
                     val uuid = pendingNoteUuid
                     if (uuid != null && uuid.isNotEmpty()) {
-                        pendingNoteUuid = null // Limpar após ler
+                        pendingNoteUuid = null // Clear after reading
                         Log.d("WIDGET_DEBUG", "getPendingNoteUuid: returning $uuid")
                         result.success(uuid)
                     } else {

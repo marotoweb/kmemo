@@ -20,6 +20,8 @@ O **kMemo** é uma aplicação móvel de notas minimalista e focada na produtivi
 - **Sincronização com kDrive (Infomaniak):** Envio e descarga de notas para a nuvem com encriptação opcional AES no cliente.
 - **Integração com Home Screen Widget:** Sincronização automática com um widget nativo do sistema para visualização rápida das últimas notas e respetiva edição rápida diretamente a partir do ambiente de trabalho do dispositivo.
 - **APP link**: Suporte a abertura de notas via APP link  *kmemo://*
+- **Opções do editor:** quebra de linha automática em títulos e itens de lista, e tachado opcional para itens de checklist marcados (configurável nas Definições). O widget do ecrã principal respeita estas opções na pré-visualização.
+- **Reordenação de listas:** arrastar itens de checklist para reordenar, com persistência automática.
 
 ---
 

@@ -544,4 +544,21 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get system => 'Sistema';
+
+  @override
+  String get editor => 'EDITOR';
+
+  @override
+  String get autoWrapLines => 'A capo automatico';
+
+  @override
+  String get autoWrapLinesSubtitle =>
+      'Va a capo sulle righe lunghe in titoli ed elementi di lista.';
+
+  @override
+  String get strikethroughChecked => 'Barrare gli elementi spuntati';
+
+  @override
+  String get strikethroughCheckedSubtitle =>
+      'Applica il barrato agli elementi di lista segnati come completati.';
 }

@@ -545,4 +545,21 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get system => 'Sistema';
+
+  @override
+  String get editor => 'EDITOR';
+
+  @override
+  String get autoWrapLines => 'Salto de línea automático';
+
+  @override
+  String get autoWrapLinesSubtitle =>
+      'Divide las líneas largas en títulos y elementos de lista.';
+
+  @override
+  String get strikethroughChecked => 'Tachar elementos marcados';
+
+  @override
+  String get strikethroughCheckedSubtitle =>
+      'Aplica tachado a los elementos de lista marcados como completados.';
 }
