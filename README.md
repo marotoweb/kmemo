@@ -2,7 +2,7 @@
 
 **kMemo** is a minimalist, productivity-focused mobile note-taking app, created in Europe and built with Flutter. Its interface moves away from traditional text editors, adopting a structure entirely driven by dynamic blocks, letting you mutate and reorder content fluidly and without visual distractions. **kMemo** was born from the need to keep our notes sovereign without being the product and without depending on big tech.
 
-**Current version: 0.1.6+7**
+**Current version:** [![Latest release](https://img.shields.io/github/v/release/marotoweb/kmemo?display_name=tag&sort=semver)](https://github.com/marotoweb/kmemo/releases/latest)
 
 ---
 
