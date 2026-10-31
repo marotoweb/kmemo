@@ -545,4 +545,21 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get system => 'Système';
+
+  @override
+  String get editor => 'ÉDITEUR';
+
+  @override
+  String get autoWrapLines => 'Retour à la ligne automatique';
+
+  @override
+  String get autoWrapLinesSubtitle =>
+      'Coupe les longues lignes dans les titres et les éléments de liste.';
+
+  @override
+  String get strikethroughChecked => 'Barrer les éléments cochés';
+
+  @override
+  String get strikethroughCheckedSubtitle =>
+      'Applique le barré aux éléments de liste marqués comme terminés.';
 }

@@ -1053,6 +1053,36 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Sistema'**
   String get system;
+
+  /// No description provided for @editor.
+  ///
+  /// In pt, this message translates to:
+  /// **'EDITOR'**
+  String get editor;
+
+  /// No description provided for @autoWrapLines.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quebra de linha automática'**
+  String get autoWrapLines;
+
+  /// No description provided for @autoWrapLinesSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Quebra linhas longas em títulos e itens de lista.'**
+  String get autoWrapLinesSubtitle;
+
+  /// No description provided for @strikethroughChecked.
+  ///
+  /// In pt, this message translates to:
+  /// **'Rasurar texto de itens marcados'**
+  String get strikethroughChecked;
+
+  /// No description provided for @strikethroughCheckedSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Aplica tachado aos itens de lista marcados como concluídos.'**
+  String get strikethroughCheckedSubtitle;
 }
 
 class _AppLocalizationsDelegate

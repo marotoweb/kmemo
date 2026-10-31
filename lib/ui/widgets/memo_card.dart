@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
+import '../../providers/theme_provider.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
 class MemoCard extends StatelessWidget {
@@ -24,6 +25,7 @@ class MemoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final strikethroughChecked = context.watch<ThemeProvider>().strikethroughChecked;
 
     final List<Color> lightColorsPalette = [
       Colors.white,
@@ -187,7 +189,7 @@ class MemoCard extends StatelessWidget {
                                               color: checked
                                                   ? mutedTextColor
                                                   : textColor,
-                                              decoration: checked
+                                              decoration: (checked && strikethroughChecked)
                                                   ? TextDecoration.lineThrough
                                                   : TextDecoration.none,
                                             ),

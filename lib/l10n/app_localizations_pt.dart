@@ -544,4 +544,21 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get system => 'Sistema';
+
+  @override
+  String get editor => 'EDITOR';
+
+  @override
+  String get autoWrapLines => 'Quebra de linha automática';
+
+  @override
+  String get autoWrapLinesSubtitle =>
+      'Quebra linhas longas em títulos e itens de lista.';
+
+  @override
+  String get strikethroughChecked => 'Rasurar texto de itens marcados';
+
+  @override
+  String get strikethroughCheckedSubtitle =>
+      'Aplica tachado aos itens de lista marcados como concluídos.';
 }

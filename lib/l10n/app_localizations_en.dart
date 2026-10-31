@@ -543,4 +543,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get system => 'System';
+
+  @override
+  String get editor => 'EDITOR';
+
+  @override
+  String get autoWrapLines => 'Automatic line wrapping';
+
+  @override
+  String get autoWrapLinesSubtitle =>
+      'Wrap long lines in titles and list items.';
+
+  @override
+  String get strikethroughChecked => 'Strikethrough checked list items';
+
+  @override
+  String get strikethroughCheckedSubtitle =>
+      'Apply strikethrough to list items marked as done.';
 }

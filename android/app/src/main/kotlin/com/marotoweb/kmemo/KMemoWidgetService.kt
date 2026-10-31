@@ -25,6 +25,8 @@ class KMemoWidgetFactory(private val context: Context) : RemoteViewsService.Remo
     private var notes = emptyList<NoteData>()
     private var untitledLabel = "Sem título"
     private var emptyLabel = "Nota vazia"
+    private var autoWrap = true
+    private var strikethroughChecked = true
 
     private data class NoteData(
         val uuid: String,
@@ -55,6 +57,12 @@ class KMemoWidgetFactory(private val context: Context) : RemoteViewsService.Remo
         try {
             views.setTextViewText(R.id.widget_item_title, note.title)
             views.setTextViewText(R.id.widget_item_preview, note.preview)
+
+            // Respect editor options: line wrapping
+            val titleMaxLines = if (autoWrap) 2 else 1
+            val previewMaxLines = if (autoWrap) 8 else 1
+            views.setInt(R.id.widget_item_title, "setMaxLines", titleMaxLines)
+            views.setInt(R.id.widget_item_preview, "setMaxLines", previewMaxLines)
 
             // Set the text color according to the background luminance
             val isDarkBg = isColorDark(note.colorInt)
@@ -119,6 +127,11 @@ class KMemoWidgetFactory(private val context: Context) : RemoteViewsService.Remo
             data.optJSONObject("labels")?.let {
                 untitledLabel = it.optString("untitled", untitledLabel)
                 emptyLabel = it.optString("empty", emptyLabel)
+            }
+
+            data.optJSONObject("settings")?.let {
+                autoWrap = it.optBoolean("autoWrap", autoWrap)
+                strikethroughChecked = it.optBoolean("strikethroughChecked", strikethroughChecked)
             }
 
             val ids = data.getJSONArray("ids")

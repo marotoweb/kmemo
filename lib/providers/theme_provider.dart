@@ -5,10 +5,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
   Locale? _locale;
+  bool _autoWrap = false;
+  bool _strikethroughChecked = true;
 
 
   ThemeMode get themeMode => _themeMode;
   Locale? get locale => _locale;
+  bool get autoWrap => _autoWrap;
+  bool get strikethroughChecked => _strikethroughChecked;
 
   ThemeProvider() {
     _loadThemePreference();
@@ -18,6 +22,8 @@ class ThemeProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final themeIndex = prefs.getInt('theme_mode') ?? 0;
     final lang = prefs.getString('language_code');
+    _autoWrap = prefs.getBool('auto_wrap') ?? false;
+    _strikethroughChecked = prefs.getBool('strikethrough_checked') ?? true;
     if (lang != null && lang.isNotEmpty) {
       _locale = Locale(lang);
     }
@@ -50,5 +56,19 @@ class ThemeProvider extends ChangeNotifier {
     } else {
       await prefs.setString('language_code', locale.languageCode);
     }
+  }
+
+  Future<void> setAutoWrap(bool value) async {
+    _autoWrap = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('auto_wrap', value);
+  }
+
+  Future<void> setStrikethroughChecked(bool value) async {
+    _strikethroughChecked = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('strikethrough_checked', value);
   }
 }

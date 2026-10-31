@@ -56,7 +56,7 @@ class KMemoWidgetProvider : AppWidgetProvider() {
             }
             val addPendingIntent = PendingIntent.getActivity(
                 context,
-                appWidgetId + 1000, // Offset para não conflitar com o template
+                appWidgetId + 1000, // Offset to avoid conflict with the template
                 addIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
             )

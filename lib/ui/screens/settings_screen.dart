@@ -159,6 +159,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           SizedBox(height: 24),
 
+          // SECTION: EDITOR
+          Text(
+            AppLocalizations.of(context)!.editor,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? Color(0xFF1E1E1E)
+                  : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+              ),
+            ),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: Text(AppLocalizations.of(context)!.autoWrapLines),
+                  subtitle: Text(
+                    AppLocalizations.of(context)!.autoWrapLinesSubtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  value: themeProvider.autoWrap,
+                  onChanged: (value) => themeProvider.setAutoWrap(value),
+                ),
+                Divider(height: 1),
+                SwitchListTile(
+                  title: Text(AppLocalizations.of(context)!.strikethroughChecked),
+                  subtitle: Text(
+                    AppLocalizations.of(context)!.strikethroughCheckedSubtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  value: themeProvider.strikethroughChecked,
+                  onChanged: (value) =>
+                      themeProvider.setStrikethroughChecked(value),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 24),
+
           // SECTION: SYNCHRONIZATION
           Text(
             AppLocalizations.of(context)!.syncSection,

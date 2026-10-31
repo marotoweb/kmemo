@@ -90,6 +90,8 @@ class WidgetService {
       final untitledLabel = prefs.getString(_labelUntitledKey) ?? 'Untitled';
       final emptyLabel = prefs.getString(_labelEmptyKey) ?? 'Empty note';
       final listItemLabel = prefs.getString(_labelListItemKey) ?? 'Item de lista';
+      final strikethroughChecked = prefs.getBool('strikethrough_checked') ?? true;
+      final autoWrap = prefs.getBool('auto_wrap') ?? false;
 
       final List<String> idsList = [];
       final List<String> titlesList = [];
@@ -131,7 +133,7 @@ class WidgetService {
               final checked = block.content['checked'] as bool? ?? false;
               final text = block.content['text']?.toString() ?? '';
               final displayText = text.isEmpty ? listItemLabel : text;
-              final styledText = checked
+              final styledText = (checked && strikethroughChecked)
                   ? displayText.replaceAllMapped(
                       RegExp(r'.'),
                       (m) => '${m.group(0)!}\u0336',
@@ -177,6 +179,10 @@ class WidgetService {
         'previews': previewsList,
         'colors': colorsList,
         'labels': {'untitled': untitledLabel, 'empty': emptyLabel},
+        'settings': {
+          'autoWrap': autoWrap,
+          'strikethroughChecked': strikethroughChecked,
+        },
       };
       await file.writeAsString(jsonEncode(widgetData));
 
