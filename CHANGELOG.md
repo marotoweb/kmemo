@@ -16,6 +16,10 @@
 - **Individual sharing:** in the editor, the **Send** option shares the note via Share Plus.
 - **kDrive-not-configured warning:** export actions show a snackbar with a direct shortcut to the sync Settings.
 
+### 🐛 Fixes
+- **Link preview titles:** HTML entities in `og:title`, `<title>` and `og:site_name` (e.g. `&#xE1;` → `á`) are now decoded, including numeric decimal/hex and common named entities. Older cached previews are decoded on read, so they are fixed without a new download.
+- **Meta tag parsing:** `og:*` tags are also read when `content` appears before `property`/`name`.
+
 ### 🛠️ Changes
 - **Add link:** inserts the URL into the note body (no longer uses link chips).
 - **Comments in English:** all source-code comments (Dart, Kotlin, XML, tests) translated to English.
