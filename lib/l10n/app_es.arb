@@ -162,5 +162,13 @@
   "autoWrapLines": "Salto de línea automático",
   "autoWrapLinesSubtitle": "Divide las líneas largas en títulos y elementos de lista.",
   "strikethroughChecked": "Tachar elementos marcados",
-  "strikethroughCheckedSubtitle": "Aplica tachado a los elementos de lista marcados como completados."
+  "strikethroughCheckedSubtitle": "Aplica tachado a los elementos de lista marcados como completados.",
+  "previewLink": "Vista previa",
+  "linkCopied": "Enlace copiado",
+  "linkPreviewRemoved": "Vista previa eliminada",
+  "openLink": "Abrir URL",
+  "copyLink": "Copiar URL",
+  "removePreview": "Eliminar",
+  "openLinkShort": "Abrir",
+  "editLink": "Editar"
 }

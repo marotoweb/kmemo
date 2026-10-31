@@ -560,4 +560,28 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get strikethroughCheckedSubtitle =>
       'Apply strikethrough to list items marked as done.';
+
+  @override
+  String get previewLink => 'Preview';
+
+  @override
+  String get linkCopied => 'Link copied';
+
+  @override
+  String get linkPreviewRemoved => 'Preview removed';
+
+  @override
+  String get openLink => 'Open URL';
+
+  @override
+  String get copyLink => 'Copy URL';
+
+  @override
+  String get removePreview => 'Remove';
+
+  @override
+  String get openLinkShort => 'Open';
+
+  @override
+  String get editLink => 'Edit';
 }

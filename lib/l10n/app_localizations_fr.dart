@@ -562,4 +562,28 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get strikethroughCheckedSubtitle =>
       'Applique le barré aux éléments de liste marqués comme terminés.';
+
+  @override
+  String get previewLink => 'Aperçu';
+
+  @override
+  String get linkCopied => 'Lien copié';
+
+  @override
+  String get linkPreviewRemoved => 'Aperçu supprimé';
+
+  @override
+  String get openLink => 'Ouvrir l’URL';
+
+  @override
+  String get copyLink => 'Copier l’URL';
+
+  @override
+  String get removePreview => 'Supprimer';
+
+  @override
+  String get openLinkShort => 'Ouvrir';
+
+  @override
+  String get editLink => 'Modifier';
 }

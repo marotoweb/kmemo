@@ -930,7 +930,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   builder: (context) =>
                                       MemoDetailScreen(memo: memo),
                                 ),
-                              );
+                              ).then((_) {
+                                if (mounted) setState(() {});
+                              });
                             }
                           },
                         ),

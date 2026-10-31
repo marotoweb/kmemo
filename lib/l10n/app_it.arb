@@ -162,5 +162,13 @@
   "autoWrapLines": "A capo automatico",
   "autoWrapLinesSubtitle": "Va a capo sulle righe lunghe in titoli ed elementi di lista.",
   "strikethroughChecked": "Barrare gli elementi spuntati",
-  "strikethroughCheckedSubtitle": "Applica il barrato agli elementi di lista segnati come completati."
+  "strikethroughCheckedSubtitle": "Applica il barrato agli elementi di lista segnati come completati.",
+  "previewLink": "Anteprima",
+  "linkCopied": "Link copiato",
+  "linkPreviewRemoved": "Anteprima rimossa",
+  "openLink": "Apri URL",
+  "copyLink": "Copia URL",
+  "removePreview": "Rimuovi",
+  "openLinkShort": "Apri",
+  "editLink": "Modifica"
 }

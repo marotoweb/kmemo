@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/link_preview_service.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
 class MemoCard extends StatelessWidget {
@@ -246,6 +247,11 @@ class MemoCard extends StatelessWidget {
                           }
                         },
                       ),
+                      _CardLinkPreview(
+                        memoUuid: memo.uuid,
+                        textColor: textColor,
+                        subtitleColor: subtitleColor,
+                      ),
                       if (images.isNotEmpty) ...[
                         Row(
                           children: [
@@ -284,5 +290,93 @@ class MemoCard extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+/// Shows the first cached link preview of a note at the bottom of its card.
+/// Reads local cache only; no network requests are made here.
+class _CardLinkPreview extends StatelessWidget {
+  final String memoUuid;
+  final Color textColor;
+  final Color subtitleColor;
+
+  const _CardLinkPreview({
+    required this.memoUuid,
+    required this.textColor,
+    required this.subtitleColor,
+  });
+
+  Future<LinkPreview?> _load(BuildContext context) async {
+    final blocks = await context.read<MemoProvider>().loadBlocks(memoUuid);
+    final text = blocks.map((b) => b.content['text']?.toString() ?? '').join('\n');
+    final removed = await LinkPreviewService.loadRemoved(memoUuid);
+    for (final url in LinkPreviewService.extractUrls(text)) {
+      if (removed.contains(url)) continue;
+      final preview = await LinkPreviewService.loadCached(url);
+      if (preview != null) return preview;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final placeholderColor = isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200;
+    return FutureBuilder<LinkPreview?>(
+      future: _load(context),
+      builder: (context, snapshot) {
+        final preview = snapshot.data;
+        if (preview == null) return SizedBox.shrink();
+        return Padding(
+          padding: EdgeInsets.only(bottom: 6.0),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: preview.imageUrl != null
+                    ? Image.network(
+                        preview.imageUrl!,
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 40,
+                          height: 40,
+                          color: placeholderColor,
+                          child: Icon(Icons.link, size: 18, color: subtitleColor),
+                        ),
+                      )
+                    : Container(
+                        width: 40,
+                        height: 40,
+                        color: placeholderColor,
+                        child: Icon(Icons.link, size: 18, color: subtitleColor),
+                      ),
+              ),
+              SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      preview.title,
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      preview.siteName,
+                      style: TextStyle(fontSize: 11, color: subtitleColor),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

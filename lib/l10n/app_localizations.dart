@@ -1083,6 +1083,54 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Aplica tachado aos itens de lista marcados como concluídos.'**
   String get strikethroughCheckedSubtitle;
+
+  /// No description provided for @previewLink.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pré-visualizar'**
+  String get previewLink;
+
+  /// No description provided for @linkCopied.
+  ///
+  /// In pt, this message translates to:
+  /// **'Link copiado'**
+  String get linkCopied;
+
+  /// No description provided for @linkPreviewRemoved.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pré-visualização removida'**
+  String get linkPreviewRemoved;
+
+  /// No description provided for @openLink.
+  ///
+  /// In pt, this message translates to:
+  /// **'Abrir URL'**
+  String get openLink;
+
+  /// No description provided for @copyLink.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiar URL'**
+  String get copyLink;
+
+  /// No description provided for @removePreview.
+  ///
+  /// In pt, this message translates to:
+  /// **'Remover'**
+  String get removePreview;
+
+  /// No description provided for @openLinkShort.
+  ///
+  /// In pt, this message translates to:
+  /// **'Abrir'**
+  String get openLinkShort;
+
+  /// No description provided for @editLink.
+  ///
+  /// In pt, this message translates to:
+  /// **'Editar'**
+  String get editLink;
 }
 
 class _AppLocalizationsDelegate

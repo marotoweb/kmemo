@@ -564,4 +564,28 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get strikethroughCheckedSubtitle =>
       'Streicht Listenelemente durch, die als erledigt markiert sind.';
+
+  @override
+  String get previewLink => 'Vorschau';
+
+  @override
+  String get linkCopied => 'Link kopiert';
+
+  @override
+  String get linkPreviewRemoved => 'Vorschau entfernt';
+
+  @override
+  String get openLink => 'URL öffnen';
+
+  @override
+  String get copyLink => 'URL kopieren';
+
+  @override
+  String get removePreview => 'Entfernen';
+
+  @override
+  String get openLinkShort => 'Öffnen';
+
+  @override
+  String get editLink => 'Bearbeiten';
 }

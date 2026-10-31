@@ -336,5 +336,13 @@
   "autoWrapLines": "Quebra de linha automática",
   "autoWrapLinesSubtitle": "Quebra linhas longas em títulos e itens de lista.",
   "strikethroughChecked": "Rasurar texto de itens marcados",
-  "strikethroughCheckedSubtitle": "Aplica tachado aos itens de lista marcados como concluídos."
+  "strikethroughCheckedSubtitle": "Aplica tachado aos itens de lista marcados como concluídos.",
+  "previewLink": "Pré-visualizar",
+  "linkCopied": "Link copiado",
+  "linkPreviewRemoved": "Pré-visualização removida",
+  "openLink": "Abrir URL",
+  "copyLink": "Copiar URL",
+  "removePreview": "Remover",
+  "openLinkShort": "Abrir",
+  "editLink": "Editar"
 }
