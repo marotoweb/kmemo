@@ -560,37 +560,78 @@ class KDriveStorage extends StorageRepository {
 
   /// Lists the folder contents in kDrive (v3).
   /// If typeFilter is provided, adds the type[] parameter to filter (e.g. 'directory').
+  ///
+  /// This endpoint uses cursor-based pagination (not page/per_page, which the
+  /// API rejects with HTTP 422). Every response carries a `cursor` and a
+  /// `has_more` flag; the cursor is passed back to fetch the next page.
   Future<List<Map<String, dynamic>>> _listFolderContentsV3(
     String folderId, {
     String? typeFilter,
   }) async {
-    final params = <String, String>{};
-    if (typeFilter != null) {
-      params['type[]'] = typeFilter;
-    }
-    final uri = Uri.parse(
-      '$_apiBase/3/drive/$_driveIdValue/files/$folderId/files',
-    ).replace(queryParameters: params);
-    final response = await _client.get(uri, headers: _authHeaders());
+    final allFiles = <Map<String, dynamic>>[];
+    String? cursor;
+    // Safety limit: 200 pages * 10 items = 2000 entries.
+    const int maxPages = 200;
 
-    if (response.statusCode != 200) {
+    for (var page = 1; page <= maxPages; page++) {
+      final params = <String, String>{};
+      if (typeFilter != null) {
+        params['type[]'] = typeFilter;
+      }
+      if (cursor != null) {
+        params['cursor'] = cursor;
+      }
+      final uri = Uri.parse(
+        '$_apiBase/3/drive/$_driveIdValue/files/$folderId/files',
+      ).replace(queryParameters: params.isEmpty ? null : params);
+      final response = await _client.get(uri, headers: _authHeaders());
+
+      if (response.statusCode != 200) {
+        debugPrint(
+          '[KDriveStorage] _listFolderContentsV3($folderId): status=${response.statusCode} page=$page',
+        );
+        break;
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (data['result'] == 'error') {
+        debugPrint('[KDriveStorage] _listFolderContentsV3($folderId): API error');
+        break;
+      }
+
+      final pageFiles = (data['data'] as List<dynamic>?) ?? [];
+      final nextCursor = data['cursor']?.toString();
+
+      // A cursor that does not advance would keep returning the same page.
+      if (cursor != null && nextCursor == cursor) {
+        debugPrint(
+          '[KDriveStorage] _listFolderContentsV3($folderId): cursor did not advance, stopping at ${allFiles.length} items',
+        );
+        break;
+      }
+
+      allFiles.addAll(pageFiles.cast<Map<String, dynamic>>());
+
+      // `has_more` is documented as required; fall back to the cursor when it
+      // is missing so an older API response cannot silently truncate the list.
+      final hasMore = data.containsKey('has_more')
+          ? data['has_more'] == true
+          : (nextCursor != null && nextCursor.isNotEmpty);
       debugPrint(
-        '[KDriveStorage] _listFolderContentsV3($folderId): status=${response.statusCode}',
+        '[KDriveStorage] _listFolderContentsV3($folderId): page=$page items=${pageFiles.length} total=${allFiles.length} has_more=$hasMore',
       );
-      return [];
+
+      if (!hasMore) break;
+      if (nextCursor == null || nextCursor.isEmpty) {
+        debugPrint(
+          '[KDriveStorage] _listFolderContentsV3($folderId): no usable cursor, stopping at ${allFiles.length} items',
+        );
+        break;
+      }
+      cursor = nextCursor;
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    if (data['result'] == 'error') {
-      debugPrint('[KDriveStorage] _listFolderContentsV3($folderId): API error');
-      return [];
-    }
-
-    final files = (data['data'] as List<dynamic>?) ?? [];
-    debugPrint(
-      '[KDriveStorage] _listFolderContentsV3($folderId): ${files.length} items',
-    );
-    return files.cast<Map<String, dynamic>>();
+    return allFiles;
   }
 
   // Getter helper for the drive id (non-null when configured)

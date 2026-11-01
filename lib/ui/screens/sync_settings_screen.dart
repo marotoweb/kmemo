@@ -268,9 +268,15 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
             ),
           );
         } else {
+          final synced = Provider.of<MemoProvider>(
+            context,
+            listen: false,
+          ).lastSyncNoteCount;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)!.syncCompleted),
+              content: Text(
+                AppLocalizations.of(context)!.syncCompletedWithCount(synced),
+              ),
               backgroundColor: Colors.green,
             ),
           );

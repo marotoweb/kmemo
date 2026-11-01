@@ -163,6 +163,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncCompleted => 'Sync completed';
 
   @override
+  String syncCompletedWithCount(int count) {
+    return 'Sync completed: $count note(s) synced.';
+  }
+
+  @override
   String get theme => 'Theme';
 
   @override
@@ -593,4 +598,41 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get copyToKdriveFailed => 'Failed to copy to kDrive';
+
+  @override
+  String get checkForUpdates => 'Check for updates';
+
+  @override
+  String get checkingForUpdates => 'Checking for updates...';
+
+  @override
+  String get upToDate => 'You\'re up to date';
+
+  @override
+  String upToDateMessage(String version) {
+    return 'You\'re running the latest version ($version).';
+  }
+
+  @override
+  String get newVersionAvailable => 'New version available';
+
+  @override
+  String newVersionMessage(String version, String current) {
+    return 'Version $version is available. You\'re running $current.';
+  }
+
+  @override
+  String get downloadUpdate => 'Download';
+
+  @override
+  String get viewReleasePage => 'View release page';
+
+  @override
+  String get later => 'Later';
+
+  @override
+  String get updateCheckFailed => 'Could not check for updates';
+
+  @override
+  String get releaseNotes => 'Release notes';
 }

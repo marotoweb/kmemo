@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../providers/memo_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/update_service.dart';
 import 'sync_settings_screen.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
@@ -16,6 +18,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _appVersion = 'Loading...';
+  bool _isCheckingUpdate = false;
 
   @override
   void initState() {
@@ -28,6 +31,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _appVersion = packageInfo.version;
     });
+  }
+
+  Future<void> _checkForUpdate() async {
+    setState(() => _isCheckingUpdate = true);
+    final info = await UpdateService().checkForUpdate();
+    if (!mounted) return;
+    setState(() => _isCheckingUpdate = false);
+
+    if (info.error.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.updateCheckFailed),
+        ),
+      );
+      return;
+    }
+
+    if (!info.hasUpdate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.upToDateMessage(info.latestVersion),
+          ),
+        ),
+      );
+      return;
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(AppLocalizations.of(ctx)!.newVersionAvailable),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  AppLocalizations.of(ctx)!.newVersionMessage(
+                    info.latestVersion,
+                    info.currentVersion,
+                  ),
+                ),
+                if (info.releaseNotes.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    AppLocalizations.of(ctx)!.releaseNotes,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(info.releaseNotes),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(AppLocalizations.of(ctx)!.later),
+            ),
+            if (info.releaseUrl.isNotEmpty)
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _launchUrl(info.releaseUrl);
+                },
+                child: Text(AppLocalizations.of(ctx)!.viewReleasePage),
+              ),
+            if (info.downloadUrl.isNotEmpty)
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _launchUrl(info.downloadUrl);
+                },
+                child: Text(AppLocalizations.of(ctx)!.downloadUpdate),
+              ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _launchUrl(String urlString) async {
@@ -52,7 +136,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: Colors.transparent,
       ),
       body: ListView(
-        padding: EdgeInsets.all(16.0),
+        // Extra bottom padding so the last item is not covered by the FAB
+        // or the system navigation bar.
+        padding: EdgeInsets.all(16.0).copyWith(bottom: 100),
         children: [
           // SECTION: APPEARANCE
           Text(
@@ -150,8 +236,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (code) {
                   if (code == null) {
                     themeProvider.setLocale(null);
+                    Provider.of<MemoProvider>(context, listen: false).refreshWidget();
                   } else {
                     themeProvider.setLocale(Locale(code));
+                    Provider.of<MemoProvider>(context, listen: false).refreshWidget();
                   }
                 },
               ),
@@ -188,7 +276,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   value: themeProvider.autoWrap,
-                  onChanged: (value) => themeProvider.setAutoWrap(value),
+                  onChanged: (value) {
+                    themeProvider.setAutoWrap(value);
+                    Provider.of<MemoProvider>(context, listen: false).refreshWidget();
+                  },
                 ),
                 Divider(height: 1),
                 SwitchListTile(
@@ -198,8 +289,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   value: themeProvider.strikethroughChecked,
-                  onChanged: (value) =>
-                      themeProvider.setStrikethroughChecked(value),
+                  onChanged: (value) {
+                    themeProvider.setStrikethroughChecked(value);
+                    Provider.of<MemoProvider>(context, listen: false).refreshWidget();
+                  },
                 ),
               ],
             ),
@@ -306,6 +399,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 ListTile(
+                  title: Text(AppLocalizations.of(context)!.checkForUpdates),
+                  subtitle: Text(
+                    _appVersion,
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  trailing: _isCheckingUpdate
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.chevron_right),
+                  onTap: _isCheckingUpdate ? null : _checkForUpdate,
+                ),
+                Divider(
+                  height: 1,
+                  color: isDarkMode
+                      ? Colors.grey.shade800
+                      : Colors.grey.shade300,
+                ),
+                ListTile(
                   title: Text(AppLocalizations.of(context)!.openSource),
                   trailing: Icon(Icons.north_east, size: 18),
                   onTap: () => _launchUrl('https://github.com/marotoweb/kmemo'),
@@ -340,6 +454,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return GestureDetector(
       onTap: () {
         Provider.of<ThemeProvider>(context, listen: false).setThemeMode(mode);
+        Provider.of<MemoProvider>(context, listen: false).refreshWidget();
       },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),

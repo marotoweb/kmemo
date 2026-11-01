@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.13
+
+### ✨ Features
+- **Widget refresh on settings changes:** changing the editor options (auto line wrap, strikethrough for checked items), the theme (light/dark/system) or the language now refreshes the home screen widget immediately, instead of waiting for the next note edit.
+- **Sync result count:** the "sync completed" snackbar now reports how many notes were uploaded or downloaded during that sync.
+- **In-app update check:** Settings → "Check for updates" queries the latest GitHub release and notifies the user (dialog) if a newer version is available, with a link to download the APK matching the device architecture. Network errors are handled gracefully.
+- **Smaller APKs (ABI split):** release builds now produce per-architecture APKs (armeabi-v7a, arm64-v8a, x86_64) instead of a single universal APK, reducing download size from ~65 MB to ~22–26 MB per architecture.
+
+### 🐛 Fixes
+- **kDrive folder listing pagination:** the v3 listing endpoint only returned the first page (10 items), so the first sync found at most 10 remote notes and the destination folder showed an incomplete list. Listing now follows the API's cursor-based pagination (`cursor`/`has_more`) and retrieves every entry. `page`/`per_page` are not accepted by this endpoint (HTTP 422), so they were removed.
+- **Widget preview line count:** the widget preview now uses the real number of preview lines (up to 8) instead of collapsing to a single line when auto-wrap was off; auto-wrap only controls the ellipsis of long lines. This also removes the invalid `setEllipsize` call that could leave the widget stuck on the loading state.
+- **Settings bottom padding:** added bottom padding to the settings list so the last options are not hidden behind the floating action button / navigation bar.
+- **Status bar icon brightness:** status bar icons now follow the active theme (light or dark) instead of always using the same brightness.
+
+### 🧪 Tests
+- Added `test/kdrive_storage_pagination_test.dart` covering cursor pagination, missing `has_more`, repeated cursors and HTTP errors.
+- Added `test/update_service_test.dart` covering version comparison (equal, greater, lesser, `v` prefix, missing parts, pre-release suffix).
+
 ## 0.1.12
 
 ### 🐛 Fixes
