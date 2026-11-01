@@ -19,6 +19,9 @@ class MemoProvider extends ChangeNotifier {
   final _uuid = const Uuid();
   Timer? _syncDebounce;
 
+  /// Number of notes uploaded or downloaded during the last sync.
+  int lastSyncNoteCount = 0;
+
   MemoProvider(this._db, {KDriveStorage? storage}) : _storage = storage {
     _listenToMemos();
   }
@@ -169,6 +172,11 @@ class MemoProvider extends ChangeNotifier {
     await WidgetService.updateWidgetData(db: _db, isDark: isDark);
   }
 
+  /// Refreshes the home screen widget after editor options change.
+  Future<void> refreshWidget() async {
+    await _updateWidgetData();
+  }
+
   /// Schedules remote sync with debounce (avoids calling the API on every keystroke).
   void _scheduleSync() {
     if (_storage == null || !_storage.isConfigured) return;
@@ -196,6 +204,7 @@ class MemoProvider extends ChangeNotifier {
     Future<bool> Function(String remoteFileId)? confirmDeleteRemote,
   }) async {
     final storage = _storage;
+    lastSyncNoteCount = 0;
     if (storage == null || !storage.isConfigured) return 0;
 
     // Rate-limit guard (ignored if force=true)
@@ -214,6 +223,7 @@ class MemoProvider extends ChangeNotifier {
             .get();
     final localMemos = List<Memo>.from(_memos);
     int decryptionFailures = 0;
+    int syncedCount = 0;
 
     debugPrint(
       '[MemoProvider] performSync(): ${localMemos.length} total notes, encryption=${storage.encryptionEnabled}',
@@ -243,6 +253,7 @@ class MemoProvider extends ChangeNotifier {
           remoteFileId: Value(remoteId ?? memo.remoteFileId),
         );
         await _db.saveMemoWithBlocks(updated, blocks);
+        syncedCount++;
         if (remoteId != null) {
           debugPrint(
             '[MemoProvider] Push OK: ${memo.uuid} → kDrive id $remoteId',
@@ -327,6 +338,7 @@ class MemoProvider extends ChangeNotifier {
           // mark as not synced to re-upload with current configuration
           final patched = remoteMemo.memo.copyWith(isSynced: false);
           await _db.saveMemoWithBlocks(patched, remoteMemo.blocks);
+          syncedCount++;
           debugPrint(
             '[MemoProvider] Pull OK: $memoUuid downloaded from kDrive (colorIndex=${patched.colorIndex}, bgImageIndex=${patched.bgImageIndex})',
           );
@@ -339,6 +351,7 @@ class MemoProvider extends ChangeNotifier {
     }
 
     storage.markSyncedNow();
+    lastSyncNoteCount = syncedCount;
     return decryptionFailures;
   }
 

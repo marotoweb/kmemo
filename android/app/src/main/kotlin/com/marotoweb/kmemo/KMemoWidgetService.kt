@@ -58,9 +58,13 @@ class KMemoWidgetFactory(private val context: Context) : RemoteViewsService.Remo
             views.setTextViewText(R.id.widget_item_title, note.title)
             views.setTextViewText(R.id.widget_item_preview, note.preview)
 
-            // Respect editor options: line wrapping
-            val titleMaxLines = if (autoWrap) 2 else 1
-            val previewMaxLines = if (autoWrap) 8 else 1
+            // Respect editor options: line wrapping.
+            // The preview can contain several lines (joined blocks), so the number
+            // of max lines must follow the real line count; autoWrap only controls
+            // whether long lines are truncated with an ellipsis.
+            val previewLines = note.preview.count { it == '\n' } + 1
+            val previewMaxLines = previewLines.coerceAtLeast(1).coerceAtMost(8)
+            val titleMaxLines = 2
             views.setInt(R.id.widget_item_title, "setMaxLines", titleMaxLines)
             views.setInt(R.id.widget_item_preview, "setMaxLines", previewMaxLines)
 

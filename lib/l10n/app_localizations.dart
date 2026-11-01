@@ -412,6 +412,12 @@ abstract class AppLocalizations {
   /// **'Sincronização concluída'**
   String get syncCompleted;
 
+  /// No description provided for @syncCompletedWithCount.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sincronização concluída: {count} nota(s) sincronizada(s).'**
+  String syncCompletedWithCount(int count);
+
   /// No description provided for @theme.
   ///
   /// In pt, this message translates to:
@@ -1149,6 +1155,72 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Falha ao copiar para kDrive'**
   String get copyToKdriveFailed;
+
+  /// No description provided for @checkForUpdates.
+  ///
+  /// In pt, this message translates to:
+  /// **'Verificar atualizações'**
+  String get checkForUpdates;
+
+  /// No description provided for @checkingForUpdates.
+  ///
+  /// In pt, this message translates to:
+  /// **'A verificar atualizações...'**
+  String get checkingForUpdates;
+
+  /// No description provided for @upToDate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Está atualizado'**
+  String get upToDate;
+
+  /// No description provided for @upToDateMessage.
+  ///
+  /// In pt, this message translates to:
+  /// **'Está a usar a versão mais recente ({version}).'**
+  String upToDateMessage(String version);
+
+  /// No description provided for @newVersionAvailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nova versão disponível'**
+  String get newVersionAvailable;
+
+  /// No description provided for @newVersionMessage.
+  ///
+  /// In pt, this message translates to:
+  /// **'A versão {version} está disponível. Está a usar a {current}.'**
+  String newVersionMessage(String version, String current);
+
+  /// No description provided for @downloadUpdate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Transferir'**
+  String get downloadUpdate;
+
+  /// No description provided for @viewReleasePage.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ver página da release'**
+  String get viewReleasePage;
+
+  /// No description provided for @later.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mais tarde'**
+  String get later;
+
+  /// No description provided for @updateCheckFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível verificar atualizações'**
+  String get updateCheckFailed;
+
+  /// No description provided for @releaseNotes.
+  ///
+  /// In pt, this message translates to:
+  /// **'Notas da release'**
+  String get releaseNotes;
 }
 
 class _AppLocalizationsDelegate

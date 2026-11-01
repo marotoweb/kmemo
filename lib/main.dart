@@ -1,6 +1,7 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'database/database.dart';
 import 'providers/memo_provider.dart';
@@ -51,6 +52,9 @@ class KMemoApp extends StatelessWidget {
           surface: Colors.white,
         ),
         scaffoldBackgroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          systemOverlayStyle: SystemUiOverlayStyle.dark,
+        ),
       ),
       // Define the dark theme
       darkTheme: ThemeData(
@@ -60,6 +64,9 @@ class KMemoApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
         scaffoldBackgroundColor: Colors.grey[900],
+        appBarTheme: const AppBarTheme(
+          systemOverlayStyle: SystemUiOverlayStyle.light,
+        ),
       ),
       themeMode: themeProvider.themeMode,
       locale: themeProvider.locale,

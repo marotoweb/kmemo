@@ -1,8 +1,12 @@
-# kMemo
+[![GitHub Latest Release](https://img.shields.io/github/v/release/marotoweb/kmemo?style=popout)](https://github.com/marotoweb/kmemo/releases/latest)
+[![GitHub All Releases](https://img.shields.io/github/downloads/marotoweb/kmemo/total)](https://github.com/marotoweb/kmemo/releases)
+
+<h1 align="center">
+  <img src="assets/icon/icon.png" width="60" alt="kMemo Icon">
+  kMemo
+</h1>
 
 **kMemo** is a minimalist, productivity-focused mobile note-taking app, created in Europe and built with Flutter. Its interface moves away from traditional text editors, adopting a structure entirely driven by dynamic blocks, letting you mutate and reorder content fluidly and without visual distractions. **kMemo** was born from the need to keep our notes sovereign without being the product and without depending on big tech.
-
-**Current version:** [![Latest release](https://img.shields.io/github/v/release/marotoweb/kmemo?display_name=tag&sort=semver)](https://github.com/marotoweb/kmemo/releases/latest)
 
 ---
 
@@ -25,6 +29,7 @@
 - **Link previews:** URLs in the note body are underlined; tapping a link opens a menu to preview (thumbnail, title, domain), open or edit the URL. Previews are only fetched on user action (no automatic requests), are cached locally, can be removed with an "Undo" option, and are also shown at the bottom of the home card.
 - **Export to kDrive:** from the note options menu, "Copy to kDrive" generates a .docx file with the note title and content and uploads it to the configured kDrive folder.
 - **Share and export (single or multiple notes):** in the editor, "Send" shares the note via Share Plus. On the home screen, with multiple notes selected, the top bar menu allows "Send" (grouped text) and "Copy to kDrive" (a single .docx with all notes). If kDrive is not configured, a warning is shown with a shortcut to the sync Settings.
+- **In-app update check:** Settings → "Check for updates" queries the latest GitHub release and notifies the user if a newer version is available, downloading the APK matching the device architecture.
 
 ---
 
@@ -204,6 +209,13 @@ kMemo **is not affiliated with, endorsed by or sponsored by Infomaniak**. The **
 | `android/app/src/main/kotlin/com/marotoweb/kmemo/KMemoWidgetProvider.kt` | AppWidget lifecycle |
 | `assets/icon/icon.png` | App icon |
 | `assets/backgrounds/` | Folder for note background images |
+
+---
+
+## 📥 Download & Distribution
+
+- **GitHub Releases:** the latest signed APK is available on the [Releases page](https://github.com/marotoweb/kmemo/releases/latest).
+- **F-Droid:** a submission is in progress (merge request [!55141](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/55141)). The app was closed once because it did not yet meet F-Droid's requirement of being actively maintained for more than 3 months; it will be resubmitted once that period is reached (expected around February 2027). The build is fully reproducible and all pipeline jobs pass.
 
 ---
 

@@ -51,6 +51,14 @@
   "syncAllNotes": "Sync all notes",
   "syncTitle": "Sync",
   "syncCompleted": "Sync completed",
+  "syncCompletedWithCount": "Sync completed: {count} note(s) synced.",
+  "@syncCompletedWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "theme": "Theme",
   "takePhoto": "Take photo",
   "infomaniakToken": "Infomaniak token",
@@ -173,5 +181,33 @@
   "editLink": "Edit",
   "kdriveNotConfigured": "kDrive not configured",
   "copiedToKdrive": "Copied to kDrive",
-  "copyToKdriveFailed": "Failed to copy to kDrive"
+  "copyToKdriveFailed": "Failed to copy to kDrive",
+  "checkForUpdates": "Check for updates",
+  "checkingForUpdates": "Checking for updates...",
+  "upToDate": "You're up to date",
+  "upToDateMessage": "You're running the latest version ({version}).",
+  "@upToDateMessage": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "newVersionAvailable": "New version available",
+  "newVersionMessage": "Version {version} is available. You're running {current}.",
+  "@newVersionMessage": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadUpdate": "Download",
+  "viewReleasePage": "View release page",
+  "later": "Later",
+  "updateCheckFailed": "Could not check for updates",
+  "releaseNotes": "Release notes"
 }

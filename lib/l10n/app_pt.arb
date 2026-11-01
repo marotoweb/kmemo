@@ -51,6 +51,14 @@
   "syncAllNotes": "Sincronizar todas as notas",
   "syncTitle": "Sincronização",
   "syncCompleted": "Sincronização concluída",
+  "syncCompletedWithCount": "Sincronização concluída: {count} nota(s) sincronizada(s).",
+  "@syncCompletedWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "theme": "Tema",
   "takePhoto": "Tirar foto",
   "infomaniakToken": "Token da Infomaniak",
@@ -347,5 +355,33 @@
   "editLink": "Editar",
   "kdriveNotConfigured": "kDrive não está configurado",
   "copiedToKdrive": "Copiado para kDrive",
-  "copyToKdriveFailed": "Falha ao copiar para kDrive"
+  "copyToKdriveFailed": "Falha ao copiar para kDrive",
+  "checkForUpdates": "Verificar atualizações",
+  "checkingForUpdates": "A verificar atualizações...",
+  "upToDate": "Está atualizado",
+  "upToDateMessage": "Está a usar a versão mais recente ({version}).",
+  "@upToDateMessage": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "newVersionAvailable": "Nova versão disponível",
+  "newVersionMessage": "A versão {version} está disponível. Está a usar a {current}.",
+  "@newVersionMessage": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "current": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadUpdate": "Transferir",
+  "viewReleasePage": "Ver página da release",
+  "later": "Mais tarde",
+  "updateCheckFailed": "Não foi possível verificar atualizações",
+  "releaseNotes": "Notas da release"
 }

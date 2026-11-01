@@ -163,6 +163,11 @@ class AppLocalizationsPt extends AppLocalizations {
   String get syncCompleted => 'Sincronização concluída';
 
   @override
+  String syncCompletedWithCount(int count) {
+    return 'Sincronização concluída: $count nota(s) sincronizada(s).';
+  }
+
+  @override
   String get theme => 'Tema';
 
   @override
@@ -594,4 +599,41 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get copyToKdriveFailed => 'Falha ao copiar para kDrive';
+
+  @override
+  String get checkForUpdates => 'Verificar atualizações';
+
+  @override
+  String get checkingForUpdates => 'A verificar atualizações...';
+
+  @override
+  String get upToDate => 'Está atualizado';
+
+  @override
+  String upToDateMessage(String version) {
+    return 'Está a usar a versão mais recente ($version).';
+  }
+
+  @override
+  String get newVersionAvailable => 'Nova versão disponível';
+
+  @override
+  String newVersionMessage(String version, String current) {
+    return 'A versão $version está disponível. Está a usar a $current.';
+  }
+
+  @override
+  String get downloadUpdate => 'Transferir';
+
+  @override
+  String get viewReleasePage => 'Ver página da release';
+
+  @override
+  String get later => 'Mais tarde';
+
+  @override
+  String get updateCheckFailed => 'Não foi possível verificar atualizações';
+
+  @override
+  String get releaseNotes => 'Notas da release';
 }
