@@ -200,6 +200,7 @@ class MemoProvider extends ChangeNotifier {
   /// delete the remote file.
   Future<int> performSync({
     bool force = false,
+    void Function(int done, int total)? onProgress,
     Future<String?> Function(String remoteFileId)? requestPassphrase,
     Future<bool> Function(String remoteFileId)? confirmDeleteRemote,
   }) async {
@@ -235,9 +236,28 @@ class MemoProvider extends ChangeNotifier {
     }
 
     // ---------------------------------------------------------------
-    // PUSH: send unsynced local notes and associate remoteFileId
+    // Progress: total = notes to upload + remote notes to download.
+    // Listing the remote folder first lets the UI show a determinate bar
+    // even when every note is re-uploaded (e.g. after toggling encryption).
     // ---------------------------------------------------------------
     final unsynced = localMemos.where((m) => !m.isSynced).toList();
+    List<RemoteMemoInfo> pendingRemote = [];
+    try {
+      final remoteMemos = await storage.listRemoteMemos();
+      final localUuids = localMemos.map((m) => m.uuid).toSet();
+      pendingRemote = remoteMemos
+          .where((r) => !localUuids.contains(r.name.replaceAll('.json', '')))
+          .toList();
+    } catch (e) {
+      debugPrint('[MemoProvider] error listing remotes: $e');
+    }
+    final total = unsynced.length + pendingRemote.length;
+    int processed = 0;
+    onProgress?.call(processed, total);
+
+    // ---------------------------------------------------------------
+    // PUSH: send unsynced local notes and associate remoteFileId
+    // ---------------------------------------------------------------
     debugPrint(
       '[MemoProvider] performSync(): ${unsynced.length} unsynced notes for upload',
     );
@@ -262,6 +282,8 @@ class MemoProvider extends ChangeNotifier {
       } catch (e) {
         debugPrint('[MemoProvider] Push failed for ${memo.uuid}: $e');
       }
+      processed++;
+      onProgress?.call(processed, total);
     }
 
     // ---------------------------------------------------------------
@@ -277,26 +299,38 @@ class MemoProvider extends ChangeNotifier {
     }
 
     try {
-      final remoteMemos = await storage.listRemoteMemos();
-      final localUuids = localMemos.map((m) => m.uuid).toSet();
-
       debugPrint(
-        '[MemoProvider] performSync(): ${remoteMemos.length} remote notes found',
+        '[MemoProvider] performSync(): ${pendingRemote.length} remote notes to pull',
       );
 
-      for (var remote in remoteMemos) {
+      // The passphrase that successfully decrypted a note is reused for the
+      // remaining notes, so the user is not asked once per encrypted note.
+      String? userPassphrase;
+      final generalPass = await storage.getEncryptionPassphrase();
+
+      for (var remote in pendingRemote) {
         final memoUuid = remote.name.replaceAll('.json', '');
-        if (localUuids.contains(memoUuid)) continue;
+        processed++;
+        onProgress?.call(processed, total);
 
         try {
           RemoteMemo? remoteMemo = await storage.downloadMemo(
             remote.remoteFileId,
           );
 
-          // If decryption failed, try with a passphrase requested from the user
+          // If decryption failed, try the passphrase that already worked for
+          // a previous note before asking the user again.
           if (remoteMemo == null && requestPassphrase != null) {
             // Save general encryption state to restore later
             final wasEnabled = EncryptionService.instance.isEnabled;
+
+            // 1. Reuse the passphrase validated for a previous note.
+            if (userPassphrase != null && userPassphrase.isNotEmpty) {
+              EncryptionService.instance.enable(userPassphrase);
+              remoteMemo = await storage.downloadMemo(remote.remoteFileId);
+            }
+
+            // 2. Ask the user (up to two attempts) only if still undecrypted.
             int attempts = 0;
             while (remoteMemo == null && attempts < 2) {
               attempts++;
@@ -304,10 +338,13 @@ class MemoProvider extends ChangeNotifier {
               if (pass == null || pass.isEmpty) break; // ignore
               EncryptionService.instance.enable(pass);
               remoteMemo = await storage.downloadMemo(remote.remoteFileId);
+              if (remoteMemo != null) {
+                userPassphrase = pass;
+              }
             }
+
             // Restore general encryption state
             if (wasEnabled) {
-              final generalPass = await storage.getEncryptionPassphrase();
               if (generalPass != null && generalPass.isNotEmpty) {
                 EncryptionService.instance.enable(generalPass);
               }
@@ -347,9 +384,10 @@ class MemoProvider extends ChangeNotifier {
         }
       }
     } catch (e) {
-      debugPrint('[MemoProvider] error listing remotes: $e');
+      debugPrint('[MemoProvider] error pulling remotes: $e');
     }
 
+    onProgress?.call(total, total);
     storage.markSyncedNow();
     lastSyncNoteCount = syncedCount;
     return decryptionFailures;

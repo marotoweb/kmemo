@@ -5,14 +5,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
   Locale? _locale;
-  bool _autoWrap = false;
+  bool _autoWrap = true;
   bool _strikethroughChecked = true;
+  bool _showLinkPreviews = true;
 
 
   ThemeMode get themeMode => _themeMode;
   Locale? get locale => _locale;
   bool get autoWrap => _autoWrap;
   bool get strikethroughChecked => _strikethroughChecked;
+  bool get showLinkPreviews => _showLinkPreviews;
 
   ThemeProvider() {
     _loadThemePreference();
@@ -22,8 +24,9 @@ class ThemeProvider extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     final themeIndex = prefs.getInt('theme_mode') ?? 0;
     final lang = prefs.getString('language_code');
-    _autoWrap = prefs.getBool('auto_wrap') ?? false;
+    _autoWrap = prefs.getBool('auto_wrap') ?? true;
     _strikethroughChecked = prefs.getBool('strikethrough_checked') ?? true;
+    _showLinkPreviews = prefs.getBool('show_link_previews') ?? true;
     if (lang != null && lang.isNotEmpty) {
       _locale = Locale(lang);
     }
@@ -70,5 +73,12 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('strikethrough_checked', value);
+  }
+
+  Future<void> setShowLinkPreviews(bool value) async {
+    _showLinkPreviews = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('show_link_previews', value);
   }
 }

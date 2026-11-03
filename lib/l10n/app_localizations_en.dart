@@ -635,4 +635,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get releaseNotes => 'Release notes';
+
+  @override
+  String get showLinkPreviews => 'Show link previews';
+
+  @override
+  String get showLinkPreviewsSubtitle =>
+      'Show preview cards for links in notes';
 }

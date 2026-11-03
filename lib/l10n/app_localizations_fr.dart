@@ -637,4 +637,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get releaseNotes => 'Notes de version';
+
+  @override
+  String get showLinkPreviews => 'Afficher les aperçus de liens';
+
+  @override
+  String get showLinkPreviewsSubtitle =>
+      'Afficher des cartes d\'aperçu pour les liens dans les notes';
 }

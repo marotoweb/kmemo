@@ -209,5 +209,7 @@
   "viewReleasePage": "Vedi pagina release",
   "later": "Più tardi",
   "updateCheckFailed": "Impossibile verificare gli aggiornamenti",
-  "releaseNotes": "Note di rilascio"
+  "releaseNotes": "Note di rilascio",
+  "showLinkPreviews": "Mostra anteprime dei link",
+  "showLinkPreviewsSubtitle": "Mostra schede di anteprima per i link nelle note"
 }

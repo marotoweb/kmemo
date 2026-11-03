@@ -1,0 +1,7 @@
+Show link previews toggle, default auto-wrap and sync progress.
+
+- New Settings → Editor option "Show link previews" (enabled by default); hides preview cards in notes and on cards.
+- Auto line wrap is now enabled by default.
+- Syncing all notes (e.g. when enabling/disabling encryption) now shows a progress card with N / M notes.
+- Tapping the note body places the cursor instead of selecting text; the cursor stays aligned with the typed text.
+- Fixed a crash when submitting the encryption passphrase and reuse the validated passphrase across notes.
