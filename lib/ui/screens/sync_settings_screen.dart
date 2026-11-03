@@ -19,6 +19,8 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   late final KDriveStorage _storage;
   bool _isLoading = true;
   bool _isSyncing = false;
+  int _syncDone = 0;
+  int _syncTotal = 0;
 
   // Configuration form state
   final _tokenController = TextEditingController();
@@ -205,6 +207,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       if (sync) {
         try {
           if (!mounted) return;
+          setState(() {
+            _isSyncing = true;
+            _syncDone = 0;
+            _syncTotal = 0;
+          });
           final decryptionFailures = await _runSyncWithPrompts(force: true);
           if (decryptionFailures > 0 && mounted) {
             _showError(
@@ -216,6 +223,10 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           debugPrint(
             '[SyncSettings] _saveCurrentConfig(): initial sync failed: $e',
           );
+        } finally {
+          if (mounted) {
+            setState(() => _isSyncing = false);
+          }
         }
       }
     } catch (e) {
@@ -248,7 +259,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   /// Manual sync (push + pull) triggered by the user.
   Future<void> _syncNow() async {
     if (_isSyncing) return;
-    setState(() => _isSyncing = true);
+    setState(() {
+      _isSyncing = true;
+      _syncDone = 0;
+      _syncTotal = 0;
+    });
     try {
       if (!mounted) return;
       // Ensure the current configuration is saved before syncing
@@ -296,46 +311,22 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     final memoProvider = Provider.of<MemoProvider>(context, listen: false);
     return await memoProvider.performSync(
       force: force,
+      onProgress: (done, total) {
+        if (!mounted) return;
+        setState(() {
+          _syncDone = done;
+          _syncTotal = total;
+        });
+      },
       requestPassphrase: (remoteFileId) async {
-        // Prompt the user for a passphrase for this specific note
-        final controller = TextEditingController();
-        final result = await showDialog<String?>(
+        // Prompt the user for a passphrase for this specific note.
+        // The dialog owns its controller and disposes it when it leaves the
+        // tree, avoiding the "_dependents.isEmpty" assertion that happened
+        // when the controller was disposed right after showDialog returned.
+        return await showDialog<String?>(
           context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(AppLocalizations.of(context)!.noteEncryptedInCloud),
-            content: SizedBox(
-              width: MediaQuery.of(context).size.width * 0.90,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)!.thisNoteIsEncryptedInCloud,
-                    style: TextStyle(fontSize: 13),
-                  ),
-                  SizedBox(height: 12),
-                  TextField(
-                    controller: controller,
-                    decoration: InputDecoration(hintText: AppLocalizations.of(context)!.passphrase),
-                    obscureText: true,
-                    maxLines: 1,
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, null),
-                child: Text(AppLocalizations.of(context)!.ignore),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-                child: Text(AppLocalizations.of(context)!.confirm),
-              ),
-            ],
-          ),
+          builder: (ctx) => const _RequestPassphraseDialog(),
         );
-        controller.dispose();
-        return (result != null && result.isNotEmpty) ? result : null;
       },
       confirmDeleteRemote: (remoteFileId) async {
         final delete = await showDialog<bool>(
@@ -404,6 +395,36 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           : ListView(
               padding: EdgeInsets.all(16.0).copyWith(bottom: 100),
               children: [
+                if (_isSyncing && _syncTotal > 0)
+                  Card(
+                    margin: EdgeInsets.only(bottom: 12),
+                    child: Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            AppLocalizations.of(context)!.syncingNow,
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(height: 8),
+                          LinearProgressIndicator(
+                            value: _syncTotal > 0
+                                ? _syncDone / _syncTotal
+                                : null,
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            '$_syncDone / $_syncTotal',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 Center(
                   child: SegmentedButton<String>(
                     segments: const [
@@ -620,7 +641,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                                         ? Colors.amber.shade300
                                         : Colors.amber.shade700)
                                     .withValues(alpha: 0.5),
-                            onChanged: (value) async {
+                            onChanged: _isSyncing
+                                ? null
+                                : (value) async {
                               if (value) {
                                 // Prompt for passphrase before enabling
                                 final confirmed = await _showPassphraseDialog();
@@ -1503,6 +1526,77 @@ class _PassphraseDialogState extends State<_PassphraseDialog> {
               return;
             }
             Navigator.pop(context, true);
+          },
+          child: Text(AppLocalizations.of(context)!.confirm),
+        ),
+      ],
+    );
+  }
+}
+
+/// Asks the user for the passphrase of a single encrypted remote note.
+///
+/// The dialog owns its [TextEditingController] so it is only disposed after
+/// the route has been removed from the tree.
+class _RequestPassphraseDialog extends StatefulWidget {
+  const _RequestPassphraseDialog();
+
+  @override
+  State<_RequestPassphraseDialog> createState() =>
+      _RequestPassphraseDialogState();
+}
+
+class _RequestPassphraseDialogState extends State<_RequestPassphraseDialog> {
+  final _controller = TextEditingController();
+  bool _showPassphrase = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(AppLocalizations.of(context)!.noteEncryptedInCloud),
+      content: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.90,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              AppLocalizations.of(context)!.thisNoteIsEncryptedInCloud,
+              style: TextStyle(fontSize: 13),
+            ),
+            SizedBox(height: 12),
+            TextField(
+              controller: _controller,
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context)!.passphrase,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _showPassphrase ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () =>
+                      setState(() => _showPassphrase = !_showPassphrase),
+                ),
+              ),
+              obscureText: !_showPassphrase,
+              maxLines: 1,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, null),
+          child: Text(AppLocalizations.of(context)!.ignore),
+        ),
+        TextButton(
+          onPressed: () {
+            final text = _controller.text.trim();
+            Navigator.pop(context, text.isEmpty ? null : text);
           },
           child: Text(AppLocalizations.of(context)!.confirm),
         ),

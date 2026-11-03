@@ -636,4 +636,11 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get releaseNotes => 'Notas da release';
+
+  @override
+  String get showLinkPreviews => 'Mostrar pré-visualizações de links';
+
+  @override
+  String get showLinkPreviewsSubtitle =>
+      'Mostra cartões de pré-visualização para links nas notas';
 }

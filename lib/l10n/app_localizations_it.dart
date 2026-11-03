@@ -636,4 +636,11 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get releaseNotes => 'Note di rilascio';
+
+  @override
+  String get showLinkPreviews => 'Mostra anteprime dei link';
+
+  @override
+  String get showLinkPreviewsSubtitle =>
+      'Mostra schede di anteprima per i link nelle note';
 }

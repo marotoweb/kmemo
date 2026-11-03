@@ -294,6 +294,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Provider.of<MemoProvider>(context, listen: false).refreshWidget();
                   },
                 ),
+                Divider(height: 1),
+                SwitchListTile(
+                  title: Text(AppLocalizations.of(context)!.showLinkPreviews),
+                  subtitle: Text(
+                    AppLocalizations.of(context)!.showLinkPreviewsSubtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  value: themeProvider.showLinkPreviews,
+                  onChanged: (value) {
+                    themeProvider.setShowLinkPreviews(value);
+                    Provider.of<MemoProvider>(context, listen: false).refreshWidget();
+                  },
+                ),
               ],
             ),
           ),

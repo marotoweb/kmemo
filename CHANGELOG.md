@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.14
+
+### ✨ Features
+- **Show link previews setting:** new Settings → Editor toggle "Show link previews" (enabled by default). When turned off, preview cards are hidden in the note editor and on note cards; the link tap menu still works.
+- **Auto line wrap enabled by default:** the auto-wrap editor option is now on by default.
+- **Sync progress:** re-uploading all notes (for example when enabling or disabling encryption) now shows a progress card with "N / M notes" instead of running silently.
+
+### 🐛 Fixes
+- **Editor cursor placement:** tapping the body now places the cursor instead of selecting text up to the tap point. The cursor also stays aligned with the last typed character because the transparent editor and the text overlay now use identical letter/word spacing.
+- **Encrypted sync passphrase:** fixed a crash (`_dependents.isEmpty`) when submitting the passphrase and reused the validated passphrase across notes instead of asking again for every encrypted note.
+
 ## 0.1.13
 
 ### ✨ Features

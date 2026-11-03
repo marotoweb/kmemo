@@ -1097,6 +1097,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
     }
 
     final blocks = await context.read<MemoProvider>().loadBlocks(widget.memo.uuid);
+    if (!mounted) return;
     final textContent = blocks
         .map((b) => b.content['text']?.toString() ?? '')
         .join('\n');
@@ -1671,9 +1672,21 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
 
   Widget _buildTextLayout(Color textColor, Color hintColor) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final showLinkPreviews =
+        context.watch<ThemeProvider>().showLinkPreviews;
     // Shared style and forced strut so the underlined overlay and the
     // editable field lay out every line at exactly the same height.
-    final bodyStyle = TextStyle(fontSize: 16, height: 1.3, color: textColor);
+    // Explicit letter/word spacing so the transparent TextField and the
+    // Text.rich overlay use identical glyph metrics. Without this, the field
+    // inherits bodyLarge (letterSpacing 0.5) while the overlay inherits
+    // bodyMedium (0.25), and the cursor drifts right as the line grows.
+    final bodyStyle = TextStyle(
+      fontSize: 16,
+      height: 1.3,
+      letterSpacing: 0,
+      wordSpacing: 0,
+      color: textColor,
+    );
     final bodyStrut = StrutStyle.fromTextStyle(bodyStyle, forceStrutHeight: true);
     final linkStyle = TextStyle(
       decoration: TextDecoration.underline,
@@ -1688,10 +1701,18 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
       builder: (viewportContext, viewport) => SingleChildScrollView(
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: viewport.maxHeight),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _textFocusNode.requestFocus(),
-            child: Column(
+          child: Stack(
+            children: [
+              // Background: only receives taps on the empty area below the
+              // text. Taps on the text field are handled by the field itself,
+              // so the cursor is placed instead of selecting text.
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _textFocusNode.requestFocus(),
+                ),
+              ),
+              Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           LayoutBuilder(
@@ -1757,17 +1778,19 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               );
             },
           ),
-          ...urls.map((url) {
-            return _buildLinkPreviewCard(
-              url,
-              _linkPreviews[url],
-              _linkPreviewLoading.contains(url),
-              textColor,
-              hintColor,
-            );
-          }),
+          if (showLinkPreviews)
+            ...urls.map((url) {
+              return _buildLinkPreviewCard(
+                url,
+                _linkPreviews[url],
+                _linkPreviewLoading.contains(url),
+                textColor,
+                hintColor,
+              );
+            }),
         ],
       ),
+            ],
           ),
         ),
       ),

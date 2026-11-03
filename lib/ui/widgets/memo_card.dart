@@ -27,6 +27,7 @@ class MemoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final strikethroughChecked = context.watch<ThemeProvider>().strikethroughChecked;
+    final showLinkPreviews = context.watch<ThemeProvider>().showLinkPreviews;
 
     final List<Color> lightColorsPalette = [
       Colors.white,
@@ -247,11 +248,12 @@ class MemoCard extends StatelessWidget {
                           }
                         },
                       ),
-                      _CardLinkPreview(
-                        memoUuid: memo.uuid,
-                        textColor: textColor,
-                        subtitleColor: subtitleColor,
-                      ),
+                      if (showLinkPreviews)
+                        _CardLinkPreview(
+                          memoUuid: memo.uuid,
+                          textColor: textColor,
+                          subtitleColor: subtitleColor,
+                        ),
                       if (images.isNotEmpty) ...[
                         Row(
                           children: [

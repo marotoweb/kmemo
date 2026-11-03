@@ -1221,6 +1221,18 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Notas da release'**
   String get releaseNotes;
+
+  /// No description provided for @showLinkPreviews.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mostrar pré-visualizações de links'**
+  String get showLinkPreviews;
+
+  /// No description provided for @showLinkPreviewsSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mostra cartões de pré-visualização para links nas notas'**
+  String get showLinkPreviewsSubtitle;
 }
 
 class _AppLocalizationsDelegate

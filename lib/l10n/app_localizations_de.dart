@@ -639,4 +639,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get releaseNotes => 'Versionshinweise';
+
+  @override
+  String get showLinkPreviews => 'Linkvorschauen anzeigen';
+
+  @override
+  String get showLinkPreviewsSubtitle =>
+      'Vorschaukarten für Links in Notizen anzeigen';
 }

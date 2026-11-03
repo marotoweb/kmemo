@@ -209,5 +209,7 @@
   "viewReleasePage": "View release page",
   "later": "Later",
   "updateCheckFailed": "Could not check for updates",
-  "releaseNotes": "Release notes"
+  "releaseNotes": "Release notes",
+  "showLinkPreviews": "Show link previews",
+  "showLinkPreviewsSubtitle": "Show preview cards for links in notes"
 }
