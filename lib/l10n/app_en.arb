@@ -211,5 +211,9 @@
   "updateCheckFailed": "Could not check for updates",
   "releaseNotes": "Release notes",
   "showLinkPreviews": "Show link previews",
-  "showLinkPreviewsSubtitle": "Show preview cards for links in notes"
+  "showLinkPreviewsSubtitle": "Show preview cards for links in notes",
+  "enableEncryptionTitle": "Enable encryption",
+  "enableEncryptionMessage": "Your local notes will be encrypted with the new passphrase and re-uploaded, replacing the remote copies. Remote notes will be downloaded and decrypted.",
+  "disableEncryptionTitle": "Disable encryption",
+  "disableEncryptionMessage": "Your local notes will be re-uploaded WITHOUT encryption, replacing the encrypted remote copies. Remote notes will be downloaded and stored locally."
 }

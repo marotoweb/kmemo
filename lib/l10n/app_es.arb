@@ -211,5 +211,9 @@
   "updateCheckFailed": "No se pudieron verificar las actualizaciones",
   "releaseNotes": "Notas de la versión",
   "showLinkPreviews": "Mostrar vistas previas de enlaces",
-  "showLinkPreviewsSubtitle": "Mostrar tarjetas de vista previa para enlaces en las notas"
+  "showLinkPreviewsSubtitle": "Mostrar tarjetas de vista previa para enlaces en las notas",
+  "enableEncryptionTitle": "Activar cifrado",
+  "enableEncryptionMessage": "Tus notas locales se cifrarán con la nueva contraseña y se volverán a subir, sustituyendo las copias remotas. Las notas remotas se descargarán y descifrarán.",
+  "disableEncryptionTitle": "Desactivar cifrado",
+  "disableEncryptionMessage": "Tus notas locales se volverán a subir SIN cifrado, sustituyendo las copias remotas cifradas. Las notas remotas se descargarán y se guardarán localmente."
 }

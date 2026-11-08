@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  clipToOutline clips the ListView (and its scrolling items) to the rounded
+  outline of the background drawable. Without it, items are drawn over the
+  widget's rounded corners while scrolling.
+-->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
+    android:clipToOutline="true"
+    android:clipChildren="true"
     android:padding="0dp">
 
     <ListView

@@ -8,6 +8,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../../database/database.dart';
+import '../../models/background_images.dart';
+import '../../models/note_palette.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
 import '../../services/docx_export_service.dart';
@@ -546,36 +548,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       Color(0xFFF5F5F5),
     ];
 
-    final List<Color> darkColorsPalette = [
-      Color(0xFF1E1E1E),
-      Color(0xFF3B1A1A),
-      Color(0xFF3D2C1E),
-      Color(0xFF3D361E),
-      Color(0xFF1E3322),
-      Color(0xFF1E3331),
-      Color(0xFF1E2A3B),
-      Color(0xFF261E3B),
-      Color(0xFF331E3B),
-      Color(0xFF3B1E32),
-      Color(0xFF2E2621),
-      Color(0xFF252B2E),
-      Color(0xFF3B2E1E),
-      Color(0xFF27331E),
-      Color(0xFF1E3338),
-      Color(0xFF2C2C2C),
-    ];
+    final colorsPalette = isDarkMode ? kDarkNotePalette : lightColorsPalette;
 
-    final colorsPalette = isDarkMode ? darkColorsPalette : lightColorsPalette;
-
-    final List<String> bgImagesPalette = [];
+    // Probe the bundled background images (bg_1.png, bg_2.png, …) so adding a
+    // file to assets/backgrounds/ is enough for it to show up here.
     final bundle = DefaultAssetBundle.of(context);
-    for (int i = 0; i < 16; i++) {
-      final path = 'assets/backgrounds/bg_$i.png';
+    final bgImageNumbers = <int>[];
+    for (var n = 1; n <= kMaxBackgroundImageNumber; n++) {
       try {
-        await bundle.load(path);
-        bgImagesPalette.add(path);
+        await bundle.load(noteBackgroundImagePath(n)!);
+        bgImageNumbers.add(n);
       } catch (_) {
-        // Image does not exist, skipping
+        // Image does not exist, skipping.
       }
     }
 
@@ -658,17 +642,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
                           ),
-                      itemCount: bgImagesPalette.length,
+                      itemCount: bgImageNumbers.length,
                       itemBuilder: (context, i) {
+                        final number = bgImageNumbers[i];
                         final isSelected =
                             singleSelectedMemo != null &&
-                            singleSelectedMemo.bgImageIndex == i;
+                            normalizedBackgroundImageIndex(
+                                  singleSelectedMemo.bgImageIndex,
+                                ) ==
+                                number;
 
                         return GestureDetector(
                           onTap: () {
-                            context.read<MemoProvider>().changeColorMultiple(
+                            context.read<MemoProvider>().changeBgImageMultiple(
                               _selectedUuids,
-                              i,
+                              number,
                             );
                             _clearSelection();
                             Navigator.pop(ctx);
@@ -687,21 +675,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(6),
-                              child: Container(
-                                color: isDarkMode
-                                    ? Colors.grey.shade800
-                                    : Colors.grey.shade200,
-                                child: Center(
-                                  child: Text(
-                                    AppLocalizations.of(context)!.bgLabel('$i'),
-                                    style: TextStyle(
-                                      fontSize: 11,
+                              child: Image.asset(
+                                noteBackgroundImagePath(number)!,
+                                fit: BoxFit.cover,
+                                cacheWidth: 240,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
                                       color: isDarkMode
-                                          ? Colors.white70
-                                          : Colors.black54,
+                                          ? Colors.grey.shade800
+                                          : Colors.grey.shade200,
+                                      child: Icon(
+                                        Icons.image_not_supported,
+                                        size: 18,
+                                        color: isDarkMode
+                                            ? Colors.white54
+                                            : Colors.black45,
+                                      ),
                                     ),
-                                  ),
-                                ),
                               ),
                             ),
                           ),

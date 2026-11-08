@@ -211,5 +211,9 @@
   "updateCheckFailed": "Impossible de vérifier les mises à jour",
   "releaseNotes": "Notes de version",
   "showLinkPreviews": "Afficher les aperçus de liens",
-  "showLinkPreviewsSubtitle": "Afficher des cartes d'aperçu pour les liens dans les notes"
+  "showLinkPreviewsSubtitle": "Afficher des cartes d'aperçu pour les liens dans les notes",
+  "enableEncryptionTitle": "Activer le chiffrement",
+  "enableEncryptionMessage": "Vos notes locales seront chiffrées avec la nouvelle phrase secrète et renvoyées, en remplaçant les copies distantes. Les notes distantes seront téléchargées et déchiffrées.",
+  "disableEncryptionTitle": "Désactiver le chiffrement",
+  "disableEncryptionMessage": "Vos notes locales seront renvoyées SANS chiffrement, en remplaçant les copies distantes chiffrées. Les notes distantes seront téléchargées et stockées localement."
 }

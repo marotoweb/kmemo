@@ -645,4 +645,18 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get showLinkPreviewsSubtitle =>
       'Mostrar tarjetas de vista previa para enlaces en las notas';
+
+  @override
+  String get enableEncryptionTitle => 'Activar cifrado';
+
+  @override
+  String get enableEncryptionMessage =>
+      'Tus notas locales se cifrarán con la nueva contraseña y se volverán a subir, sustituyendo las copias remotas. Las notas remotas se descargarán y descifrarán.';
+
+  @override
+  String get disableEncryptionTitle => 'Desactivar cifrado';
+
+  @override
+  String get disableEncryptionMessage =>
+      'Tus notas locales se volverán a subir SIN cifrado, sustituyendo las copias remotas cifradas. Las notas remotas se descargarán y se guardarán localmente.';
 }

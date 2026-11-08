@@ -644,4 +644,18 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get showLinkPreviewsSubtitle =>
       'Afficher des cartes d\'aperçu pour les liens dans les notes';
+
+  @override
+  String get enableEncryptionTitle => 'Activer le chiffrement';
+
+  @override
+  String get enableEncryptionMessage =>
+      'Vos notes locales seront chiffrées avec la nouvelle phrase secrète et renvoyées, en remplaçant les copies distantes. Les notes distantes seront téléchargées et déchiffrées.';
+
+  @override
+  String get disableEncryptionTitle => 'Désactiver le chiffrement';
+
+  @override
+  String get disableEncryptionMessage =>
+      'Vos notes locales seront renvoyées SANS chiffrement, en remplaçant les copies distantes chiffrées. Les notes distantes seront téléchargées et stockées localement.';
 }

@@ -646,4 +646,18 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get showLinkPreviewsSubtitle =>
       'Vorschaukarten für Links in Notizen anzeigen';
+
+  @override
+  String get enableEncryptionTitle => 'Verschlüsselung aktivieren';
+
+  @override
+  String get enableEncryptionMessage =>
+      'Ihre lokalen Notizen werden mit der neuen Passphrase verschlüsselt und erneut hochgeladen, wobei die Remote-Kopien ersetzt werden. Remote-Notizen werden heruntergeladen und entschlüsselt.';
+
+  @override
+  String get disableEncryptionTitle => 'Verschlüsselung deaktivieren';
+
+  @override
+  String get disableEncryptionMessage =>
+      'Ihre lokalen Notizen werden OHNE Verschlüsselung erneut hochgeladen und ersetzen die verschlüsselten Remote-Kopien. Remote-Notizen werden heruntergeladen und lokal gespeichert.';
 }

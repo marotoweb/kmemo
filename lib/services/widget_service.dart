@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:drift/drift.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:kmemo/database/database.dart';
+import 'package:kmemo/models/note_palette.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -49,24 +50,11 @@ class WidgetService {
     0xFFF5F5F5, // Cinzento muito claro
   ];
 
-  static const List<int> _darkColorsHex = [
-    0xFF1E1E1E, // Preto
-    0xFF3B1A1A, // Vermelho escuro
-    0xFF3D2C1E, // Laranja escuro
-    0xFF3D361E, // Amarelo escuro
-    0xFF1E3322, // Verde escuro
-    0xFF1E3331, // Teal escuro
-    0xFF1E2A3B, // Azul escuro
-    0xFF261E3B, // Indigo escuro
-    0xFF331E3B, // Roxo escuro
-    0xFF3B1E32, // Rosa escuro
-    0xFF2E2621, // Castanho escuro
-    0xFF252B2E, // Azul-acinzentado escuro
-    0xFF3B2E1E, // Amber escuro
-    0xFF27331E, // Verde-lima escuro
-    0xFF1E3338, // Ciano escuro
-    0xFF2C2C2C, // Cinzento escuro
-  ];
+  /// Dark palette shared with the Flutter UI (editor, home cards) so the
+  /// native widget stays in sync with the in-app colors.
+  static final List<int> _darkColorsHex = kDarkNotePalette
+      .map((color) => color.toARGB32())
+      .toList(growable: false);
 
   /// Syncs active notes with the JSON file shared with the native Android side
   /// [isDark] controls whether light or dark color palette is used for note cards

@@ -1,9 +1,12 @@
 // lib/ui/widgets/memo_card.dart
 
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../database/database.dart';
+import '../../models/background_images.dart';
+import '../../models/note_palette.dart';
 import '../../providers/memo_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/link_preview_service.dart';
@@ -28,6 +31,7 @@ class MemoCard extends StatelessWidget {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final strikethroughChecked = context.watch<ThemeProvider>().strikethroughChecked;
     final showLinkPreviews = context.watch<ThemeProvider>().showLinkPreviews;
+    final autoWrap = context.watch<ThemeProvider>().autoWrap;
 
     final List<Color> lightColorsPalette = [
       Colors.white,
@@ -48,26 +52,7 @@ class MemoCard extends StatelessWidget {
       Color(0xFFF5F5F5),
     ];
 
-    final List<Color> darkColorsPalette = [
-      Color(0xFF1E1E1E), // Preto suave
-      Color(0xFF3B1A1A), // Vermelho escuro suave
-      Color(0xFF3D2C1E), // Laranja escuro suave
-      Color(0xFF3D361E), // Dark soft yellow/amber
-      Color(0xFF1E3322), // Verde escuro suave
-      Color(0xFF1E3331), // Teal escuro suave
-      Color(0xFF1E2A3B), // Azul escuro suave
-      Color(0xFF261E3B), // Dark soft indigo
-      Color(0xFF331E3B), // Roxo escuro suave
-      Color(0xFF3B1E32), // Rosa escuro suave
-      Color(0xFF2E2621), // Castanho escuro suave
-      Color(0xFF252B2E), // Azul-acinzentado escuro suave
-      Color(0xFF3B2E1E), // Deep soft amber
-      Color(0xFF27331E), // Verde-lima escuro suave
-      Color(0xFF1E3338), // Ciano escuro suave
-      Color(0xFF2C2C2C), // Secondary dark grey
-    ];
-
-    final colorsPalette = isDarkMode ? darkColorsPalette : lightColorsPalette;
+    final colorsPalette = isDarkMode ? kDarkNotePalette : lightColorsPalette;
 
     final cardColor = isSelected
         ? (isDarkMode ? Color(0xFF4A3810) : Colors.amber.shade50)
@@ -75,9 +60,20 @@ class MemoCard extends StatelessWidget {
               ? colorsPalette[memo.colorIndex]
               : (isDarkMode ? Color(0xFF1E1E1E) : Colors.white));
 
-    final textColor = isDarkMode ? Colors.white70 : Colors.black87;
-    final subtitleColor = isDarkMode ? Colors.white60 : Colors.black45;
-    final mutedTextColor = isDarkMode ? Colors.white38 : Colors.black38;
+    // When a background image is set, it is painted inside the card
+    // decoration and the text must stay light over it, regardless of theme.
+    final bgImagePath = noteBackgroundImagePath(memo.bgImageIndex);
+    final hasBgImage = bgImagePath != null;
+
+    final textColor = hasBgImage
+        ? Colors.white
+        : (isDarkMode ? Colors.white70 : Colors.black87);
+    final subtitleColor = hasBgImage
+        ? Colors.white70
+        : (isDarkMode ? Colors.white60 : Colors.black45);
+    final mutedTextColor = hasBgImage
+        ? Colors.white60
+        : (isDarkMode ? Colors.white38 : Colors.black38);
 
     List<String> images = [];
     try {
@@ -91,6 +87,14 @@ class MemoCard extends StatelessWidget {
         margin: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
         decoration: BoxDecoration(
           color: cardColor,
+          image: bgImagePath == null
+              ? null
+              : DecorationImage(
+                  image: AssetImage(bgImagePath),
+                  fit: BoxFit.cover,
+                  // Missing asset: keep the selected color as fallback.
+                  onError: (exception, stackTrace) {},
+                ),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
@@ -133,8 +137,11 @@ class MemoCard extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                             color: textColor,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          // Automatic line wrapping applies to titles too.
+                          maxLines: autoWrap ? null : 1,
+                          overflow: autoWrap
+                              ? TextOverflow.clip
+                              : TextOverflow.ellipsis,
                         ),
                         SizedBox(height: 6),
                       ],
@@ -195,8 +202,10 @@ class MemoCard extends StatelessWidget {
                                                   ? TextDecoration.lineThrough
                                                   : TextDecoration.none,
                                             ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: autoWrap ? null : 1,
+                                            overflow: autoWrap
+                                                ? TextOverflow.clip
+                                                : TextOverflow.ellipsis,
                                           ),
                                         ),
                                       ],
@@ -274,9 +283,11 @@ class MemoCard extends StatelessWidget {
                         AppLocalizations.of(context)!.updatedOn(_formatDate(memo.updatedAt)),
                         style: TextStyle(
                           fontSize: 10,
-                          color: isDarkMode
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
+                          color: hasBgImage
+                              ? Colors.white60
+                              : (isDarkMode
+                                    ? Colors.grey.shade400
+                                    : Colors.grey.shade600),
                         ),
                       ),
                     ],
@@ -335,9 +346,9 @@ class _CardLinkPreview extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
-                child: preview.imageUrl != null
-                    ? Image.network(
-                        preview.imageUrl!,
+                child: preview.localImagePath != null
+                    ? Image.file(
+                        File(preview.localImagePath!),
                         width: 40,
                         height: 40,
                         fit: BoxFit.cover,

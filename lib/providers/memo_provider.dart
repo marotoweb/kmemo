@@ -562,8 +562,37 @@ class MemoProvider extends ChangeNotifier {
 
     for (var memo in targets) {
       final blocks = await _db.getBlocksForMemo(memo.uuid);
+      // Selecting a color also clears any selected background image, matching
+      // the editor: the color becomes visible and the image is removed.
       await _db.saveMemoWithBlocks(
-        memo.copyWith(colorIndex: colorIndex),
+        memo.copyWith(colorIndex: colorIndex, bgImageIndex: -1),
+        blocks,
+      );
+    }
+    _scheduleSync();
+  }
+
+  /// Applies a background image (asset index) to several notes at once.
+  /// Mirrors [changeColorMultiple] for the background-image palette.
+  Future<void> changeBgImageMultiple(
+    List<String> uuids,
+    int bgImageIndex,
+  ) async {
+    final List<Memo> targets = [];
+    for (var id in uuids) {
+      final match = _memos.cast<Memo?>().firstWhere(
+        (m) => m?.uuid == id,
+        orElse: () => null,
+      );
+      if (match != null) {
+        targets.add(match);
+      }
+    }
+
+    for (var memo in targets) {
+      final blocks = await _db.getBlocksForMemo(memo.uuid);
+      await _db.saveMemoWithBlocks(
+        memo.copyWith(bgImageIndex: bgImageIndex),
         blocks,
       );
     }

@@ -390,41 +390,45 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.syncTitle), elevation: 0),
+      bottomNavigationBar: _isSyncing
+          ? SafeArea(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context)!.syncingNow,
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          value: _syncTotal > 0
+                              ? _syncDone / _syncTotal
+                              : null,
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          '$_syncDone / $_syncTotal',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : null,
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : ListView(
               padding: EdgeInsets.all(16.0).copyWith(bottom: 100),
               children: [
-                if (_isSyncing && _syncTotal > 0)
-                  Card(
-                    margin: EdgeInsets.only(bottom: 12),
-                    child: Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            AppLocalizations.of(context)!.syncingNow,
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(height: 8),
-                          LinearProgressIndicator(
-                            value: _syncTotal > 0
-                                ? _syncDone / _syncTotal
-                                : null,
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            '$_syncDone / $_syncTotal',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
                 Center(
                   child: SegmentedButton<String>(
                     segments: const [
@@ -658,14 +662,24 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
 
                               if (!context.mounted) return;
 
+                              // Explain exactly what will happen before
+                              // replacing local/remote notes.
+                              final l10n = AppLocalizations.of(context)!;
+                              final enabling = value;
                               // Ask the user whether to sync all notes
                               // ignore: use_build_context_synchronously
                               final confirmedSync = await showDialog<bool>(
                                 context: context,
                                 builder: (ctx) => AlertDialog(
-                                  title: Text(AppLocalizations.of(context)!.syncAllNotes),
+                                  title: Text(
+                                    enabling
+                                        ? l10n.enableEncryptionTitle
+                                        : l10n.disableEncryptionTitle,
+                                  ),
                                   content: Text(
-                                    AppLocalizations.of(context)!.wantToSyncAllNotes,
+                                    enabling
+                                        ? l10n.enableEncryptionMessage
+                                        : l10n.disableEncryptionMessage,
                                   ),
                                   actions: [
                                     TextButton(

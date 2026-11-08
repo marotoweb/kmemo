@@ -1233,6 +1233,30 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Mostra cartões de pré-visualização para links nas notas'**
   String get showLinkPreviewsSubtitle;
+
+  /// No description provided for @enableEncryptionTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ativar encriptação'**
+  String get enableEncryptionTitle;
+
+  /// No description provided for @enableEncryptionMessage.
+  ///
+  /// In pt, this message translates to:
+  /// **'As notas locais serão encriptadas com a nova passphrase e reenviadas, substituindo as cópias remotas. As notas remotas serão descarregadas e desencriptadas.'**
+  String get enableEncryptionMessage;
+
+  /// No description provided for @disableEncryptionTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Desativar encriptação'**
+  String get disableEncryptionTitle;
+
+  /// No description provided for @disableEncryptionMessage.
+  ///
+  /// In pt, this message translates to:
+  /// **'As notas locais serão reenviadas SEM encriptação, substituindo as cópias remotas encriptadas. As notas remotas serão descarregadas e guardadas localmente.'**
+  String get disableEncryptionMessage;
 }
 
 class _AppLocalizationsDelegate

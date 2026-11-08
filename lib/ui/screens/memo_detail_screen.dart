@@ -10,6 +10,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 import '../../services/docx_export_service.dart';
 import '../../database/database.dart';
+import '../../models/background_images.dart';
+import '../../models/note_palette.dart';
 import '../../providers/memo_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/kdrive_storage.dart';
@@ -208,28 +210,8 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     Color(0xFFF5F5F5),
   ];
 
-  final List<Color> _darkColorsPalette = [
-    Color(0xFF1E1E1E),
-    Color(0xFF3B1A1A),
-    Color(0xFF3D2C1E),
-    Color(0xFF3D361E),
-    Color(0xFF1E3322),
-    Color(0xFF1E3331),
-    Color(0xFF1E2A3B),
-    Color(0xFF261E3B),
-    Color(0xFF331E3B),
-    Color(0xFF3B1E32),
-    Color(0xFF2E2621),
-    Color(0xFF252B2E),
-    Color(0xFF3B2E1E),
-    Color(0xFF27331E),
-    Color(0xFF1E3338),
-    Color(0xFF2C2C2C),
-  ];
-
-  // List of predefined background image paths (app assets)
-  // Only images that exist in the bundle are included.
-  List<String> _bgImagesPalette = [];
+  /// Background image numbers that exist in the bundle (bg_1.png, bg_2.png, …).
+  List<int> _bgImageNumbers = [];
 
   @override
   void initState() {
@@ -246,20 +228,21 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     _loadMemoData();
   }
 
+  /// Probes `bg_1.png` … `bg_N.png` so adding a file to `assets/backgrounds/`
+  /// is enough for it to appear in the picker (no code change needed).
   Future<void> _loadAvailableBgImages() async {
     final bundle = DefaultAssetBundle.of(context);
-    final available = <String>[];
-    for (int i = 0; i < 16; i++) {
-      final path = 'assets/backgrounds/bg_$i.png';
+    final available = <int>[];
+    for (var n = 1; n <= kMaxBackgroundImageNumber; n++) {
       try {
-        await bundle.load(path);
-        available.add(path);
+        await bundle.load(noteBackgroundImagePath(n)!);
+        available.add(n);
       } catch (_) {
-        // Image does not exist, skipping
+        // Image does not exist, skipping.
       }
     }
     if (mounted) {
-      setState(() => _bgImagesPalette = available);
+      setState(() => _bgImageNumbers = available);
     }
   }
 
@@ -741,7 +724,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   void _showStyleMenu(BuildContext context) {
     // ignore: use_build_context_synchronously
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final colorsPalette = isDarkMode ? _darkColorsPalette : _lightColorsPalette;
+    final colorsPalette = isDarkMode ? kDarkNotePalette : _lightColorsPalette;
 
     showModalBottomSheet(
       // ignore: use_build_context_synchronously
@@ -823,19 +806,25 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
                           ),
-                      itemCount: _bgImagesPalette.length,
+                      itemCount: _bgImageNumbers.length,
                       // ignore: use_build_context_synchronously
                       itemBuilder: (context, i) {
+                        final number = _bgImageNumbers[i];
+                        final isBgSelected =
+                            normalizedBackgroundImageIndex(
+                              _currentMemo.bgImageIndex,
+                            ) ==
+                            number;
                         return GestureDetector(
                           onTap: () {
                             setModalState(() {
                               _currentMemo = _currentMemo.copyWith(
-                                bgImageIndex: i,
+                                bgImageIndex: number,
                               );
                             });
                             setState(() {
                               _currentMemo = _currentMemo.copyWith(
-                                bgImageIndex: i,
+                                bgImageIndex: number,
                               );
                             });
                             _persistData();
@@ -844,31 +833,33 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: _currentMemo.bgImageIndex == i
+                                color: isBgSelected
                                     ? Colors.blue
                                     : (isDarkMode
                                           ? Colors.grey.shade700
                                           : Colors.grey.shade300),
-                                width: _currentMemo.bgImageIndex == i ? 3 : 1,
+                                width: isBgSelected ? 3 : 1,
                               ),
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(6),
-                              child: Container(
-                                color: isDarkMode
-                                    ? Colors.grey.shade800
-                                    : Colors.grey.shade200,
-                                child: Center(
-                                  child: Text(
-                                    AppLocalizations.of(context)!.bgLabel('$i'),
-                                    style: TextStyle(
-                                      fontSize: 11,
+                              child: Image.asset(
+                                noteBackgroundImagePath(number)!,
+                                fit: BoxFit.cover,
+                                cacheWidth: 240,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    Container(
                                       color: isDarkMode
-                                          ? Colors.white70
-                                          : Colors.black54,
+                                          ? Colors.grey.shade800
+                                          : Colors.grey.shade200,
+                                      child: Icon(
+                                        Icons.image_not_supported,
+                                        size: 18,
+                                        color: isDarkMode
+                                            ? Colors.white54
+                                            : Colors.black45,
+                                      ),
                                     ),
-                                  ),
-                                ),
                               ),
                             ),
                           ),
@@ -1149,13 +1140,14 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
     // ignore: use_build_context_synchronously
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final activeColorsPalette = isDarkMode
-        ? _darkColorsPalette
+        ? kDarkNotePalette
         : _lightColorsPalette;
 
-    final Decoration noteBackgroundDecoration = _currentMemo.bgImageIndex != -1
+    final bgImagePath = noteBackgroundImagePath(_currentMemo.bgImageIndex);
+    final Decoration noteBackgroundDecoration = bgImagePath != null
         ? BoxDecoration(
             image: DecorationImage(
-              image: AssetImage(_bgImagesPalette[_currentMemo.bgImageIndex]),
+              image: AssetImage(bgImagePath),
               fit: BoxFit.cover,
             ),
           )
@@ -1643,6 +1635,8 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
     int end,
   ) async {
     final l10n = AppLocalizations.of(context)!;
+    final showLinkPreviews =
+        context.read<ThemeProvider>().showLinkPreviews;
     final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     final choice = await showMenu<String>(
       context: context,
@@ -1651,7 +1645,8 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
         Offset.zero & overlay.size,
       ),
       items: [
-        PopupMenuItem(value: 'preview', child: Text(l10n.previewLink)),
+        if (showLinkPreviews)
+          PopupMenuItem(value: 'preview', child: Text(l10n.previewLink)),
         PopupMenuItem(value: 'open', child: Text(l10n.openLinkShort)),
         PopupMenuItem(value: 'edit', child: Text(l10n.editLink)),
       ],
@@ -1826,11 +1821,11 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                     child: CircularProgressIndicator(strokeWidth: 2),
                   ),
                 )
-              else if (preview?.imageUrl != null)
+              else if (preview?.localImagePath != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    preview!.imageUrl!,
+                  child: Image.file(
+                    File(preview!.localImagePath!),
                     width: 56,
                     height: 56,
                     fit: BoxFit.cover,

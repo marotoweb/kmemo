@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.15
+
+### ✨ Features
+- **Background image previews:** the background image picker (note editor and home style sheet) now shows a thumbnail of each available image instead of a text label.
+- **Background images on home cards:** notes with a background image now render it on the home card too, with light text for proper contrast.
+- **Vivid dark palette:** the dark-theme note colors are slightly lighter and less saturated, and are now shared by the editor, home cards and the native widget.
+
+### 🐛 Fixes
+- **No network when showing cached link previews (privacy):** OG preview images are now cached locally during an explicit preview fetch (cache v3) and rendered from local files only. Toggling "Show link previews" no longer loads remote images. Existing cached previews without a local image show a placeholder until the user requests a preview again.
+- **Rounded widget corners:** cards are clipped to the widget's rounded background while scrolling, so they no longer overlap the corners.
+- **Sync progress bar always visible:** the sync progress indicator is now pinned to the bottom of the sync screen, so it remains visible while scrolling the destination folder list.
+- **Clearer encryption sync warnings:** the confirmation shown when enabling or disabling encryption now explains exactly what happens to local and remote notes (re-upload/replace, download and decrypt), instead of the generic "sync all notes" message.
+- **Link preview menu:** the "Preview" action in the link menu is hidden when "Show link previews" is disabled.
+- **Home card line wrapping:** with "Automatic line wrapping" enabled, note titles and checklist items on the home cards now wrap instead of being truncated to a single line.
+- **Color vs. background image:** choosing a color now clears the background image consistently in the editor and on the home screen.
+- **Home image selection:** picking a background image in the home style sheet now applies the image (previously it changed the note color).
+
 ## 0.1.14
 
 ### ✨ Features

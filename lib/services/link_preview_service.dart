@@ -1,19 +1,26 @@
 // lib/services/link_preview_service.dart
 
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Metadata shown in a link preview card.
+/// [localImagePath] points to a locally cached image file; rendering must use
+/// it (never the remote [imageUrl]) to avoid unexpected network requests.
 class LinkPreview {
   final String title;
   final String? imageUrl;
   final String siteName;
+  final String? localImagePath;
 
   const LinkPreview({
     required this.title,
     this.imageUrl,
     required this.siteName,
+    this.localImagePath,
   });
 }
 
@@ -38,10 +45,12 @@ class LinkPreviewService {
 
   static String _removedKey(String memoUuid) => 'link_removed_$memoUuid';
 
-  /// Cache schema version. Entries below this need entity decoding on read.
-  static const int _cacheVersion = 2;
+  /// Cache schema version.
+  /// v1: raw HTML-encoded text. v2: decoded entities. v3: adds local image file.
+  static const int _cacheVersion = 3;
 
   /// Returns the cached preview for [url], or null if none was saved.
+  /// Only local cache is read; no network requests are made.
   static Future<LinkPreview?> loadCached(String url) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_cacheKey(url));
@@ -49,55 +58,136 @@ class LinkPreviewService {
     final j = jsonDecode(raw) as Map<String, dynamic>;
     // Older cache entries stored raw HTML-encoded text; decode them on read so
     // existing previews are fixed without a new network request.
-    final needsDecode = (j['v'] as int? ?? 1) < _cacheVersion;
+    final needsDecode = (j['v'] as int? ?? 1) < 2;
     String decode(String value) =>
         needsDecode ? decodeHtmlEntities(value) : value;
     final cachedImage = j['image'] as String?;
+    final cachedImagePath = j['imagePath'] as String?;
+    String? localImagePath;
+    if (cachedImagePath != null && cachedImagePath.isNotEmpty) {
+      try {
+        if (await File(cachedImagePath).exists()) {
+          localImagePath = cachedImagePath;
+        }
+      } catch (_) {
+        // Missing/inaccessible file: show placeholder, never fetch from network.
+      }
+    }
     return LinkPreview(
       title: decode(j['title'] as String? ?? url),
       imageUrl: cachedImage == null ? null : decode(cachedImage),
       siteName: decode(
         j['site'] as String? ?? Uri.tryParse(url)?.host ?? url,
       ),
+      localImagePath: localImagePath,
     );
   }
 
   /// Downloads metadata for [url] (Open Graph), caches it and returns it.
+  /// Also caches the OG image locally (explicit user action only) so displaying
+  /// a cached preview never triggers network requests.
   static Future<LinkPreview> fetchAndCache(String url) async {
     final uri = Uri.parse(url);
     String title = uri.host;
     String? image;
     String site = uri.host;
     try {
-      final resp = await http.get(uri).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .get(uri, headers: {'User-Agent': 'kMemo'})
+          .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final body = resp.body;
         final ogTitle = _meta(body, 'og:title');
         if (ogTitle != null) {
           title = ogTitle;
         } else {
-          final t = RegExp(r'<title[^>]*>([^<]+)</title>', caseSensitive: false)
-              .firstMatch(body);
+          final t =
+              RegExp(r'<title[^>]*>([^<]+)</title>', caseSensitive: false)
+                  .firstMatch(body);
           if (t != null) title = decodeHtmlEntities(t.group(1)!.trim());
         }
-        image = _meta(body, 'og:image');
+        final rawImage = _meta(body, 'og:image');
+        if (rawImage != null && rawImage.isNotEmpty) {
+          image = Uri.tryParse(rawImage)?.hasScheme == true
+              ? rawImage
+              : uri.resolve(rawImage).toString();
+        }
         site = _meta(body, 'og:site_name') ?? site;
       }
     } catch (_) {
       // Fall back to host-only preview below.
     }
-    final preview = LinkPreview(title: title, imageUrl: image, siteName: site);
+    String? localImagePath;
+    if (image != null) {
+      localImagePath = await _cacheImage(image);
+    }
+    final preview = LinkPreview(
+      title: title,
+      imageUrl: image,
+      siteName: site,
+      localImagePath: localImagePath,
+    );
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       _cacheKey(url),
       jsonEncode({
         'title': title,
         'image': image,
+        'imagePath': localImagePath,
         'site': site,
         'v': _cacheVersion,
       }),
     );
     return preview;
+  }
+
+  static Future<Directory> _imageCacheDir() async {
+    final base = await getTemporaryDirectory();
+    final dir = Directory(p.join(base.path, 'link_previews'));
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    return dir;
+  }
+
+  /// Downloads [imageUrl] into the local cache (explicit action only).
+  /// Returns the local file path, or null on failure. Never throws.
+  static Future<String?> _cacheImage(String imageUrl) async {
+    try {
+      final uri = Uri.tryParse(imageUrl);
+      if (uri == null || !(uri.isScheme('http') || uri.isScheme('https'))) {
+        return null;
+      }
+      final resp = await http
+          .get(uri, headers: {'User-Agent': 'kMemo'})
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200 || resp.bodyBytes.isEmpty) return null;
+      // Avoid caching excessively large images.
+      if (resp.bodyBytes.length > 3 * 1024 * 1024) return null;
+      final dir = await _imageCacheDir();
+      final ext = _imageExtension(resp.headers['content-type'], imageUrl);
+      final name =
+          'img_${imageUrl.hashCode.toRadixString(16)}_${DateTime.now().microsecondsSinceEpoch.toRadixString(16)}$ext';
+      final file = File(p.join(dir.path, name));
+      await file.writeAsBytes(resp.bodyBytes, flush: true);
+      return file.path;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String _imageExtension(String? contentType, String imageUrl) {
+    final ct = (contentType ?? '').toLowerCase();
+    if (ct.contains('png')) return '.png';
+    if (ct.contains('webp')) return '.webp';
+    if (ct.contains('gif')) return '.gif';
+    if (ct.contains('svg')) return '.svg';
+    if (ct.contains('jpeg') || ct.contains('jpg')) return '.jpg';
+    final lower = imageUrl.toLowerCase();
+    for (final ext in ['.png', '.webp', '.gif', '.jpg', '.jpeg', '.svg']) {
+      if (lower.contains(ext)) return ext == '.jpeg' ? '.jpg' : ext;
+    }
+    return '.jpg';
   }
 
   static String? _meta(String html, String property) {

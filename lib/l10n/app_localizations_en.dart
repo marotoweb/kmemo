@@ -642,4 +642,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get showLinkPreviewsSubtitle =>
       'Show preview cards for links in notes';
+
+  @override
+  String get enableEncryptionTitle => 'Enable encryption';
+
+  @override
+  String get enableEncryptionMessage =>
+      'Your local notes will be encrypted with the new passphrase and re-uploaded, replacing the remote copies. Remote notes will be downloaded and decrypted.';
+
+  @override
+  String get disableEncryptionTitle => 'Disable encryption';
+
+  @override
+  String get disableEncryptionMessage =>
+      'Your local notes will be re-uploaded WITHOUT encryption, replacing the encrypted remote copies. Remote notes will be downloaded and stored locally.';
 }

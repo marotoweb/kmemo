@@ -643,4 +643,18 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get showLinkPreviewsSubtitle =>
       'Mostra schede di anteprima per i link nelle note';
+
+  @override
+  String get enableEncryptionTitle => 'Attiva crittografia';
+
+  @override
+  String get enableEncryptionMessage =>
+      'Le note locali verranno crittografate con la nuova passphrase e ricaricate, sostituendo le copie remote. Le note remote verranno scaricate e decrittografate.';
+
+  @override
+  String get disableEncryptionTitle => 'Disattiva crittografia';
+
+  @override
+  String get disableEncryptionMessage =>
+      'Le note locali verranno ricaricate SENZA crittografia, sostituendo le copie remote crittografate. Le note remote verranno scaricate e salvate localmente.';
 }
