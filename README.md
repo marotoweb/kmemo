@@ -26,6 +26,9 @@
 - **APP link:** Support for opening notes via APP link *kmemo://*
 - **Editor options:** automatic line wrapping in titles and list items, and optional strikethrough for checked checklist items (configurable in Settings). The home screen widget respects these options in the preview.
 - **List reordering:** drag checklist items to reorder, with automatic persistence.
+- **Home sorting and search:** sort notes by last modification, creation date or a custom order (ascending/descending for dates), and search by title and content from the app bar.
+- **Pinned notes:** pin notes to keep them at the top of the home list and the widget; pinning is synced across devices.
+- **Custom home order:** in custom-order mode, select a single note and drag it vertically to reorder the list.
 - **Link previews:** URLs in the note body are underlined; tapping a link opens a menu to preview (thumbnail, title, domain), open or edit the URL. Previews are only fetched on user action (no automatic requests), are cached locally, can be removed with an "Undo" option, and are also shown at the bottom of the home card.
 - **Export to kDrive:** from the note options menu, "Copy to kDrive" generates a .docx file with the note title and content and uploads it to the configured kDrive folder.
 - **Share and export (single or multiple notes):** in the editor, "Send" shares the note via Share Plus. On the home screen, with multiple notes selected, the top bar menu allows "Send" (grouped text) and "Copy to kDrive" (a single .docx with all notes). If kDrive is not configured, a warning is shown with a shortcut to the sync Settings.

@@ -10,13 +10,15 @@ import '../../models/note_palette.dart';
 import '../../providers/memo_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/link_preview_service.dart';
+import 'highlighted_text.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
 class MemoCard extends StatelessWidget {
   final Memo memo;
   final bool isSelected;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback? onLongPress;
+  final String searchQuery;
 
   const MemoCard({
     super.key,
@@ -24,12 +26,15 @@ class MemoCard extends StatelessWidget {
     required this.isSelected,
     required this.onTap,
     required this.onLongPress,
+    this.searchQuery = '',
   });
 
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final strikethroughChecked = context.watch<ThemeProvider>().strikethroughChecked;
+    final strikethroughChecked = context
+        .watch<ThemeProvider>()
+        .strikethroughChecked;
     final showLinkPreviews = context.watch<ThemeProvider>().showLinkPreviews;
     final autoWrap = context.watch<ThemeProvider>().autoWrap;
 
@@ -65,6 +70,8 @@ class MemoCard extends StatelessWidget {
     final bgImagePath = noteBackgroundImagePath(memo.bgImageIndex);
     final hasBgImage = bgImagePath != null;
 
+    // A translucent scrim darkens the image (see the decoration below) so the
+    // white text stays readable on both light and dark images.
     final textColor = hasBgImage
         ? Colors.white
         : (isDarkMode ? Colors.white70 : Colors.black87);
@@ -92,6 +99,11 @@ class MemoCard extends StatelessWidget {
               : DecorationImage(
                   image: AssetImage(bgImagePath),
                   fit: BoxFit.cover,
+                  // Darken the image so white text stays readable.
+                  colorFilter: ColorFilter.mode(
+                    Colors.black.withValues(alpha: 0.30),
+                    BlendMode.darken,
+                  ),
                   // Missing asset: keep the selected color as fallback.
                   onError: (exception, stackTrace) {},
                 ),
@@ -129,19 +141,39 @@ class MemoCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (memo.title.isNotEmpty) ...[
-                        Text(
-                          memo.title,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
-                          ),
-                          // Automatic line wrapping applies to titles too.
-                          maxLines: autoWrap ? null : 1,
-                          overflow: autoWrap
-                              ? TextOverflow.clip
-                              : TextOverflow.ellipsis,
+                      if (memo.title.isNotEmpty || memo.isPinned) ...[
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (memo.isPinned)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  right: 4,
+                                  top: 2,
+                                ),
+                                child: Icon(
+                                  Icons.push_pin,
+                                  size: 14,
+                                  color: subtitleColor,
+                                ),
+                              ),
+                            Expanded(
+                              child: HighlightedText(
+                                text: memo.title,
+                                query: searchQuery,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
+                                // Automatic line wrapping applies to titles too.
+                                maxLines: autoWrap ? null : 1,
+                                overflow: autoWrap
+                                    ? TextOverflow.clip
+                                    : TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                         SizedBox(height: 6),
                       ],
@@ -189,16 +221,21 @@ class MemoCard extends StatelessWidget {
                                         ),
                                         SizedBox(width: 6),
                                         Expanded(
-                                          child: Text(
-                                            text.isEmpty
-                                                ? AppLocalizations.of(context)!.listItem
+                                          child: HighlightedText(
+                                            text: text.isEmpty
+                                                ? AppLocalizations.of(
+                                                    context,
+                                                  )!.listItem
                                                 : text,
+                                            query: searchQuery,
                                             style: TextStyle(
                                               fontSize: 13,
                                               color: checked
                                                   ? mutedTextColor
                                                   : textColor,
-                                              decoration: (checked && strikethroughChecked)
+                                              decoration:
+                                                  (checked &&
+                                                      strikethroughChecked)
                                                   ? TextDecoration.lineThrough
                                                   : TextDecoration.none,
                                             ),
@@ -243,8 +280,9 @@ class MemoCard extends StatelessWidget {
                                 : contentText;
                             return Padding(
                               padding: EdgeInsets.only(bottom: 6.0),
-                              child: Text(
-                                visibleText,
+                              child: HighlightedText(
+                                text: visibleText,
+                                query: searchQuery,
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: textColor,
@@ -269,7 +307,9 @@ class MemoCard extends StatelessWidget {
                             Icon(Icons.image, size: 13, color: subtitleColor),
                             SizedBox(width: 4),
                             Text(
-                              AppLocalizations.of(context)!.imageAttachmentsCount('${images.length}'),
+                              AppLocalizations.of(
+                                context,
+                              )!.imageAttachmentsCount('${images.length}'),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: subtitleColor,
@@ -280,7 +320,9 @@ class MemoCard extends StatelessWidget {
                         SizedBox(height: 4),
                       ],
                       Text(
-                        AppLocalizations.of(context)!.updatedOn(_formatDate(memo.updatedAt)),
+                        AppLocalizations.of(
+                          context,
+                        )!.updatedOn(_formatDate(memo.updatedAt)),
                         style: TextStyle(
                           fontSize: 10,
                           color: hasBgImage
@@ -321,7 +363,9 @@ class _CardLinkPreview extends StatelessWidget {
 
   Future<LinkPreview?> _load(BuildContext context) async {
     final blocks = await context.read<MemoProvider>().loadBlocks(memoUuid);
-    final text = blocks.map((b) => b.content['text']?.toString() ?? '').join('\n');
+    final text = blocks
+        .map((b) => b.content['text']?.toString() ?? '')
+        .join('\n');
     final removed = await LinkPreviewService.loadRemoved(memoUuid);
     for (final url in LinkPreviewService.extractUrls(text)) {
       if (removed.contains(url)) continue;
@@ -334,7 +378,9 @@ class _CardLinkPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final placeholderColor = isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200;
+    final placeholderColor = isDarkMode
+        ? Colors.grey.shade800
+        : Colors.grey.shade200;
     return FutureBuilder<LinkPreview?>(
       future: _load(context),
       builder: (context, snapshot) {
@@ -356,7 +402,11 @@ class _CardLinkPreview extends StatelessWidget {
                           width: 40,
                           height: 40,
                           color: placeholderColor,
-                          child: Icon(Icons.link, size: 18, color: subtitleColor),
+                          child: Icon(
+                            Icons.link,
+                            size: 18,
+                            color: subtitleColor,
+                          ),
                         ),
                       )
                     : Container(
@@ -373,7 +423,11 @@ class _CardLinkPreview extends StatelessWidget {
                   children: [
                     Text(
                       preview.title,
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

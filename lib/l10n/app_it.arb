@@ -215,5 +215,15 @@
   "enableEncryptionTitle": "Attiva crittografia",
   "enableEncryptionMessage": "Le note locali verranno crittografate con la nuova passphrase e ricaricate, sostituendo le copie remote. Le note remote verranno scaricate e decrittografate.",
   "disableEncryptionTitle": "Disattiva crittografia",
-  "disableEncryptionMessage": "Le note locali verranno ricaricate SENZA crittografia, sostituendo le copie remote crittografate. Le note remote verranno scaricate e salvate localmente."
+  "disableEncryptionMessage": "Le note locali verranno ricaricate SENZA crittografia, sostituendo le copie remote crittografate. Le note remote verranno scaricate e salvate localmente.",
+  "searchNotes": "Cerca note…",
+  "noResults": "Nessun risultato",
+  "sortBy": "Ordina per",
+  "sortByUpdated": "Ultima modifica",
+  "sortByCreated": "Data di creazione",
+  "sortByCustom": "Ordine personalizzato",
+  "ascending": "Crescente",
+  "descending": "Decrescente",
+  "pin": "Fissa",
+  "unpin": "Rimuovi fissaggio"
 }

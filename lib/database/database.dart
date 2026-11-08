@@ -28,6 +28,11 @@ class Memos extends Table {
   BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();
 
+  // Home ordering: pinned notes always come first; sortIndex is the manual
+  // position used by the "custom order" sort mode (local to the device).
+  BoolColumn get isPinned => boolean().withDefault(const Constant(false))();
+  IntColumn get sortIndex => integer().withDefault(const Constant(0))();
+
   @override
   Set<Column> get primaryKey => {uuid};
 }
@@ -82,7 +87,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4; // Incrementado for acomodar isDeleted
+  int get schemaVersion => 5; // v5 adds isPinned and sortIndex
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -100,6 +105,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 4) {
         await m.addColumn(memos, memos.isDeleted);
+      }
+      if (from < 5) {
+        await m.addColumn(memos, memos.isPinned);
+        await m.addColumn(memos, memos.sortIndex);
       }
     },
   );

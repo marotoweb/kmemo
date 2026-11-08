@@ -165,6 +165,33 @@ class $MemosTable extends Memos with TableInfo<$MemosTable, Memo> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _isPinnedMeta = const VerificationMeta(
+    'isPinned',
+  );
+  @override
+  late final GeneratedColumn<bool> isPinned = GeneratedColumn<bool>(
+    'is_pinned',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_pinned" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _sortIndexMeta = const VerificationMeta(
+    'sortIndex',
+  );
+  @override
+  late final GeneratedColumn<int> sortIndex = GeneratedColumn<int>(
+    'sort_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
   @override
   List<GeneratedColumn> get $columns => [
     uuid,
@@ -180,6 +207,8 @@ class $MemosTable extends Memos with TableInfo<$MemosTable, Memo> {
     linkAttachments,
     isArchived,
     isDeleted,
+    isPinned,
+    sortIndex,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -292,6 +321,18 @@ class $MemosTable extends Memos with TableInfo<$MemosTable, Memo> {
         isDeleted.isAcceptableOrUnknown(data['is_deleted']!, _isDeletedMeta),
       );
     }
+    if (data.containsKey('is_pinned')) {
+      context.handle(
+        _isPinnedMeta,
+        isPinned.isAcceptableOrUnknown(data['is_pinned']!, _isPinnedMeta),
+      );
+    }
+    if (data.containsKey('sort_index')) {
+      context.handle(
+        _sortIndexMeta,
+        sortIndex.isAcceptableOrUnknown(data['sort_index']!, _sortIndexMeta),
+      );
+    }
     return context;
   }
 
@@ -353,6 +394,14 @@ class $MemosTable extends Memos with TableInfo<$MemosTable, Memo> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_deleted'],
       )!,
+      isPinned: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_pinned'],
+      )!,
+      sortIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_index'],
+      )!,
     );
   }
 
@@ -376,6 +425,8 @@ class Memo extends DataClass implements Insertable<Memo> {
   final String linkAttachments;
   final bool isArchived;
   final bool isDeleted;
+  final bool isPinned;
+  final int sortIndex;
   const Memo({
     required this.uuid,
     required this.title,
@@ -390,6 +441,8 @@ class Memo extends DataClass implements Insertable<Memo> {
     required this.linkAttachments,
     required this.isArchived,
     required this.isDeleted,
+    required this.isPinned,
+    required this.sortIndex,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -409,6 +462,8 @@ class Memo extends DataClass implements Insertable<Memo> {
     map['link_attachments'] = Variable<String>(linkAttachments);
     map['is_archived'] = Variable<bool>(isArchived);
     map['is_deleted'] = Variable<bool>(isDeleted);
+    map['is_pinned'] = Variable<bool>(isPinned);
+    map['sort_index'] = Variable<int>(sortIndex);
     return map;
   }
 
@@ -429,6 +484,8 @@ class Memo extends DataClass implements Insertable<Memo> {
       linkAttachments: Value(linkAttachments),
       isArchived: Value(isArchived),
       isDeleted: Value(isDeleted),
+      isPinned: Value(isPinned),
+      sortIndex: Value(sortIndex),
     );
   }
 
@@ -451,6 +508,8 @@ class Memo extends DataClass implements Insertable<Memo> {
       linkAttachments: serializer.fromJson<String>(json['linkAttachments']),
       isArchived: serializer.fromJson<bool>(json['isArchived']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
+      isPinned: serializer.fromJson<bool>(json['isPinned']),
+      sortIndex: serializer.fromJson<int>(json['sortIndex']),
     );
   }
   @override
@@ -470,6 +529,8 @@ class Memo extends DataClass implements Insertable<Memo> {
       'linkAttachments': serializer.toJson<String>(linkAttachments),
       'isArchived': serializer.toJson<bool>(isArchived),
       'isDeleted': serializer.toJson<bool>(isDeleted),
+      'isPinned': serializer.toJson<bool>(isPinned),
+      'sortIndex': serializer.toJson<int>(sortIndex),
     };
   }
 
@@ -487,6 +548,8 @@ class Memo extends DataClass implements Insertable<Memo> {
     String? linkAttachments,
     bool? isArchived,
     bool? isDeleted,
+    bool? isPinned,
+    int? sortIndex,
   }) => Memo(
     uuid: uuid ?? this.uuid,
     title: title ?? this.title,
@@ -501,6 +564,8 @@ class Memo extends DataClass implements Insertable<Memo> {
     linkAttachments: linkAttachments ?? this.linkAttachments,
     isArchived: isArchived ?? this.isArchived,
     isDeleted: isDeleted ?? this.isDeleted,
+    isPinned: isPinned ?? this.isPinned,
+    sortIndex: sortIndex ?? this.sortIndex,
   );
   Memo copyWithCompanion(MemosCompanion data) {
     return Memo(
@@ -531,6 +596,8 @@ class Memo extends DataClass implements Insertable<Memo> {
           ? data.isArchived.value
           : this.isArchived,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
+      isPinned: data.isPinned.present ? data.isPinned.value : this.isPinned,
+      sortIndex: data.sortIndex.present ? data.sortIndex.value : this.sortIndex,
     );
   }
 
@@ -549,7 +616,9 @@ class Memo extends DataClass implements Insertable<Memo> {
           ..write('audioAttachments: $audioAttachments, ')
           ..write('linkAttachments: $linkAttachments, ')
           ..write('isArchived: $isArchived, ')
-          ..write('isDeleted: $isDeleted')
+          ..write('isDeleted: $isDeleted, ')
+          ..write('isPinned: $isPinned, ')
+          ..write('sortIndex: $sortIndex')
           ..write(')'))
         .toString();
   }
@@ -569,6 +638,8 @@ class Memo extends DataClass implements Insertable<Memo> {
     linkAttachments,
     isArchived,
     isDeleted,
+    isPinned,
+    sortIndex,
   );
   @override
   bool operator ==(Object other) =>
@@ -586,7 +657,9 @@ class Memo extends DataClass implements Insertable<Memo> {
           other.audioAttachments == this.audioAttachments &&
           other.linkAttachments == this.linkAttachments &&
           other.isArchived == this.isArchived &&
-          other.isDeleted == this.isDeleted);
+          other.isDeleted == this.isDeleted &&
+          other.isPinned == this.isPinned &&
+          other.sortIndex == this.sortIndex);
 }
 
 class MemosCompanion extends UpdateCompanion<Memo> {
@@ -603,6 +676,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
   final Value<String> linkAttachments;
   final Value<bool> isArchived;
   final Value<bool> isDeleted;
+  final Value<bool> isPinned;
+  final Value<int> sortIndex;
   final Value<int> rowid;
   const MemosCompanion({
     this.uuid = const Value.absent(),
@@ -618,6 +693,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     this.linkAttachments = const Value.absent(),
     this.isArchived = const Value.absent(),
     this.isDeleted = const Value.absent(),
+    this.isPinned = const Value.absent(),
+    this.sortIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   MemosCompanion.insert({
@@ -634,6 +711,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     this.linkAttachments = const Value.absent(),
     this.isArchived = const Value.absent(),
     this.isDeleted = const Value.absent(),
+    this.isPinned = const Value.absent(),
+    this.sortIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : uuid = Value(uuid),
        createdAt = Value(createdAt),
@@ -652,6 +731,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     Expression<String>? linkAttachments,
     Expression<bool>? isArchived,
     Expression<bool>? isDeleted,
+    Expression<bool>? isPinned,
+    Expression<int>? sortIndex,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -668,6 +749,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
       if (linkAttachments != null) 'link_attachments': linkAttachments,
       if (isArchived != null) 'is_archived': isArchived,
       if (isDeleted != null) 'is_deleted': isDeleted,
+      if (isPinned != null) 'is_pinned': isPinned,
+      if (sortIndex != null) 'sort_index': sortIndex,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -686,6 +769,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     Value<String>? linkAttachments,
     Value<bool>? isArchived,
     Value<bool>? isDeleted,
+    Value<bool>? isPinned,
+    Value<int>? sortIndex,
     Value<int>? rowid,
   }) {
     return MemosCompanion(
@@ -702,6 +787,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
       linkAttachments: linkAttachments ?? this.linkAttachments,
       isArchived: isArchived ?? this.isArchived,
       isDeleted: isDeleted ?? this.isDeleted,
+      isPinned: isPinned ?? this.isPinned,
+      sortIndex: sortIndex ?? this.sortIndex,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -748,6 +835,12 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     if (isDeleted.present) {
       map['is_deleted'] = Variable<bool>(isDeleted.value);
     }
+    if (isPinned.present) {
+      map['is_pinned'] = Variable<bool>(isPinned.value);
+    }
+    if (sortIndex.present) {
+      map['sort_index'] = Variable<int>(sortIndex.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -770,6 +863,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
           ..write('linkAttachments: $linkAttachments, ')
           ..write('isArchived: $isArchived, ')
           ..write('isDeleted: $isDeleted, ')
+          ..write('isPinned: $isPinned, ')
+          ..write('sortIndex: $sortIndex, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1258,6 +1353,8 @@ typedef $$MemosTableCreateCompanionBuilder =
       Value<String> linkAttachments,
       Value<bool> isArchived,
       Value<bool> isDeleted,
+      Value<bool> isPinned,
+      Value<int> sortIndex,
       Value<int> rowid,
     });
 typedef $$MemosTableUpdateCompanionBuilder =
@@ -1275,6 +1372,8 @@ typedef $$MemosTableUpdateCompanionBuilder =
       Value<String> linkAttachments,
       Value<bool> isArchived,
       Value<bool> isDeleted,
+      Value<bool> isPinned,
+      Value<int> sortIndex,
       Value<int> rowid,
     });
 
@@ -1372,6 +1471,16 @@ class $$MemosTableFilterComposer extends Composer<_$AppDatabase, $MemosTable> {
 
   ColumnFilters<bool> get isDeleted => $composableBuilder(
     column: $table.isDeleted,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortIndex => $composableBuilder(
+    column: $table.sortIndex,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1474,6 +1583,16 @@ class $$MemosTableOrderingComposer
     column: $table.isDeleted,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<bool> get isPinned => $composableBuilder(
+    column: $table.isPinned,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortIndex => $composableBuilder(
+    column: $table.sortIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$MemosTableAnnotationComposer
@@ -1537,6 +1656,12 @@ class $$MemosTableAnnotationComposer
 
   GeneratedColumn<bool> get isDeleted =>
       $composableBuilder(column: $table.isDeleted, builder: (column) => column);
+
+  GeneratedColumn<bool> get isPinned =>
+      $composableBuilder(column: $table.isPinned, builder: (column) => column);
+
+  GeneratedColumn<int> get sortIndex =>
+      $composableBuilder(column: $table.sortIndex, builder: (column) => column);
 
   Expression<T> blocksRefs<T extends Object>(
     Expression<T> Function($$BlocksTableAnnotationComposer a) f,
@@ -1605,6 +1730,8 @@ class $$MemosTableTableManager
                 Value<String> linkAttachments = const Value.absent(),
                 Value<bool> isArchived = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
+                Value<int> sortIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MemosCompanion(
                 uuid: uuid,
@@ -1620,6 +1747,8 @@ class $$MemosTableTableManager
                 linkAttachments: linkAttachments,
                 isArchived: isArchived,
                 isDeleted: isDeleted,
+                isPinned: isPinned,
+                sortIndex: sortIndex,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1637,6 +1766,8 @@ class $$MemosTableTableManager
                 Value<String> linkAttachments = const Value.absent(),
                 Value<bool> isArchived = const Value.absent(),
                 Value<bool> isDeleted = const Value.absent(),
+                Value<bool> isPinned = const Value.absent(),
+                Value<int> sortIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => MemosCompanion.insert(
                 uuid: uuid,
@@ -1652,6 +1783,8 @@ class $$MemosTableTableManager
                 linkAttachments: linkAttachments,
                 isArchived: isArchived,
                 isDeleted: isDeleted,
+                isPinned: isPinned,
+                sortIndex: sortIndex,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

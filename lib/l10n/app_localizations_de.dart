@@ -660,4 +660,34 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get disableEncryptionMessage =>
       'Ihre lokalen Notizen werden OHNE Verschlüsselung erneut hochgeladen und ersetzen die verschlüsselten Remote-Kopien. Remote-Notizen werden heruntergeladen und lokal gespeichert.';
+
+  @override
+  String get searchNotes => 'Notizen durchsuchen…';
+
+  @override
+  String get noResults => 'Keine Ergebnisse';
+
+  @override
+  String get sortBy => 'Sortieren nach';
+
+  @override
+  String get sortByUpdated => 'Zuletzt geändert';
+
+  @override
+  String get sortByCreated => 'Erstellungsdatum';
+
+  @override
+  String get sortByCustom => 'Benutzerdefinierte Reihenfolge';
+
+  @override
+  String get ascending => 'Aufsteigend';
+
+  @override
+  String get descending => 'Absteigend';
+
+  @override
+  String get pin => 'Anheften';
+
+  @override
+  String get unpin => 'Loslösen';
 }

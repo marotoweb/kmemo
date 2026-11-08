@@ -215,5 +215,15 @@
   "enableEncryptionTitle": "Activar cifrado",
   "enableEncryptionMessage": "Tus notas locales se cifrarán con la nueva contraseña y se volverán a subir, sustituyendo las copias remotas. Las notas remotas se descargarán y descifrarán.",
   "disableEncryptionTitle": "Desactivar cifrado",
-  "disableEncryptionMessage": "Tus notas locales se volverán a subir SIN cifrado, sustituyendo las copias remotas cifradas. Las notas remotas se descargarán y se guardarán localmente."
+  "disableEncryptionMessage": "Tus notas locales se volverán a subir SIN cifrado, sustituyendo las copias remotas cifradas. Las notas remotas se descargarán y se guardarán localmente.",
+  "searchNotes": "Buscar notas…",
+  "noResults": "Sin resultados",
+  "sortBy": "Ordenar por",
+  "sortByUpdated": "Última modificación",
+  "sortByCreated": "Fecha de creación",
+  "sortByCustom": "Orden personalizado",
+  "ascending": "Ascendente",
+  "descending": "Descendente",
+  "pin": "Fijar",
+  "unpin": "Desfijar"
 }

@@ -2,9 +2,9 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:drift/drift.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:kmemo/database/database.dart';
+import 'package:kmemo/models/home_sort.dart';
 import 'package:kmemo/models/note_palette.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -58,27 +58,31 @@ class WidgetService {
 
   /// Syncs active notes with the JSON file shared with the native Android side
   /// [isDark] controls whether light or dark color palette is used for note cards
-  static Future<void> updateWidgetData({required AppDatabase db, bool isDark = false}) async {
+  static Future<void> updateWidgetData({
+    required AppDatabase db,
+    bool isDark = false,
+  }) async {
     try {
       final memos =
           await (db.select(db.memos)
                 ..where((t) => t.isArchived.equals(false))
-                ..where((t) => t.isDeleted.equals(false))
-                ..orderBy([
-                  (t) => OrderingTerm(
-                    expression: t.updatedAt,
-                    mode: OrderingMode.desc,
-                  ),
-                ]))
+                ..where((t) => t.isDeleted.equals(false)))
               .get();
 
       debugPrint('[WidgetService] Active memos found: ${memos.length}');
 
       final prefs = await SharedPreferences.getInstance();
+      // Use the same ordering rule as the home screen (pinned notes first).
+      final sortMode = homeSortModeFromName(prefs.getString(kHomeSortModeKey));
+      final sortAscending = prefs.getBool(kHomeSortAscendingKey) ?? false;
+      memos.sort((a, b) => compareMemosForSort(a, b, sortMode, sortAscending));
+
       final untitledLabel = prefs.getString(_labelUntitledKey) ?? 'Untitled';
       final emptyLabel = prefs.getString(_labelEmptyKey) ?? 'Empty note';
-      final listItemLabel = prefs.getString(_labelListItemKey) ?? 'Item de lista';
-      final strikethroughChecked = prefs.getBool('strikethrough_checked') ?? true;
+      final listItemLabel =
+          prefs.getString(_labelListItemKey) ?? 'Item de lista';
+      final strikethroughChecked =
+          prefs.getBool('strikethrough_checked') ?? true;
       final autoWrap = prefs.getBool('auto_wrap') ?? false;
 
       final List<String> idsList = [];
@@ -90,15 +94,15 @@ class WidgetService {
         idsList.add(memo.uuid);
 
         final rawTitle = memo.title;
-        final displayTitle = rawTitle.trim().isEmpty
+        final baseTitle = rawTitle.trim().isEmpty
             ? untitledLabel
             : rawTitle.trim();
-        titlesList.add(displayTitle);
+        // Pinned notes are listed first and marked with a pin.
+        titlesList.add(memo.isPinned ? '📌 $baseTitle' : baseTitle);
 
         final colorIndex = memo.colorIndex;
         final palette = isDark ? _darkColorsHex : _lightColorsHex;
-        final hexColor =
-            (colorIndex >= 0 && colorIndex < palette.length)
+        final hexColor = (colorIndex >= 0 && colorIndex < palette.length)
             ? palette[colorIndex]
             : (isDark ? 0xFF1E1E1E : 0xFFFFFFFF);
         colorsList.add(hexColor);
@@ -154,7 +158,7 @@ class WidgetService {
         previewsList.add(displayPreview);
 
         debugPrint(
-          '[WidgetService] Memo ${memo.uuid}: title="$displayTitle", preview="$displayPreview", color=0x${hexColor.toRadixString(16).padLeft(8, '0')}',
+          '[WidgetService] Memo ${memo.uuid}: title="$baseTitle", preview="$displayPreview", color=0x${hexColor.toRadixString(16).padLeft(8, '0')}',
         );
       }
 

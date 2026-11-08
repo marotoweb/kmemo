@@ -215,5 +215,15 @@
   "enableEncryptionTitle": "Enable encryption",
   "enableEncryptionMessage": "Your local notes will be encrypted with the new passphrase and re-uploaded, replacing the remote copies. Remote notes will be downloaded and decrypted.",
   "disableEncryptionTitle": "Disable encryption",
-  "disableEncryptionMessage": "Your local notes will be re-uploaded WITHOUT encryption, replacing the encrypted remote copies. Remote notes will be downloaded and stored locally."
+  "disableEncryptionMessage": "Your local notes will be re-uploaded WITHOUT encryption, replacing the encrypted remote copies. Remote notes will be downloaded and stored locally.",
+  "searchNotes": "Search notes…",
+  "noResults": "No results",
+  "sortBy": "Sort by",
+  "sortByUpdated": "Last modified",
+  "sortByCreated": "Creation date",
+  "sortByCustom": "Custom order",
+  "ascending": "Ascending",
+  "descending": "Descending",
+  "pin": "Pin",
+  "unpin": "Unpin"
 }

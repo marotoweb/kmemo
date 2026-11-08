@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.16
+
+### ✨ Features
+- **Home sorting:** choose to sort notes by last modification, creation date or a custom order, from a new sort button in the app bar. The date modes support ascending/descending order.
+- **Search notes:** a fully rounded search field replaces the app bar title and filters notes by title and content as you type.
+- **Pinned notes:** pin/unpin notes from the multi-selection bar or the note editor. Pinned notes always stay at the top of the home list and of the native widget (marked with 📌).
+- **Custom order (drag & drop):** in custom-order mode, select a single note and drag it vertically to reorder the list. Pinned and non-pinned notes form separate sections.
+- **More background images:** new backgrounds `bg_2`–`bg_5`, plus support for PNG, JPEG and WebP files dropped into `assets/backgrounds/` (no code change needed). A dark scrim keeps the text readable over both light and dark images.
+- **Smaller background assets:** `bg_1` is now a JPEG (1.25 MB → 177 KB), saving about 1 MB in the APK.
+- **Search highlighting:** while searching on the home screen, matching words in note titles, body text and checklist items are highlighted with an amber background.
+- **Hybrid drag gesture:** a single long-press + drag reorders any note (auto-switching to custom order when needed); a long-press released without dragging starts multi-selection. Dragging is available in all sort modes.
+- **Transparent drag proxy:** the dragged note keeps its rounded corners with no dark rectangular background behind it.
+
+### 🔧 Internal
+- **Database schema v5:** adds `isPinned` (synced across devices) and `sortIndex` (local manual order) to notes, with an automatic migration.
+- **Shared ordering rule:** the home screen and the native widget use the same sort logic.
+
 ## 0.1.15
 
 ### ✨ Features

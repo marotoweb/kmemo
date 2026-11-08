@@ -1,5 +1,8 @@
 // lib/ui/screens/home_screen.dart
 
+import 'dart:async';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -9,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../../database/database.dart';
 import '../../models/background_images.dart';
+import '../../models/home_sort.dart';
 import '../../models/note_palette.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
@@ -31,8 +35,25 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final List<String> _selectedUuids = [];
-  static const MethodChannel _widgetChannel = MethodChannel('com.marotoweb.kmemo/widget');
+  static const MethodChannel _widgetChannel = MethodChannel(
+    'com.marotoweb.kmemo/widget',
+  );
   bool _isOpeningNote = false;
+
+  // AppBar search (pill field replacing the title).
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  bool _isSearching = false;
+  String _searchQuery = '';
+  List<Memo> _searchResults = [];
+  Timer? _searchDebounce;
+
+  // Hybrid gesture (reorder-allowed view): long-press + drag reorders;
+  // long-press + release without dragging toggles multi-selection.
+  int? _pressPointer;
+  DateTime? _pressDownTime;
+  String? _pressUuid;
+  bool _reorderFiredForPress = false;
 
   @override
   void didChangeDependencies() {
@@ -99,14 +120,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final memo = await (db.select(
       db.memos,
     )..where((t) => t.uuid.equals(uuid))).getSingleOrNull();
-    
+
     if (memo != null && mounted) {
       debugPrint('[HomeScreen] Opening note: $uuid (${memo.title})');
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => MemoDetailScreen(memo: memo),
-        ),
+        MaterialPageRoute(builder: (context) => MemoDetailScreen(memo: memo)),
       ).then((_) {
         // Clear the flag when returning
         _isOpeningNote = false;
@@ -120,31 +139,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _checkWidgetLaunch() async {
     try {
       debugPrint('[HomeScreen] _checkWidgetLaunch called');
-      
+
       // Check if there is a flag to create a new note
       bool createNewNote = false;
       try {
-        createNewNote = await _widgetChannel.invokeMethod<bool>('getCreateNoteFlag') ?? false;
-        debugPrint('[HomeScreen] createNewNote from MethodChannel: $createNewNote');
+        createNewNote =
+            await _widgetChannel.invokeMethod<bool>('getCreateNoteFlag') ??
+            false;
+        debugPrint(
+          '[HomeScreen] createNewNote from MethodChannel: $createNewNote',
+        );
       } catch (e) {
         debugPrint('[HomeScreen] MethodChannel error (getCreateNoteFlag): $e');
       }
-      
+
       if (createNewNote) {
         if (!mounted) return;
         await _createNoteFromWidget();
         return;
       }
-      
+
       // Try to get the uuid via MethodChannel (more reliable than SharedPreferences)
       String? clickedUuid;
       try {
-        clickedUuid = await _widgetChannel.invokeMethod<String>('getPendingNoteUuid');
+        clickedUuid = await _widgetChannel.invokeMethod<String>(
+          'getPendingNoteUuid',
+        );
         debugPrint('[HomeScreen] UUID from MethodChannel: $clickedUuid');
       } catch (e) {
         debugPrint('[HomeScreen] MethodChannel error: $e');
       }
-      
+
       // Fallback: try reading directly from SharedPreferences
       if (clickedUuid == null || clickedUuid.isEmpty) {
         final prefs = await SharedPreferences.getInstance();
@@ -154,21 +179,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
         debugPrint('[HomeScreen] clickedUuid from prefs: $clickedUuid');
       }
-      
+
       if (clickedUuid != null && clickedUuid.isNotEmpty) {
         if (!mounted) return;
-        
+
         // Check if we are already opening the note
         if (_isOpeningNote) {
-          debugPrint('[HomeScreen] Already opening note, skipping _checkWidgetLaunch');
+          debugPrint(
+            '[HomeScreen] Already opening note, skipping _checkWidgetLaunch',
+          );
           return;
         }
-        
+
         final db = Provider.of<AppDatabase>(context, listen: false);
         final memo = await (db.select(
           db.memos,
         )..where((t) => t.uuid.equals(clickedUuid!))).getSingleOrNull();
-        
+
         if (memo != null && mounted) {
           debugPrint('[HomeScreen] Opening note: $clickedUuid (${memo.title})');
           _isOpeningNote = true;
@@ -196,19 +223,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _createNoteFromWidget() async {
     try {
       if (_isOpeningNote) {
-        debugPrint('[HomeScreen] Already opening note, skipping _createNoteFromWidget');
+        debugPrint(
+          '[HomeScreen] Already opening note, skipping _createNoteFromWidget',
+        );
         return;
       }
       _isOpeningNote = true;
-      
+
       final provider = context.read<MemoProvider>();
       final newMemo = await provider.createNewMemo();
-      
+
       if (!mounted) {
         _isOpeningNote = false;
         return;
       }
-      
+
       debugPrint('[HomeScreen] Creating new note from widget: ${newMemo.uuid}');
       Navigator.push(
         context,
@@ -228,7 +257,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// Sanitizes text received from other apps before storing it in a note.
   String _sanitizeSharedText(String input) {
     // Remove null bytes and other control characters except newline/tab.
-    final cleaned = input.replaceAll(RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'), '');
+    final cleaned = input.replaceAll(
+      RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]'),
+      '',
+    );
     // Normalize line endings and collapse excessive blank lines.
     final normalized = cleaned.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
     final lines = normalized.split('\n');
@@ -275,8 +307,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         // title defaults to "shared note").
         final checklistRegex = RegExp(r'^\s*[-*]?\s*\[([xX ]?)\]\s*(.*)$');
         final firstLine = lines.first.trim();
-        final firstLineIsChecklist = firstLine.isNotEmpty &&
-            checklistRegex.hasMatch(firstLine);
+        final firstLineIsChecklist =
+            firstLine.isNotEmpty && checklistRegex.hasMatch(firstLine);
 
         String title;
         List<String> bodyLines;
@@ -288,9 +320,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ? firstLine
               : AppLocalizations.of(context)!.sharedNote;
           // the body is the rest (or the full text if it's the only line)
-          bodyLines = lines.length > 1
-              ? lines.sublist(1)
-              : [];
+          bodyLines = lines.length > 1 ? lines.sublist(1) : [];
         }
 
         debugPrint('[HomeScreen] title: "$title"');
@@ -310,6 +340,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           linkAttachments: '[]',
           isArchived: false,
           isDeleted: false,
+          isPinned: false,
+          sortIndex: provider.nextTopSortIndex(),
         );
 
         final List<Block> blocks = [];
@@ -342,10 +374,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 uuid: Uuid().v4(),
                 memoUuid: memo.uuid,
                 type: BlockType.checklist,
-                content: {
-                  'text': line.trim(),
-                  'checked': false,
-                },
+                content: {'text': line.trim(), 'checked': false},
                 sortOrder: sortOrder++,
                 isDeleted: false,
               ),
@@ -388,6 +417,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    _searchFocus.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -403,6 +435,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _toggleSelection(String uuid) {
+    if (_selectedUuids.isEmpty && _isSearching) {
+      _closeSearch();
+    }
     setState(() {
       if (_selectedUuids.contains(uuid)) {
         _selectedUuids.remove(uuid);
@@ -417,6 +452,218 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _selectedUuids.clear();
     });
   }
+
+  // ---------------------------------------------------------------------------
+  // Search (AppBar pill)
+  // ---------------------------------------------------------------------------
+
+  void _toggleSearch() {
+    if (_isSearching) {
+      _closeSearch();
+      return;
+    }
+    setState(() {
+      _isSearching = true;
+      _selectedUuids.clear();
+    });
+    _searchFocus.requestFocus();
+  }
+
+  void _closeSearch() {
+    _searchDebounce?.cancel();
+    _searchController.clear();
+    _searchFocus.unfocus();
+    setState(() {
+      _isSearching = false;
+      _searchQuery = '';
+      _searchResults = [];
+    });
+  }
+
+  void _onSearchChanged(String value) {
+    _searchDebounce?.cancel();
+    final query = value.trim();
+    setState(() {
+      _searchQuery = query;
+      if (query.isEmpty) _searchResults = [];
+    });
+    if (query.isEmpty) return;
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () async {
+      final provider = context.read<MemoProvider>();
+      final results = await provider.searchMemos(query);
+      if (!mounted || _searchQuery != query) return;
+      setState(() => _searchResults = results);
+    });
+  }
+
+  /// Fully rounded search field that replaces the AppBar title.
+  Widget _buildSearchField(bool isDarkMode) {
+    final l10n = AppLocalizations.of(context)!;
+    final hintColor = isDarkMode ? Colors.white54 : Colors.black45;
+    final textColor = isDarkMode ? Colors.white : Colors.black87;
+    final fieldBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(999),
+      borderSide: BorderSide.none,
+    );
+
+    return SizedBox(
+      height: 40,
+      child: TextField(
+        controller: _searchController,
+        focusNode: _searchFocus,
+        autofocus: true,
+        textInputAction: TextInputAction.search,
+        onChanged: _onSearchChanged,
+        style: TextStyle(fontSize: 15, color: textColor),
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: l10n.searchNotes,
+          hintStyle: TextStyle(fontSize: 15, color: hintColor),
+          prefixIcon: Icon(Icons.search, size: 20, color: hintColor),
+          suffixIcon: _searchController.text.isEmpty
+              ? null
+              : IconButton(
+                  icon: Icon(Icons.clear, size: 18, color: hintColor),
+                  onPressed: () {
+                    _searchController.clear();
+                    _onSearchChanged('');
+                    _searchFocus.requestFocus();
+                  },
+                ),
+          filled: true,
+          fillColor: isDarkMode
+              ? Colors.white.withValues(alpha: 0.10)
+              : Colors.black.withValues(alpha: 0.06),
+          contentPadding: EdgeInsets.zero,
+          border: fieldBorder,
+          enabledBorder: fieldBorder,
+          focusedBorder: fieldBorder,
+        ),
+      ),
+    );
+  }
+
+  /// Notes currently displayed: search results or the provider's sorted list.
+  List<Memo> _visibleMemos(MemoProvider provider) =>
+      _searchQuery.isEmpty ? provider.activeMemos : _searchResults;
+
+  // ---------------------------------------------------------------------------
+  // Sort options (bottom sheet)
+  // ---------------------------------------------------------------------------
+
+  void _showSortMenu() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetContext) {
+        final l10n = AppLocalizations.of(sheetContext)!;
+        return SafeArea(
+          child: StatefulBuilder(
+            builder: (context, setSheetState) {
+              final provider = context.watch<MemoProvider>();
+
+              Widget option(HomeSortMode mode, String label) {
+                final selected = provider.sortMode == mode;
+                return ListTile(
+                  leading: Icon(
+                    selected
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    color: selected
+                        ? Theme.of(context).colorScheme.primary
+                        : null,
+                  ),
+                  title: Text(label),
+                  onTap: () async {
+                    await provider.setSortMode(mode);
+                    setSheetState(() {});
+                  },
+                );
+              }
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          l10n.sortBy,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  option(HomeSortMode.updated, l10n.sortByUpdated),
+                  option(HomeSortMode.created, l10n.sortByCreated),
+                  option(HomeSortMode.custom, l10n.sortByCustom),
+                  if (provider.sortMode != HomeSortMode.custom)
+                    SwitchListTile(
+                      secondary: Icon(
+                        provider.sortAscending
+                            ? Icons.arrow_upward
+                            : Icons.arrow_downward,
+                      ),
+                      title: Text(
+                        provider.sortAscending
+                            ? l10n.ascending
+                            : l10n.descending,
+                      ),
+                      value: provider.sortAscending,
+                      onChanged: (value) async {
+                        await provider.setSortAscending(value);
+                        setSheetState(() {});
+                      },
+                    ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Custom order (drag only the single selected card)
+  // ---------------------------------------------------------------------------
+
+  Future<void> _handleReorder(
+    MemoProvider provider,
+    List<Memo> items,
+    int oldIndex,
+    int newIndex,
+  ) async {
+    _reorderFiredForPress = true;
+
+    // Automatically switch to custom order when the user drags in any other
+    // sort mode (seeds the current order so nothing jumps).
+    if (provider.sortMode != HomeSortMode.custom) {
+      await provider.setSortMode(HomeSortMode.custom);
+      if (!mounted) return;
+    }
+
+    if (newIndex > oldIndex) newIndex -= 1;
+
+    final list = List<Memo>.from(items);
+    final moved = list.removeAt(oldIndex);
+    // Pinned and non-pinned notes are separate sections; keep the moved note
+    // inside its own section.
+    final pinnedInList = list.where((m) => m.isPinned).length;
+    final minIndex = moved.isPinned ? 0 : pinnedInList;
+    final maxIndex = moved.isPinned ? pinnedInList : list.length;
+    final target = newIndex.clamp(minIndex, maxIndex);
+    if (target == oldIndex) return;
+    list.insert(target, moved);
+
+    _clearSelection();
+    await provider.reorderActiveMemos(list.map((m) => m.uuid).toList());
+  }
+
+
 
   List<Memo> _selectedMemos(MemoProvider provider) {
     final selected = <Memo>[];
@@ -455,8 +702,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         text: buffer.toString().trim(),
         title: memos.length == 1
             ? (memos.first.title.trim().isEmpty
-                ? l10n.note
-                : memos.first.title.trim())
+                  ? l10n.note
+                  : memos.first.title.trim())
             : l10n.sharedNote,
       ),
     );
@@ -550,18 +797,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     final colorsPalette = isDarkMode ? kDarkNotePalette : lightColorsPalette;
 
-    // Probe the bundled background images (bg_1.png, bg_2.png, …) so adding a
-    // file to assets/backgrounds/ is enough for it to show up here.
-    final bundle = DefaultAssetBundle.of(context);
-    final bgImageNumbers = <int>[];
-    for (var n = 1; n <= kMaxBackgroundImageNumber; n++) {
-      try {
-        await bundle.load(noteBackgroundImagePath(n)!);
-        bgImageNumbers.add(n);
-      } catch (_) {
-        // Image does not exist, skipping.
-      }
-    }
+    final bgImageNumbers = noteBackgroundNumbers;
 
     if (!context.mounted) return;
     final provider = context.read<MemoProvider>();
@@ -595,12 +831,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   children: [
                     GridView.builder(
                       padding: EdgeInsets.all(16),
-                      gridDelegate:
-                          SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                          ),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 4,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
                       itemCount: colorsPalette.length,
                       itemBuilder: (context, i) {
                         final isSelected =
@@ -636,12 +871,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     GridView.builder(
                       padding: EdgeInsets.all(16),
-                      gridDelegate:
-                          SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                          ),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 4,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
                       itemCount: bgImageNumbers.length,
                       itemBuilder: (context, i) {
                         final number = bgImageNumbers[i];
@@ -708,368 +942,528 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  Widget _buildBody(
+    MemoProvider provider,
+    List<Memo> items,
+    bool isDarkMode,
+    bool isSelectionMode,
+  ) {
+    if (provider.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (items.isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
+      return Center(
+        child: Text(
+          _searchQuery.isNotEmpty ? l10n.noResults : l10n.noActiveNotes,
+          style: TextStyle(color: isDarkMode ? Colors.white38 : Colors.black45),
+        ),
+      );
+    }
+
+    // Drag & drop is available when not searching: the single selected note
+    // can be dragged. Dropping in a date sort mode automatically switches to
+    // the custom order (see _handleReorder).
+    if (_isSearching) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+        child: ListView.builder(
+          padding: const EdgeInsets.only(bottom: 120.0),
+          itemCount: items.length,
+          itemBuilder: (context, index) => _buildMemoItem(
+            provider,
+            items[index],
+            index,
+            isDarkMode,
+            isSelectionMode,
+            reorderableView: false,
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      child: ReorderableListView.builder(
+        padding: const EdgeInsets.only(bottom: 120.0),
+        buildDefaultDragHandles: false,
+        itemCount: items.length,
+        onReorder: (oldIndex, newIndex) =>
+            _handleReorder(provider, items, oldIndex, newIndex),
+        // The default proxy wraps the dragged item in a rectangular Material,
+        // which shows as a dark box behind the rounded card. Keep the lift
+        // animation but make the proxy transparent so the card shape wins.
+        proxyDecorator: (child, index, animation) {
+          return AnimatedBuilder(
+            animation: animation,
+            builder: (context, child) {
+              final t = Curves.easeInOut.transform(animation.value);
+              return Transform.scale(
+                scale: 1 + 0.02 * t,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: child,
+                ),
+              );
+            },
+            child: child,
+          );
+        },
+        itemBuilder: (context, index) => _buildMemoItem(
+          provider,
+          items[index],
+          index,
+          isDarkMode,
+          isSelectionMode,
+          reorderableView: true,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMemoItem(
+    MemoProvider provider,
+    Memo memo,
+    int index,
+    bool isDarkMode,
+    bool isSelectionMode, {
+    required bool reorderableView,
+  }) {
+    final isSelected = _selectedUuids.contains(memo.uuid);
+
+    Widget card = Stack(
+      alignment: Alignment.center,
+      children: [
+        Positioned.fill(
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+            alignment: Alignment.centerLeft,
+            padding: const EdgeInsets.only(left: 20),
+            decoration: BoxDecoration(
+              color: isDarkMode ? const Color(0xFF3B2E1E) : Colors.amber,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.archive,
+              color: isDarkMode ? Colors.white70 : Colors.black87,
+            ),
+          ),
+        ),
+        Dismissible(
+          key: Key(memo.uuid),
+          direction: DismissDirection.startToEnd,
+          background: const SizedBox.shrink(),
+          onDismissed: (direction) async {
+            final uuidToArchive = memo.uuid;
+            final l10n = AppLocalizations.of(context)!;
+            final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+            await provider.archiveMemoStatus(uuidToArchive, true);
+
+            if (!mounted) return;
+
+            scaffoldMessenger.hideCurrentSnackBar();
+
+            final snackBarController = scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text(l10n.noteArchived),
+                duration: const Duration(seconds: 8),
+                action: SnackBarAction(
+                  label: l10n.undo,
+                  textColor: Colors.amberAccent,
+                  onPressed: () async {
+                    scaffoldMessenger.hideCurrentSnackBar();
+                    await provider.archiveMemoStatus(uuidToArchive, false);
+                  },
+                ),
+              ),
+            );
+
+            Future.delayed(const Duration(seconds: 8), () {
+              try {
+                snackBarController.close();
+              } catch (_) {}
+            });
+          },
+          child: MemoCard(
+            memo: memo,
+            isSelected: isSelected,
+            searchQuery: _isSearching ? _searchQuery : '',
+            // In the reorder view, long-press + drag reorders and a
+            // long-press released without dragging toggles selection.
+            onLongPress: reorderableView ? null : () => _toggleSelection(memo.uuid),
+            onTap: () {
+              if (isSelectionMode) {
+                _toggleSelection(memo.uuid);
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MemoDetailScreen(memo: memo),
+                  ),
+                ).then((_) {
+                  if (mounted) setState(() {});
+                });
+              }
+            },
+          ),
+        ),
+      ],
+    );
+
+    if (reorderableView) {
+      card = Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (event) {
+          _pressPointer = event.pointer;
+          _pressDownTime = DateTime.now();
+          _pressUuid = memo.uuid;
+          _reorderFiredForPress = false;
+        },
+        onPointerUp: (event) {
+          if (_pressPointer != event.pointer) return;
+          final down = _pressDownTime;
+          final uuid = _pressUuid;
+          final didReorder = _reorderFiredForPress;
+          _pressPointer = null;
+          _pressDownTime = null;
+          _pressUuid = null;
+          _reorderFiredForPress = false;
+          if (uuid == null || down == null || didReorder) return;
+          // A long-press released without dragging prepares multi-selection.
+          final elapsed = DateTime.now().difference(down);
+          if (elapsed >= kLongPressTimeout) {
+            _toggleSelection(uuid);
+          }
+        },
+        onPointerCancel: (event) {
+          if (_pressPointer == event.pointer) {
+            _pressPointer = null;
+            _pressDownTime = null;
+            _pressUuid = null;
+            _reorderFiredForPress = false;
+          }
+        },
+        // Always enabled: long-press + drag starts a reorder (1 gesture).
+        child: ReorderableDelayedDragStartListener(
+          index: index,
+          enabled: true,
+          child: card,
+        ),
+      );
+    }
+
+    return KeyedSubtree(key: ValueKey(memo.uuid), child: card);
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<MemoProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
     final isSelectionMode = _selectedUuids.isNotEmpty;
-    final activeMemos = provider.activeMemos;
+    final activeMemos = _visibleMemos(provider);
+    final selectedMemos = _selectedMemos(provider);
+    final allSelectedPinned =
+        selectedMemos.isNotEmpty && selectedMemos.every((m) => m.isPinned);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      appBar: isSelectionMode
-          ? AppBar(
-              backgroundColor: isDarkMode
-                  ? Color(0xFF3B2E1E)
-                  : Colors.amber.shade100,
-              leading: IconButton(
-                icon: Icon(
-                  Icons.close,
-                  color: isDarkMode ? Colors.white70 : Colors.black87,
-                ),
-                onPressed: _clearSelection,
-              ),
-              title: Text(
-                '${_selectedUuids.length}',
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white70 : Colors.black87,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              actions: [
-                IconButton(
+    return PopScope(
+      // The system back button closes the search instead of leaving the app.
+      canPop: !_isSearching,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _isSearching) _closeSearch();
+      },
+      child: Scaffold(
+        appBar: isSelectionMode
+            ? AppBar(
+                backgroundColor: isDarkMode
+                    ? Color(0xFF3B2E1E)
+                    : Colors.amber.shade100,
+                leading: IconButton(
                   icon: Icon(
-                    Icons.push_pin_outlined,
+                    Icons.close,
                     color: isDarkMode ? Colors.white70 : Colors.black87,
                   ),
-                  onPressed: () {
-                    _clearSelection();
-                  },
+                  onPressed: _clearSelection,
                 ),
-                IconButton(
-                  icon: Icon(
-                    Icons.palette_outlined,
+                title: Text(
+                  '${_selectedUuids.length}',
+                  style: TextStyle(
                     color: isDarkMode ? Colors.white70 : Colors.black87,
+                    fontWeight: FontWeight.bold,
                   ),
-                  onPressed: () => _showStyleMenu(context),
                 ),
-                PopupMenuButton<String>(
-                  icon: Icon(
-                    Icons.more_vert,
-                    color: isDarkMode ? Colors.white70 : Colors.black87,
+                actions: [
+                  IconButton(
+                    tooltip: allSelectedPinned ? l10n.unpin : l10n.pin,
+                    icon: Icon(
+                      allSelectedPinned
+                          ? Icons.push_pin
+                          : Icons.push_pin_outlined,
+                      color: isDarkMode ? Colors.white70 : Colors.black87,
+                    ),
+                    onPressed: () async {
+                      final uuids = List<String>.from(_selectedUuids);
+                      final pinned = !allSelectedPinned;
+                      _clearSelection();
+                      await provider.setPinnedMultiple(uuids, pinned);
+                    },
                   ),
-                  onSelected: (value) async {
-                    final memoProvider = context.read<MemoProvider>();
-                    if (value == 'archive') {
-                      final uuidsToArchive = List<String>.from(_selectedUuids);
-                      _clearSelection();
-
-                      await memoProvider.archiveMultiple(uuidsToArchive);
-
-                      if (!context.mounted) return;
-
-                      final scaffoldMessenger = ScaffoldMessenger.of(context);
-                      scaffoldMessenger.hideCurrentSnackBar();
-
-                      final snackBarController = scaffoldMessenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            uuidsToArchive.length > 1
-                                ? AppLocalizations.of(context)!.notesArchivedCount('${uuidsToArchive.length}')
-                                : AppLocalizations.of(context)!.noteArchived,
-                          ),
-                          duration: Duration(seconds: 8),
-                          action: SnackBarAction(
-                            label: AppLocalizations.of(context)!.undo,
-                            textColor: Colors.amberAccent,
-                            onPressed: () async {
-                              scaffoldMessenger.hideCurrentSnackBar();
-                              for (var uuid in uuidsToArchive) {
-                                await memoProvider.archiveMemoStatus(
-                                  uuid,
-                                  false,
-                                );
-                              }
-                            },
-                          ),
-                        ),
-                      );
-
-                      Future.delayed(Duration(seconds: 8), () {
-                        try {
-                          snackBarController.close();
-                        } catch (_) {}
-                      });
-                    } else if (value == 'delete') {
-                      final uuidsToDelete = List<String>.from(_selectedUuids);
-                      _clearSelection();
-
-                      await memoProvider.deleteMultiple(uuidsToDelete);
-
-                      if (!context.mounted) return;
-
-                      final scaffoldMessenger = ScaffoldMessenger.of(context);
-                      scaffoldMessenger.hideCurrentSnackBar();
-
-                      final snackBarController = scaffoldMessenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            uuidsToDelete.length > 1
-                                ? AppLocalizations.of(context)!.notesSentToTrashCount('${uuidsToDelete.length}')
-                                : AppLocalizations.of(context)!.noteSentToTrash,
-                          ),
-                          duration: Duration(seconds: 8),
-                          action: SnackBarAction(
-                            label: AppLocalizations.of(context)!.undo,
-                            textColor: Colors.amberAccent,
-                            onPressed: () async {
-                              scaffoldMessenger.hideCurrentSnackBar();
-                              await memoProvider.restoreMultiple(uuidsToDelete);
-                            },
-                          ),
-                        ),
-                      );
-
-                      Future.delayed(Duration(seconds: 8), () {
-                        try {
-                          snackBarController.close();
-                        } catch (_) {}
-                      });
-                    } else if (value == 'copy') {
-                      await memoProvider.duplicateMultiple(_selectedUuids);
-                      _clearSelection();
-                    } else if (value == 'share') {
-                      await _shareSelectedNotes();
-                    } else if (value == 'kdrive') {
-                      await _exportSelectedNotesToKDrive();
-                    } else {
-                      _clearSelection();
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'archive',
-                      child: Text(AppLocalizations.of(context)!.archive),
+                  IconButton(
+                    icon: Icon(
+                      Icons.palette_outlined,
+                      color: isDarkMode ? Colors.white70 : Colors.black87,
                     ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Text(AppLocalizations.of(context)!.delete),
-                    ),
-                    PopupMenuItem(
-                      value: 'copy',
-                      child: Text(AppLocalizations.of(context)!.makeCopy2),
-                    ),
-                    PopupMenuItem(value: 'share', child: Text(AppLocalizations.of(context)!.send)),
-                    PopupMenuItem(
-                      value: 'kdrive',
-                      child: Text(AppLocalizations.of(context)!.copyToKdrive),
-                    ),
-                  ],
-                ),
-              ],
-            )
-          : AppBar(
-              title: Text(
-                'kMemo',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              elevation: 0,
-              backgroundColor: Colors.transparent,
-            ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: isDarkMode ? Color(0xFF3B2E1E) : Colors.amber,
-              ),
-              child: Text(
-                'kMemo',
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white70 : Colors.black87,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.lightbulb_outline),
-              title: Text(AppLocalizations.of(context)!.notes),
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: Icon(Icons.archive_outlined),
-              title: Text(AppLocalizations.of(context)!.archiveScreen),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ArchiveScreen(),
+                    onPressed: () => _showStyleMenu(context),
                   ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.delete_outline),
-              title: Text(AppLocalizations.of(context)!.trash),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => TrashScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.settings_outlined),
-              title: Text(AppLocalizations.of(context)!.settings),
-              // SettingsScreen
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => SettingsScreen(),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-      body: provider.isLoading
-          ? Center(child: CircularProgressIndicator())
-          : activeMemos.isEmpty
-          ? Center(
-              child: Text(
-                AppLocalizations.of(context)!.noActiveNotes,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white38 : Colors.black45,
-                ),
-              ),
-            )
-          : Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12.0),
-              child: ListView.builder(
-                padding: EdgeInsets.only(bottom: 120.0),
-                itemCount: activeMemos.length,
-                itemBuilder: (context, index) {
-                  final memo = activeMemos[index];
-                  final isSelected = _selectedUuids.contains(memo.uuid);
+                  PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      color: isDarkMode ? Colors.white70 : Colors.black87,
+                    ),
+                    onSelected: (value) async {
+                      final memoProvider = context.read<MemoProvider>();
+                      if (value == 'archive') {
+                        final uuidsToArchive = List<String>.from(
+                          _selectedUuids,
+                        );
+                        _clearSelection();
 
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Positioned.fill(
-                        child: Container(
-                          margin: EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 2,
-                          ),
-                          alignment: Alignment.centerLeft,
-                          padding: EdgeInsets.only(left: 20),
-                          decoration: BoxDecoration(
-                            color: isDarkMode
-                                ? Color(0xFF3B2E1E)
-                                : Colors.amber,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.archive,
-                            color: isDarkMode ? Colors.white70 : Colors.black87,
-                          ),
-                        ),
-                      ),
-                      Dismissible(
-                        key: Key(memo.uuid),
-                        direction: DismissDirection.startToEnd,
-                        background: SizedBox.shrink(),
-                        onDismissed: (direction) async {
-                          final uuidToArchive = memo.uuid;
+                        await memoProvider.archiveMultiple(uuidsToArchive);
 
-                          await provider.archiveMemoStatus(uuidToArchive, true);
+                        if (!context.mounted) return;
 
-                          if (!context.mounted) return;
+                        final scaffoldMessenger = ScaffoldMessenger.of(context);
+                        scaffoldMessenger.hideCurrentSnackBar();
 
-                          final scaffoldMessenger = ScaffoldMessenger.of(
-                            context,
-                          );
-                          scaffoldMessenger.hideCurrentSnackBar();
-
-                          final snackBarController = scaffoldMessenger
-                              .showSnackBar(
-                                SnackBar(
-                                  content: Text(AppLocalizations.of(context)!.noteArchived),
-                                  duration: Duration(seconds: 8),
-                                  action: SnackBarAction(
-                                    label: AppLocalizations.of(context)!.undo,
-                                    textColor: Colors.amberAccent,
-                                    onPressed: () async {
-                                      scaffoldMessenger.hideCurrentSnackBar();
-                                      await provider.archiveMemoStatus(
-                                        uuidToArchive,
+                        final snackBarController = scaffoldMessenger
+                            .showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  uuidsToArchive.length > 1
+                                      ? AppLocalizations.of(
+                                          context,
+                                        )!.notesArchivedCount(
+                                          '${uuidsToArchive.length}',
+                                        )
+                                      : AppLocalizations.of(
+                                          context,
+                                        )!.noteArchived,
+                                ),
+                                duration: Duration(seconds: 8),
+                                action: SnackBarAction(
+                                  label: AppLocalizations.of(context)!.undo,
+                                  textColor: Colors.amberAccent,
+                                  onPressed: () async {
+                                    scaffoldMessenger.hideCurrentSnackBar();
+                                    for (var uuid in uuidsToArchive) {
+                                      await memoProvider.archiveMemoStatus(
+                                        uuid,
                                         false,
                                       );
-                                    },
-                                  ),
+                                    }
+                                  },
                                 ),
-                              );
+                              ),
+                            );
 
-                          Future.delayed(Duration(seconds: 8), () {
-                            try {
-                              snackBarController.close();
-                            } catch (_) {}
-                          });
-                        },
-                        child: MemoCard(
-                          memo: memo,
-                          isSelected: isSelected,
-                          onLongPress: () => _toggleSelection(memo.uuid),
-                          onTap: () {
-                            if (isSelectionMode) {
-                              _toggleSelection(memo.uuid);
-                            } else {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      MemoDetailScreen(memo: memo),
+                        Future.delayed(Duration(seconds: 8), () {
+                          try {
+                            snackBarController.close();
+                          } catch (_) {}
+                        });
+                      } else if (value == 'delete') {
+                        final uuidsToDelete = List<String>.from(_selectedUuids);
+                        _clearSelection();
+
+                        await memoProvider.deleteMultiple(uuidsToDelete);
+
+                        if (!context.mounted) return;
+
+                        final scaffoldMessenger = ScaffoldMessenger.of(context);
+                        scaffoldMessenger.hideCurrentSnackBar();
+
+                        final snackBarController = scaffoldMessenger
+                            .showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  uuidsToDelete.length > 1
+                                      ? AppLocalizations.of(
+                                          context,
+                                        )!.notesSentToTrashCount(
+                                          '${uuidsToDelete.length}',
+                                        )
+                                      : AppLocalizations.of(
+                                          context,
+                                        )!.noteSentToTrash,
                                 ),
-                              ).then((_) {
-                                if (mounted) setState(() {});
-                              });
-                            }
-                          },
-                        ),
+                                duration: Duration(seconds: 8),
+                                action: SnackBarAction(
+                                  label: AppLocalizations.of(context)!.undo,
+                                  textColor: Colors.amberAccent,
+                                  onPressed: () async {
+                                    scaffoldMessenger.hideCurrentSnackBar();
+                                    await memoProvider.restoreMultiple(
+                                      uuidsToDelete,
+                                    );
+                                  },
+                                ),
+                              ),
+                            );
+
+                        Future.delayed(Duration(seconds: 8), () {
+                          try {
+                            snackBarController.close();
+                          } catch (_) {}
+                        });
+                      } else if (value == 'copy') {
+                        await memoProvider.duplicateMultiple(_selectedUuids);
+                        _clearSelection();
+                      } else if (value == 'share') {
+                        await _shareSelectedNotes();
+                      } else if (value == 'kdrive') {
+                        await _exportSelectedNotesToKDrive();
+                      } else {
+                        _clearSelection();
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'archive',
+                        child: Text(AppLocalizations.of(context)!.archive),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text(AppLocalizations.of(context)!.delete),
+                      ),
+                      PopupMenuItem(
+                        value: 'copy',
+                        child: Text(AppLocalizations.of(context)!.makeCopy2),
+                      ),
+                      PopupMenuItem(
+                        value: 'share',
+                        child: Text(AppLocalizations.of(context)!.send),
+                      ),
+                      PopupMenuItem(
+                        value: 'kdrive',
+                        child: Text(AppLocalizations.of(context)!.copyToKdrive),
                       ),
                     ],
+                  ),
+                ],
+              )
+            : AppBar(
+                title: _isSearching
+                    ? _buildSearchField(isDarkMode)
+                    : Text(
+                        'kMemo',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                elevation: 0,
+                backgroundColor: Colors.transparent,
+                actions: [
+                  if (!_isSearching)
+                    IconButton(
+                      tooltip: l10n.searchNotes,
+                      icon: const Icon(Icons.search),
+                      onPressed: _toggleSearch,
+                    ),
+                  IconButton(
+                    tooltip: l10n.sortBy,
+                    icon: const Icon(Icons.sort),
+                    onPressed: _showSortMenu,
+                  ),
+                  if (_isSearching)
+                    IconButton(
+                      tooltip: l10n.cancel,
+                      icon: const Icon(Icons.close),
+                      onPressed: _closeSearch,
+                    ),
+                ],
+              ),
+        drawer: Drawer(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  color: isDarkMode ? Color(0xFF3B2E1E) : Colors.amber,
+                ),
+                child: Text(
+                  'kMemo',
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white70 : Colors.black87,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.lightbulb_outline),
+                title: Text(AppLocalizations.of(context)!.notes),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: Icon(Icons.archive_outlined),
+                title: Text(AppLocalizations.of(context)!.archiveScreen),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => ArchiveScreen()),
                   );
                 },
               ),
-            ),
-      floatingActionButton: isSelectionMode
-          ? null
-          : FloatingActionButton(
-              backgroundColor: isDarkMode
-                  ? Color(0xFF3B2E1E)
-                  : Colors.amber,
-              onPressed: () async {
-                final newMemo = await provider.createNewMemo();
-                if (context.mounted) {
+              ListTile(
+                leading: Icon(Icons.delete_outline),
+                title: Text(AppLocalizations.of(context)!.trash),
+                onTap: () {
+                  Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => MemoDetailScreen(memo: newMemo, isNew: true),
-                    ),
+                    MaterialPageRoute(builder: (context) => TrashScreen()),
                   );
-                }
-              },
-              child: Icon(
-                Icons.add,
-                color: isDarkMode ? Colors.white70 : Colors.black87,
+                },
               ),
-            ),
+              ListTile(
+                leading: Icon(Icons.settings_outlined),
+                title: Text(AppLocalizations.of(context)!.settings),
+                // SettingsScreen
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SettingsScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        body: _buildBody(provider, activeMemos, isDarkMode, isSelectionMode),
+        floatingActionButton: isSelectionMode
+            ? null
+            : FloatingActionButton(
+                backgroundColor: isDarkMode ? Color(0xFF3B2E1E) : Colors.amber,
+                onPressed: () async {
+                  final newMemo = await provider.createNewMemo();
+                  if (context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            MemoDetailScreen(memo: newMemo, isNew: true),
+                      ),
+                    );
+                  }
+                },
+                child: Icon(
+                  Icons.add,
+                  color: isDarkMode ? Colors.white70 : Colors.black87,
+                ),
+              ),
+      ),
     );
   }
 }

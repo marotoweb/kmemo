@@ -215,5 +215,15 @@
   "enableEncryptionTitle": "Activer le chiffrement",
   "enableEncryptionMessage": "Vos notes locales seront chiffrées avec la nouvelle phrase secrète et renvoyées, en remplaçant les copies distantes. Les notes distantes seront téléchargées et déchiffrées.",
   "disableEncryptionTitle": "Désactiver le chiffrement",
-  "disableEncryptionMessage": "Vos notes locales seront renvoyées SANS chiffrement, en remplaçant les copies distantes chiffrées. Les notes distantes seront téléchargées et stockées localement."
+  "disableEncryptionMessage": "Vos notes locales seront renvoyées SANS chiffrement, en remplaçant les copies distantes chiffrées. Les notes distantes seront téléchargées et stockées localement.",
+  "searchNotes": "Rechercher des notes…",
+  "noResults": "Aucun résultat",
+  "sortBy": "Trier par",
+  "sortByUpdated": "Dernière modification",
+  "sortByCreated": "Date de création",
+  "sortByCustom": "Ordre personnalisé",
+  "ascending": "Croissant",
+  "descending": "Décroissant",
+  "pin": "Épingler",
+  "unpin": "Désépingler"
 }

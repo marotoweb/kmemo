@@ -215,5 +215,15 @@
   "enableEncryptionTitle": "Verschlüsselung aktivieren",
   "enableEncryptionMessage": "Ihre lokalen Notizen werden mit der neuen Passphrase verschlüsselt und erneut hochgeladen, wobei die Remote-Kopien ersetzt werden. Remote-Notizen werden heruntergeladen und entschlüsselt.",
   "disableEncryptionTitle": "Verschlüsselung deaktivieren",
-  "disableEncryptionMessage": "Ihre lokalen Notizen werden OHNE Verschlüsselung erneut hochgeladen und ersetzen die verschlüsselten Remote-Kopien. Remote-Notizen werden heruntergeladen und lokal gespeichert."
+  "disableEncryptionMessage": "Ihre lokalen Notizen werden OHNE Verschlüsselung erneut hochgeladen und ersetzen die verschlüsselten Remote-Kopien. Remote-Notizen werden heruntergeladen und lokal gespeichert.",
+  "searchNotes": "Notizen durchsuchen…",
+  "noResults": "Keine Ergebnisse",
+  "sortBy": "Sortieren nach",
+  "sortByUpdated": "Zuletzt geändert",
+  "sortByCreated": "Erstellungsdatum",
+  "sortByCustom": "Benutzerdefinierte Reihenfolge",
+  "ascending": "Aufsteigend",
+  "descending": "Absteigend",
+  "pin": "Anheften",
+  "unpin": "Loslösen"
 }

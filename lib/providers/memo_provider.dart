@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database.dart';
+import '../models/home_sort.dart';
 import '../services/kdrive_storage.dart';
 import '../services/storage_repository.dart';
 import '../services/encryption_service.dart';
@@ -19,22 +20,163 @@ class MemoProvider extends ChangeNotifier {
   final _uuid = const Uuid();
   Timer? _syncDebounce;
 
+  // Home ordering preferences (persisted in SharedPreferences).
+  HomeSortMode _sortMode = HomeSortMode.updated;
+  bool _sortAscending = false;
+
   /// Number of notes uploaded or downloaded during the last sync.
   int lastSyncNoteCount = 0;
 
   MemoProvider(this._db, {KDriveStorage? storage}) : _storage = storage {
+    _loadSortPreferences();
     _listenToMemos();
   }
 
   List<Memo> get memos => _memos;
 
-  List<Memo> get activeMemos =>
-      _memos.where((m) => !m.isArchived && !m.isDeleted).toList();
+  HomeSortMode get sortMode => _sortMode;
+  bool get sortAscending => _sortAscending;
+
+  List<Memo> get activeMemos => _sortedActive(_memos);
   List<Memo> get archivedMemos =>
       _memos.where((m) => m.isArchived && !m.isDeleted).toList();
   List<Memo> get deletedMemos => _memos.where((m) => m.isDeleted).toList();
 
   bool get isLoading => _isLoading;
+
+  List<Memo> _sortedActive(List<Memo> source) {
+    final list = source
+        .where((m) => !m.isArchived && !m.isDeleted)
+        .toList(growable: false);
+    final sorted = List<Memo>.from(list);
+    sorted.sort((a, b) => compareMemosForSort(a, b, _sortMode, _sortAscending));
+    return sorted;
+  }
+
+  Future<void> _loadSortPreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _sortMode = homeSortModeFromName(prefs.getString(kHomeSortModeKey));
+      _sortAscending = prefs.getBool(kHomeSortAscendingKey) ?? false;
+      notifyListeners();
+      _updateWidgetData();
+    } catch (_) {
+      // Keep the defaults if preferences cannot be read.
+    }
+  }
+
+  /// Changes the home sort mode and persists it. Switching to
+  /// [HomeSortMode.custom] for the first time seeds [Memo.sortIndex] from the
+  /// order currently on screen, so nothing jumps around.
+  Future<void> setSortMode(HomeSortMode mode) async {
+    if (mode == _sortMode) return;
+    if (mode == HomeSortMode.custom) {
+      await _ensureCustomOrderInitialized();
+    }
+    _sortMode = mode;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(kHomeSortModeKey, mode.name);
+    _updateWidgetData();
+  }
+
+  Future<void> setSortAscending(bool value) async {
+    if (value == _sortAscending) return;
+    _sortAscending = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kHomeSortAscendingKey, value);
+    _updateWidgetData();
+  }
+
+  /// Seeds the manual order from the current display order, once.
+  Future<void> _ensureCustomOrderInitialized() async {
+    final prefs = await SharedPreferences.getInstance();
+    final initialized = prefs.getBool(kHomeCustomOrderInitializedKey) ?? false;
+    if (initialized) return;
+
+    // Order the notes the way they are displayed right now (previous mode).
+    final ordered = _sortedActive(_memos).map((m) => m.uuid).toList();
+    _applySortIndexes(ordered);
+    await _writeSortIndexes(ordered);
+    await prefs.setBool(kHomeCustomOrderInitializedKey, true);
+  }
+
+  /// Persists the manual order. [orderedUuids] must contain the full active
+  /// list in its new display order (pinned notes first).
+  Future<void> reorderActiveMemos(List<String> orderedUuids) async {
+    // Optimistic in-memory update so the list does not snap back on drop.
+    _applySortIndexes(orderedUuids);
+    await _writeSortIndexes(orderedUuids);
+  }
+
+  void _applySortIndexes(List<String> orderedUuids) {
+    final indexByUuid = <String, int>{};
+    for (var i = 0; i < orderedUuids.length; i++) {
+      indexByUuid[orderedUuids[i]] = i;
+    }
+    _memos = _memos
+        .map(
+          (m) => indexByUuid.containsKey(m.uuid)
+              ? m.copyWith(sortIndex: indexByUuid[m.uuid])
+              : m,
+        )
+        .toList();
+    notifyListeners();
+  }
+
+  Future<void> _writeSortIndexes(List<String> orderedUuids) async {
+    await _db.transaction(() async {
+      for (var i = 0; i < orderedUuids.length; i++) {
+        await (_db.update(_db.memos)
+              ..where((t) => t.uuid.equals(orderedUuids[i])))
+            .write(MemosCompanion(sortIndex: Value(i)));
+      }
+    });
+  }
+
+  /// Index that puts a new (or duplicated) note at the top of the non-pinned
+  /// section.
+  int nextTopSortIndex() {
+    final active = _memos.where((m) => !m.isArchived && !m.isDeleted);
+    final nonPinned = active.where((m) => !m.isPinned).toList();
+    if (nonPinned.isNotEmpty) {
+      var min = nonPinned.first.sortIndex;
+      for (final memo in nonPinned) {
+        if (memo.sortIndex < min) min = memo.sortIndex;
+      }
+      return min - 1;
+    }
+    final pinned = active.where((m) => m.isPinned).toList();
+    if (pinned.isNotEmpty) {
+      var max = pinned.first.sortIndex;
+      for (final memo in pinned) {
+        if (memo.sortIndex > max) max = memo.sortIndex;
+      }
+      return max + 1;
+    }
+    return 0;
+  }
+
+  /// Searches active notes by title and block content (case-insensitive).
+  Future<List<Memo>> searchMemos(String query) async {
+    final term = '%${query.toLowerCase()}%';
+    final rows = await _db
+        .customSelect(
+          'SELECT * FROM memos WHERE is_archived = 0 AND is_deleted = 0 AND '
+          '(LOWER(title) LIKE ?1 OR EXISTS ('
+          'SELECT 1 FROM blocks WHERE blocks.memo_uuid = memos.uuid '
+          'AND blocks.is_deleted = 0 AND LOWER(content) LIKE ?1))',
+          variables: [Variable.withString(term)],
+          readsFrom: {_db.memos, _db.blocks},
+        )
+        .get();
+    final results = rows.map((row) => _db.memos.map(row.data)).toList();
+    results.sort(
+      (a, b) => compareMemosForSort(a, b, _sortMode, _sortAscending),
+    );
+    return results;
+  }
 
   void _listenToMemos() {
     _db.watchAllMemos().listen(
@@ -66,6 +208,8 @@ class MemoProvider extends ChangeNotifier {
       linkAttachments: '[]',
       isArchived: false,
       isDeleted: false,
+      isPinned: false,
+      sortIndex: nextTopSortIndex(),
     );
 
     await _db.transaction(() async {
@@ -164,10 +308,14 @@ class MemoProvider extends ChangeNotifier {
         isDark = true; // dark
       } else {
         // system - use the platform brightness
-        isDark = WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+        isDark =
+            WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+            Brightness.dark;
       }
     } catch (_) {
-      isDark = WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark;
+      isDark =
+          WidgetsBinding.instance.platformDispatcher.platformBrightness ==
+          Brightness.dark;
     }
     await WidgetService.updateWidgetData(db: _db, isDark: isDark);
   }
@@ -308,6 +456,8 @@ class MemoProvider extends ChangeNotifier {
       String? userPassphrase;
       final generalPass = await storage.getEncryptionPassphrase();
 
+      // New notes are placed at the top of the non-pinned section.
+      var nextSortIndex = nextTopSortIndex();
       for (var remote in pendingRemote) {
         final memoUuid = remote.name.replaceAll('.json', '');
         processed++;
@@ -373,7 +523,10 @@ class MemoProvider extends ChangeNotifier {
 
           // Re-save according to general encryption configuration:
           // mark as not synced to re-upload with current configuration
-          final patched = remoteMemo.memo.copyWith(isSynced: false);
+          final patched = remoteMemo.memo.copyWith(
+            isSynced: false,
+            sortIndex: nextSortIndex--,
+          );
           await _db.saveMemoWithBlocks(patched, remoteMemo.blocks);
           syncedCount++;
           debugPrint(
@@ -399,9 +552,7 @@ class MemoProvider extends ChangeNotifier {
     final storage = _storage;
     if (storage == null || !storage.isConfigured) return 0;
 
-    debugPrint(
-      '[MemoProvider] syncAll(): starting re-sync of all notes',
-    );
+    debugPrint('[MemoProvider] syncAll(): starting re-sync of all notes');
 
     // Mark all notes as not synced using an explicit transaction
     await _db.transaction(() async {
@@ -448,7 +599,9 @@ class MemoProvider extends ChangeNotifier {
 
   // Mark as deleted (send to trash)
   Future<void> softDeleteMultiple(List<String> uuids) async {
-    debugPrint('[MemoProvider] softDeleteMultiple: ${uuids.length} uuids: $uuids');
+    debugPrint(
+      '[MemoProvider] softDeleteMultiple: ${uuids.length} uuids: $uuids',
+    );
     debugPrint('[MemoProvider] _memos count: ${_memos.length}');
     if (uuids.isEmpty) {
       debugPrint('[MemoProvider] softDeleteMultiple: nothing to delete');
@@ -472,7 +625,9 @@ class MemoProvider extends ChangeNotifier {
         }
         final blocks = await _db.getBlocksForMemo(match.uuid);
         await _db.saveMemoWithBlocks(match.copyWith(isDeleted: true), blocks);
-        debugPrint('[MemoProvider] softDeleteMultiple: saved ${match.uuid} isDeleted=true');
+        debugPrint(
+          '[MemoProvider] softDeleteMultiple: saved ${match.uuid} isDeleted=true',
+        );
       }
     }
     _scheduleSync();
@@ -599,6 +754,30 @@ class MemoProvider extends ChangeNotifier {
     _scheduleSync();
   }
 
+  /// Pins or unpins several notes. Pinning is synced across devices, so the
+  /// note is marked as not synced and its [Memo.updatedAt] is refreshed.
+  Future<void> setPinnedMultiple(List<String> uuids, bool pinned) async {
+    final now = DateTime.now();
+    for (final id in uuids) {
+      var match = _memos.cast<Memo?>().firstWhere(
+        (m) => m?.uuid == id,
+        orElse: () => null,
+      );
+      // The note may not be in the stream yet (e.g. a brand-new note opened
+      // from the editor); fall back to the database.
+      match ??= await (_db.select(
+        _db.memos,
+      )..where((t) => t.uuid.equals(id))).getSingleOrNull();
+      if (match == null) continue;
+      final blocks = await _db.getBlocksForMemo(match.uuid);
+      await _db.saveMemoWithBlocks(
+        match.copyWith(isPinned: pinned, updatedAt: now, isSynced: false),
+        blocks,
+      );
+    }
+    _scheduleSync();
+  }
+
   Future<String> _localizedCopySuffix() async {
     // Suffix used when duplicating a note, localized by saved language preference.
     const suffixes = <String, String>{
@@ -622,6 +801,7 @@ class MemoProvider extends ChangeNotifier {
     final now = DateTime.now();
     final copySuffix = await _localizedCopySuffix();
     final List<Memo> targets = [];
+    var nextSortIndex = nextTopSortIndex();
 
     for (var id in uuids) {
       final match = _memos.cast<Memo?>().firstWhere(
@@ -639,13 +819,13 @@ class MemoProvider extends ChangeNotifier {
 
       final duplicatedMemo = memo.copyWith(
         uuid: newUuid,
-        title: memo.title.isNotEmpty
-            ? '${memo.title} $copySuffix'
-            : '',
+        title: memo.title.isNotEmpty ? '${memo.title} $copySuffix' : '',
         createdAt: now,
         updatedAt: now,
         isSynced: false,
         isDeleted: false,
+        isPinned: false,
+        sortIndex: nextSortIndex--,
       );
 
       final duplicatedBlocks = blocks

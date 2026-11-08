@@ -389,5 +389,15 @@
   "enableEncryptionTitle": "Ativar encriptação",
   "enableEncryptionMessage": "As notas locais serão encriptadas com a nova passphrase e reenviadas, substituindo as cópias remotas. As notas remotas serão descarregadas e desencriptadas.",
   "disableEncryptionTitle": "Desativar encriptação",
-  "disableEncryptionMessage": "As notas locais serão reenviadas SEM encriptação, substituindo as cópias remotas encriptadas. As notas remotas serão descarregadas e guardadas localmente."
+  "disableEncryptionMessage": "As notas locais serão reenviadas SEM encriptação, substituindo as cópias remotas encriptadas. As notas remotas serão descarregadas e guardadas localmente.",
+  "searchNotes": "Pesquisar notas…",
+  "noResults": "Sem resultados",
+  "sortBy": "Ordenar por",
+  "sortByUpdated": "Última alteração",
+  "sortByCreated": "Data de criação",
+  "sortByCustom": "Ordem personalizada",
+  "ascending": "Ascendente",
+  "descending": "Descendente",
+  "pin": "Fixar",
+  "unpin": "Desafixar"
 }

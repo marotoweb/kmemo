@@ -657,4 +657,34 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get disableEncryptionMessage =>
       'Le note locali verranno ricaricate SENZA crittografia, sostituendo le copie remote crittografate. Le note remote verranno scaricate e salvate localmente.';
+
+  @override
+  String get searchNotes => 'Cerca note…';
+
+  @override
+  String get noResults => 'Nessun risultato';
+
+  @override
+  String get sortBy => 'Ordina per';
+
+  @override
+  String get sortByUpdated => 'Ultima modifica';
+
+  @override
+  String get sortByCreated => 'Data di creazione';
+
+  @override
+  String get sortByCustom => 'Ordine personalizzato';
+
+  @override
+  String get ascending => 'Crescente';
+
+  @override
+  String get descending => 'Decrescente';
+
+  @override
+  String get pin => 'Fissa';
+
+  @override
+  String get unpin => 'Rimuovi fissaggio';
 }

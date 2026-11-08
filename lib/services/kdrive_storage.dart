@@ -794,6 +794,7 @@ class KDriveStorage extends StorageRepository {
         'linkAttachments': memo.linkAttachments,
         'isArchived': memo.isArchived,
         'isDeleted': memo.isDeleted,
+        'isPinned': memo.isPinned,
       },
       'blocks': blocks.map((b) {
         return {
@@ -1085,6 +1086,8 @@ class KDriveStorage extends StorageRepository {
         bgImageIndex: memoMap['bgImageIndex'] as int? ?? -1,
         isArchived: memoMap['isArchived'] as bool? ?? false,
         isDeleted: memoMap['isDeleted'] as bool? ?? false,
+        isPinned: memoMap['isPinned'] as bool? ?? false,
+        sortIndex: 0, // manual order is local to the device
         remoteFileId: memoMap['remoteFileId'] as String?,
         imageAttachments: memoMap['imageAttachments'] as String? ?? '[]',
         audioAttachments: memoMap['audioAttachments'] as String? ?? '[]',

@@ -656,4 +656,34 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get disableEncryptionMessage =>
       'Your local notes will be re-uploaded WITHOUT encryption, replacing the encrypted remote copies. Remote notes will be downloaded and stored locally.';
+
+  @override
+  String get searchNotes => 'Search notes…';
+
+  @override
+  String get noResults => 'No results';
+
+  @override
+  String get sortBy => 'Sort by';
+
+  @override
+  String get sortByUpdated => 'Last modified';
+
+  @override
+  String get sortByCreated => 'Creation date';
+
+  @override
+  String get sortByCustom => 'Custom order';
+
+  @override
+  String get ascending => 'Ascending';
+
+  @override
+  String get descending => 'Descending';
+
+  @override
+  String get pin => 'Pin';
+
+  @override
+  String get unpin => 'Unpin';
 }

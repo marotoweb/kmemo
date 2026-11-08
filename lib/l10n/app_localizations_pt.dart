@@ -657,4 +657,34 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get disableEncryptionMessage =>
       'As notas locais serão reenviadas SEM encriptação, substituindo as cópias remotas encriptadas. As notas remotas serão descarregadas e guardadas localmente.';
+
+  @override
+  String get searchNotes => 'Pesquisar notas…';
+
+  @override
+  String get noResults => 'Sem resultados';
+
+  @override
+  String get sortBy => 'Ordenar por';
+
+  @override
+  String get sortByUpdated => 'Última alteração';
+
+  @override
+  String get sortByCreated => 'Data de criação';
+
+  @override
+  String get sortByCustom => 'Ordem personalizada';
+
+  @override
+  String get ascending => 'Ascendente';
+
+  @override
+  String get descending => 'Descendente';
+
+  @override
+  String get pin => 'Fixar';
+
+  @override
+  String get unpin => 'Desafixar';
 }

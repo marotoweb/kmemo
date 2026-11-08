@@ -6,12 +6,15 @@ import 'package:provider/provider.dart';
 import 'database/database.dart';
 import 'providers/memo_provider.dart';
 import 'providers/theme_provider.dart';
+import 'models/background_images.dart';
 import 'services/kdrive_storage.dart';
 import 'ui/screens/home_screen.dart';
 import 'l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Discover bundled background images before the UI is built.
+  await loadNoteBackgroundImages();
   final database = AppDatabase();
   final storage = KDriveStorage();
   // Load saved configuration (token, drive) before creating the provider

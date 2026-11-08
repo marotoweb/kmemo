@@ -210,9 +210,6 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     Color(0xFFF5F5F5),
   ];
 
-  /// Background image numbers that exist in the bundle (bg_1.png, bg_2.png, …).
-  List<int> _bgImageNumbers = [];
-
   @override
   void initState() {
     super.initState();
@@ -224,26 +221,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
 
     // Fixed id for the text block when the note stays in running text mode
     _textBlockUuid = '${_currentMemo.uuid}_text_fixed';
-    _loadAvailableBgImages();
     _loadMemoData();
-  }
-
-  /// Probes `bg_1.png` … `bg_N.png` so adding a file to `assets/backgrounds/`
-  /// is enough for it to appear in the picker (no code change needed).
-  Future<void> _loadAvailableBgImages() async {
-    final bundle = DefaultAssetBundle.of(context);
-    final available = <int>[];
-    for (var n = 1; n <= kMaxBackgroundImageNumber; n++) {
-      try {
-        await bundle.load(noteBackgroundImagePath(n)!);
-        available.add(n);
-      } catch (_) {
-        // Image does not exist, skipping.
-      }
-    }
-    if (mounted) {
-      setState(() => _bgImageNumbers = available);
-    }
   }
 
   @override
@@ -806,10 +784,10 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
                           ),
-                      itemCount: _bgImageNumbers.length,
+                      itemCount: noteBackgroundNumbers.length,
                       // ignore: use_build_context_synchronously
                       itemBuilder: (context, i) {
-                        final number = _bgImageNumbers[i];
+                        final number = noteBackgroundNumbers[i];
                         final isBgSelected =
                             normalizedBackgroundImageIndex(
                               _currentMemo.bgImageIndex,
@@ -1149,13 +1127,26 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
             image: DecorationImage(
               image: AssetImage(bgImagePath),
               fit: BoxFit.cover,
+              // Darken the image so the light text stays readable.
+              colorFilter: ColorFilter.mode(
+                Colors.black.withValues(alpha: 0.38),
+                BlendMode.darken,
+              ),
             ),
           )
         : BoxDecoration(color: activeColorsPalette[_currentMemo.colorIndex]);
 
-    final textColor = isDarkMode ? Colors.white70 : Colors.black87;
-    final hintColor = isDarkMode ? Colors.white38 : Colors.black38;
-    final iconColor = isDarkMode ? Colors.white70 : Colors.black87;
+    // With a background image, the image is darkened by a scrim (see the
+    // decoration below) and the text is always light.
+    final textColor = bgImagePath != null
+        ? Colors.white70
+        : (isDarkMode ? Colors.white70 : Colors.black87);
+    final hintColor = bgImagePath != null
+        ? Colors.white38
+        : (isDarkMode ? Colors.white38 : Colors.black38);
+    final iconColor = bgImagePath != null
+        ? Colors.white70
+        : (isDarkMode ? Colors.white70 : Colors.black87);
     final footerBgColor = isDarkMode
         ? Color(0xFF1E1E1E).withValues(alpha: 0.9)
         : Colors.white.withValues(alpha: 0.9);
@@ -1224,11 +1215,27 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               },
             ),
           actions: [
-            // TODO: implement pinning note (pin)
-            // IconButton(
-            //   icon: Icon(Icons.push_pin_outlined, color: iconColor),
-            //   onPressed: () {},
-            // ),
+            IconButton(
+              tooltip: _currentMemo.isPinned
+                  ? AppLocalizations.of(context)!.unpin
+                  : AppLocalizations.of(context)!.pin,
+              icon: Icon(
+                _currentMemo.isPinned
+                    ? Icons.push_pin
+                    : Icons.push_pin_outlined,
+                color: iconColor,
+              ),
+              onPressed: () async {
+                final pinned = !_currentMemo.isPinned;
+                setState(() {
+                  _currentMemo = _currentMemo.copyWith(isPinned: pinned);
+                });
+                await context.read<MemoProvider>().setPinnedMultiple(
+                  [_currentMemo.uuid],
+                  pinned,
+                );
+              },
+            ),
             // TODO: implement notification/reminder (notification)
             // IconButton(
             //   icon: Icon(Icons.notification_add_outlined, color: iconColor),

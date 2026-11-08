@@ -1257,6 +1257,66 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'As notas locais serão reenviadas SEM encriptação, substituindo as cópias remotas encriptadas. As notas remotas serão descarregadas e guardadas localmente.'**
   String get disableEncryptionMessage;
+
+  /// No description provided for @searchNotes.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pesquisar notas…'**
+  String get searchNotes;
+
+  /// No description provided for @noResults.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem resultados'**
+  String get noResults;
+
+  /// No description provided for @sortBy.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ordenar por'**
+  String get sortBy;
+
+  /// No description provided for @sortByUpdated.
+  ///
+  /// In pt, this message translates to:
+  /// **'Última alteração'**
+  String get sortByUpdated;
+
+  /// No description provided for @sortByCreated.
+  ///
+  /// In pt, this message translates to:
+  /// **'Data de criação'**
+  String get sortByCreated;
+
+  /// No description provided for @sortByCustom.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ordem personalizada'**
+  String get sortByCustom;
+
+  /// No description provided for @ascending.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ascendente'**
+  String get ascending;
+
+  /// No description provided for @descending.
+  ///
+  /// In pt, this message translates to:
+  /// **'Descendente'**
+  String get descending;
+
+  /// No description provided for @pin.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fixar'**
+  String get pin;
+
+  /// No description provided for @unpin.
+  ///
+  /// In pt, this message translates to:
+  /// **'Desafixar'**
+  String get unpin;
 }
 
 class _AppLocalizationsDelegate
