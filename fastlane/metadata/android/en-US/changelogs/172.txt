@@ -1,7 +1,0 @@
-Sorting, search, pinned notes and drag & drop.
-
-- Sort notes by last modification, creation date or a custom order.
-- Search notes by title and content from the app bar.
-- Pin notes to keep them at the top (also in the widget).
-- Drag a single selected note to reorder it in custom-order mode.
-- New background images bg_2-bg_5; bg_1 converted to JPEG (smaller APK).

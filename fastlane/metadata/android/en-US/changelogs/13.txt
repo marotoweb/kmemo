@@ -1,7 +1,0 @@
-Reproducible build alignment.
-
-- Java 21 toolchain.
-- Packaging excludes for dexopt and Kotlin module metadata.
-- R8 and resource shrinking.
-- Block proprietary Google Play transitive dependencies.
-- Disable ArtProfile tasks for deterministic builds.

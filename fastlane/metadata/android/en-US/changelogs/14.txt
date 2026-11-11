@@ -1,9 +1,0 @@
-In-app update check and smaller APKs.
-
-- Settings → "Check for updates" queries the latest GitHub release and notifies the user if a newer version is available, downloading the APK matching the device architecture.
-- Release builds now produce per-architecture APKs (armeabi-v7a, arm64-v8a, x86_64), reducing download size from ~65 MB to ~22-26 MB.
-- kDrive folder listing now follows cursor-based pagination (fixes incomplete folder listings and first sync).
-- Widget refreshes immediately on settings changes (editor options, theme, language).
-- Sync completion snackbar now reports the number of synced notes.
-- Widget preview uses the real number of preview lines (up to 8).
-- Fixed settings bottom padding and status bar icon brightness.

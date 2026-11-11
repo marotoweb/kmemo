@@ -1,4 +1,0 @@
-Release signing fix.
-
-- Sign release APKs with the release keystore instead of the debug key.
-- Keeps the reproducible build alignment from 0.1.9.

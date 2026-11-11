@@ -1,6 +1,0 @@
-Privacy and sync fixes.
-
-- Link preview images are cached locally and rendered offline; toggling "Show link previews" no longer triggers network requests.
-- Sync progress stays visible at the bottom while scrolling.
-- Clearer confirmation when enabling/disabling encryption (explains local/remote effects).
-- Link "Preview" menu action hidden when link previews are disabled.
