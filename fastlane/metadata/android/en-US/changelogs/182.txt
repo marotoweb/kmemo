@@ -1,0 +1,8 @@
+Swipe actions, widget fixes, smoother lists.
+
+- Swipe right to archive, left to move to trash (both with Undo).
+- Swipes only act after a near-complete drag, so quick swipes no longer archive by accident.
+- Fixed a note reopening on every start after opening it from the widget.
+- Fixed long-press selection and accidental selection while scrolling.
+- Smoother list: previews come from memory, not a query per card.
+- Widget: no scroll jumps; new transparency sliders in Settings.
