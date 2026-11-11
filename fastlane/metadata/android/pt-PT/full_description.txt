@@ -1,0 +1,16 @@
+O kMemo é uma aplicação de notas por blocos que funciona offline, criada em Flutter com SQLite local (Drift).
+
+As notas são compostas por blocos de texto e listas de verificação independentes, para reunir ideias, tarefas e notas longas no mesmo lugar. A aplicação funciona totalmente offline: cada nota é guardada localmente no teu dispositivo.
+
+Funcionalidades:
+- Editor por blocos com blocos de texto e de lista de verificação.
+- Temas claro, escuro e do sistema, com cores personalizadas por nota.
+- Arquivo e lixo, com restauro e eliminação permanente.
+- Widget de ecrã principal (Android) com as notas mais recentes.
+- Sincronização remota opcional com o kDrive (Infomaniak), incluindo encriptação AES-256 opcional no cliente.
+- Pré-visualizações de links (Open Graph) apenas quando as pedes; nada é obtido automaticamente.
+- Exportação para .docx e partilha de notas pela folha de partilha do sistema.
+- Seis idiomas: português, inglês, francês, alemão, italiano e espanhol.
+- Sem telemetria e sem publicidade.
+
+O kMemo não está afiliado, apoiado ou patrocinado pela Infomaniak. O kDrive é uma marca registada da Infomaniak.
