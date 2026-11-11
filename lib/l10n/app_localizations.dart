@@ -1317,6 +1317,30 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Desafixar'**
   String get unpin;
+
+  /// No description provided for @widget.
+  ///
+  /// In pt, this message translates to:
+  /// **'WIDGETS'**
+  String get widget;
+
+  /// No description provided for @widgetBackgroundTransparency.
+  ///
+  /// In pt, this message translates to:
+  /// **'Transparência do fundo do widget'**
+  String get widgetBackgroundTransparency;
+
+  /// No description provided for @widgetCardTransparency.
+  ///
+  /// In pt, this message translates to:
+  /// **'Transparência dos cards'**
+  String get widgetCardTransparency;
+
+  /// No description provided for @transparencyPercent.
+  ///
+  /// In pt, this message translates to:
+  /// **'{value}%'**
+  String transparencyPercent(int value);
 }
 
 class _AppLocalizationsDelegate

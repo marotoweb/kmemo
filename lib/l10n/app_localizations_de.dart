@@ -690,4 +690,19 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get unpin => 'Loslösen';
+
+  @override
+  String get widget => 'WIDGETS';
+
+  @override
+  String get widgetBackgroundTransparency =>
+      'Transparenz des Widget-Hintergrunds';
+
+  @override
+  String get widgetCardTransparency => 'Transparenz der Karten';
+
+  @override
+  String transparencyPercent(int value) {
+    return '$value %';
+  }
 }

@@ -49,38 +49,81 @@ class LinkPreviewService {
   /// v1: raw HTML-encoded text. v2: decoded entities. v3: adds local image file.
   static const int _cacheVersion = 3;
 
+  // In-memory caches warmed by [preload]. Cards read them synchronously so a
+  // preview never appears after the card was laid out (which made the list
+  // jump while scrolling).
+  static final Map<String, LinkPreview> _previewCache = {};
+  static final Map<String, Set<String>> _removedCache = {};
+  static bool _preloaded = false;
+
+  /// Loads every cached preview and removed-URL set into memory once, at
+  /// startup, so card builds never wait on SharedPreferences.
+  static Future<void> preload() async {
+    if (_preloaded) return;
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in prefs.getKeys()) {
+      if (key.startsWith('link_preview_')) {
+        final raw = prefs.getString(key);
+        if (raw == null) continue;
+        final preview = _decodePreview(null, raw);
+        if (preview != null) _previewCache[key] = preview;
+      } else if (key.startsWith('link_removed_')) {
+        final memoUuid = key.substring('link_removed_'.length);
+        _removedCache[memoUuid] = (prefs.getStringList(key) ?? []).toSet();
+      }
+    }
+    _preloaded = true;
+  }
+
+  /// Synchronous preview lookup for widget builds. Returns null until
+  /// [preload] has run or the preview was fetched in this session.
+  static LinkPreview? cachedPreviewSync(String url) => _previewCache[_cacheKey(url)];
+
+  /// Synchronous removed-URL check for widget builds.
+  static bool isRemovedSync(String memoUuid, String url) =>
+      _removedCache[memoUuid]?.contains(url) ?? false;
+
+  static LinkPreview? _decodePreview(String? fallbackUrl, String raw) {
+    try {
+      final j = jsonDecode(raw) as Map<String, dynamic>;
+      // Older cache entries stored raw HTML-encoded text; decode them on read
+      // so existing previews are fixed without a new network request.
+      final needsDecode = (j['v'] as int? ?? 1) < 2;
+      String decode(String value) =>
+          needsDecode ? decodeHtmlEntities(value) : value;
+      final cachedImage = j['image'] as String?;
+      final cachedImagePath = j['imagePath'] as String?;
+      final fallback = fallbackUrl ?? '';
+      return LinkPreview(
+        title: decode(j['title'] as String? ?? fallback),
+        imageUrl: cachedImage == null ? null : decode(cachedImage),
+        siteName: decode(
+          j['site'] as String? ??
+              Uri.tryParse(fallback)?.host ??
+              fallback,
+        ),
+        localImagePath:
+            (cachedImagePath != null && cachedImagePath.isNotEmpty)
+            ? cachedImagePath
+            : null,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Returns the cached preview for [url], or null if none was saved.
   /// Only local cache is read; no network requests are made.
   static Future<LinkPreview?> loadCached(String url) async {
+    final key = _cacheKey(url);
+    final cached = _previewCache[key];
+    if (cached != null) return cached;
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_cacheKey(url));
+    final raw = prefs.getString(key);
     if (raw == null) return null;
-    final j = jsonDecode(raw) as Map<String, dynamic>;
-    // Older cache entries stored raw HTML-encoded text; decode them on read so
-    // existing previews are fixed without a new network request.
-    final needsDecode = (j['v'] as int? ?? 1) < 2;
-    String decode(String value) =>
-        needsDecode ? decodeHtmlEntities(value) : value;
-    final cachedImage = j['image'] as String?;
-    final cachedImagePath = j['imagePath'] as String?;
-    String? localImagePath;
-    if (cachedImagePath != null && cachedImagePath.isNotEmpty) {
-      try {
-        if (await File(cachedImagePath).exists()) {
-          localImagePath = cachedImagePath;
-        }
-      } catch (_) {
-        // Missing/inaccessible file: show placeholder, never fetch from network.
-      }
-    }
-    return LinkPreview(
-      title: decode(j['title'] as String? ?? url),
-      imageUrl: cachedImage == null ? null : decode(cachedImage),
-      siteName: decode(
-        j['site'] as String? ?? Uri.tryParse(url)?.host ?? url,
-      ),
-      localImagePath: localImagePath,
-    );
+    final preview = _decodePreview(url, raw);
+    if (preview != null) _previewCache[key] = preview;
+    return preview;
   }
 
   /// Downloads metadata for [url] (Open Graph), caches it and returns it.
@@ -127,6 +170,8 @@ class LinkPreviewService {
       siteName: site,
       localImagePath: localImagePath,
     );
+    // Make the new preview available to the next synchronous card build.
+    _previewCache[_cacheKey(url)] = preview;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       _cacheKey(url),
@@ -262,11 +307,20 @@ class LinkPreviewService {
 
   /// URLs the user removed the preview card for, per note.
   static Future<Set<String>> loadRemoved(String memoUuid) async {
+    final cached = _removedCache[memoUuid];
+    if (cached != null) return cached;
     final prefs = await SharedPreferences.getInstance();
-    return (prefs.getStringList(_removedKey(memoUuid)) ?? []).toSet();
+    final removed = (prefs.getStringList(_removedKey(memoUuid)) ?? []).toSet();
+    _removedCache[memoUuid] = removed;
+    return removed;
   }
 
   static Future<void> saveRemoved(String memoUuid, Set<String> urls) async {
+    if (urls.isEmpty) {
+      _removedCache.remove(memoUuid);
+    } else {
+      _removedCache[memoUuid] = Set<String>.from(urls);
+    }
     final prefs = await SharedPreferences.getInstance();
     if (urls.isEmpty) {
       await prefs.remove(_removedKey(memoUuid));

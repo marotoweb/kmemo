@@ -2,7 +2,6 @@
 
 import 'dart:async';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -16,6 +15,8 @@ import '../../models/home_sort.dart';
 import '../../models/note_palette.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
+import '../widgets/app_snackbar.dart';
+import '../widgets/swipe_action_card.dart';
 import '../../services/docx_export_service.dart';
 import '../../services/kdrive_storage.dart';
 import '../../services/widget_service.dart';
@@ -49,11 +50,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Timer? _searchDebounce;
 
   // Hybrid gesture (reorder-allowed view): long-press + drag reorders;
-  // long-press + release without dragging toggles multi-selection.
-  int? _pressPointer;
-  DateTime? _pressDownTime;
-  String? _pressUuid;
-  bool _reorderFiredForPress = false;
+  // long-press + release without moving toggles multi-selection.
+  //
+  // The selection is detected from the reorder callbacks instead of the card
+  // itself: once the delayed drag starts, the card widget is unmounted, so a
+  // Listener on the card never sees the pointer up. onReorderStart only fires
+  // for a long-press (never for a scroll), and onReorderEnd reports the drop
+  // index, which stays equal to the start index when the finger did not move.
+  int? _dragStartIndex;
 
   @override
   void didChangeDependencies() {
@@ -71,6 +75,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Apply any widget reload deferred before the first frame (the app may
+      // still have been reported as backgrounded while starting).
+      if (mounted) {
+        Provider.of<MemoProvider>(context, listen: false).refreshWidget();
+      }
       // Prioritize shared text over pending widget note to avoid overlapping navigation.
       final prefs = await SharedPreferences.getInstance();
       final sharedText = prefs.getString('kmemo.shared_text');
@@ -116,7 +125,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
     _isOpeningNote = true;
+    // Resolve the database before awaiting: the context must not be used
+    // across an async gap.
     final db = Provider.of<AppDatabase>(context, listen: false);
+    // Consume the pending record as soon as the note is opened: it must not
+    // survive the session, otherwise the next app start reopens this note.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('flutter.clicked_note_uuid', '');
     final memo = await (db.select(
       db.memos,
     )..where((t) => t.uuid.equals(uuid))).getSingleOrNull();
@@ -431,6 +446,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // the app returned to foreground (e.g. when clicking the widget while already open)
       _checkWidgetLaunch();
       _checkSharedText();
+      // Apply any widget reload that was deferred while the app was in the
+      // background (it is deferred to avoid resetting the widget scroll).
+      Provider.of<MemoProvider>(context, listen: false).refreshWidget();
     }
   }
 
@@ -637,8 +655,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     int oldIndex,
     int newIndex,
   ) async {
-    _reorderFiredForPress = true;
-
     // Automatically switch to custom order when the user drags in any other
     // sort mode (seeds the current order so nothing jumps).
     if (provider.sortMode != HomeSortMode.custom) {
@@ -662,8 +678,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _clearSelection();
     await provider.reorderActiveMemos(list.map((m) => m.uuid).toList());
   }
-
-
 
   List<Memo> _selectedMemos(MemoProvider provider) {
     final selected = <Memo>[];
@@ -721,13 +735,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (!storage.isConfigured) {
       final navigator = Navigator.of(context);
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.kdriveNotConfigured),
-          action: SnackBarAction(
-            label: l10n.settings,
-            onPressed: () => navigator.push(
-              MaterialPageRoute(builder: (_) => SyncSettingsScreen()),
-            ),
+        buildAppSnackBar(
+          context,
+          message: l10n.kdriveNotConfigured,
+          actionLabel: l10n.settings,
+          onAction: () => navigator.push(
+            MaterialPageRoute(builder: (_) => SyncSettingsScreen()),
           ),
         ),
       );
@@ -757,16 +770,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await storage.uploadMemoBytes(fileName: fileName, bytes: docxBytes);
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.copiedToKdrive),
+        buildAppSnackBar(
+          context,
+          message: l10n.copiedToKdrive,
           duration: const Duration(seconds: 3),
         ),
       );
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(
-          content: Text('${l10n.copyToKdriveFailed}: $e'),
+        buildAppSnackBar(
+          context,
+          message: '${l10n.copyToKdriveFailed}: $e',
           duration: const Duration(seconds: 5),
         ),
       );
@@ -991,6 +1006,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         itemCount: items.length,
         onReorder: (oldIndex, newIndex) =>
             _handleReorder(provider, items, oldIndex, newIndex),
+        // A long-press that never moves the card ends with the same drop
+        // index, so treat it as a multi-selection toggle. A real reorder
+        // changes the index and is handled by onReorder.
+        onReorderStart: (index) {
+          _dragStartIndex = index;
+        },
+        onReorderEnd: (index) {
+          final startIndex = _dragStartIndex;
+          _dragStartIndex = null;
+          if (startIndex == null || startIndex != index) return;
+          if (startIndex < items.length) {
+            _toggleSelection(items[startIndex].uuid);
+          }
+        },
         // The default proxy wraps the dragged item in a rectangular Material,
         // which shows as a dark box behind the rounded card. Keep the lift
         // animation but make the proxy transparent so the card shape wins.
@@ -1001,10 +1030,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               final t = Curves.easeInOut.transform(animation.value);
               return Transform.scale(
                 scale: 1 + 0.02 * t,
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: child,
-                ),
+                child: Material(type: MaterialType.transparency, child: child),
               );
             },
             child: child,
@@ -1022,6 +1048,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Colored background revealed while a card is swiped away. The icon stays
+  /// on [alignment], the side the card is dragged away from.
+  Widget _buildSwipeBackground({
+    required bool isDarkMode,
+    required IconData icon,
+    required Color color,
+    required Alignment alignment,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+      alignment: alignment,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, color: isDarkMode ? Colors.white70 : Colors.black87),
+    );
+  }
+
   Widget _buildMemoItem(
     MemoProvider provider,
     Memo memo,
@@ -1032,125 +1078,93 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }) {
     final isSelected = _selectedUuids.contains(memo.uuid);
 
-    Widget card = Stack(
-      alignment: Alignment.center,
-      children: [
-        Positioned.fill(
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-            alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.only(left: 20),
-            decoration: BoxDecoration(
-              color: isDarkMode ? const Color(0xFF3B2E1E) : Colors.amber,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.archive,
-              color: isDarkMode ? Colors.white70 : Colors.black87,
-            ),
-          ),
-        ),
-        Dismissible(
-          key: Key(memo.uuid),
-          direction: DismissDirection.startToEnd,
-          background: const SizedBox.shrink(),
-          onDismissed: (direction) async {
-            final uuidToArchive = memo.uuid;
-            final l10n = AppLocalizations.of(context)!;
-            final scaffoldMessenger = ScaffoldMessenger.of(context);
+    Widget card = SwipeActionCard(
+      dismissKey: Key(memo.uuid),
+      // Right archives, left moves the note to the trash. Both directions
+      // require a near-complete swipe (see SwipeActionCard).
+      direction: DismissDirection.horizontal,
+      background: _buildSwipeBackground(
+        isDarkMode: isDarkMode,
+        icon: Icons.archive,
+        color: isDarkMode ? const Color(0xFF3B2E1E) : Colors.amber,
+        alignment: Alignment.centerLeft,
+      ),
+      secondaryBackground: _buildSwipeBackground(
+        isDarkMode: isDarkMode,
+        icon: Icons.delete_outline,
+        color: isDarkMode ? const Color(0xFF4A1E1E) : Colors.red.shade200,
+        alignment: Alignment.centerRight,
+      ),
+      onDismissed: (direction) async {
+        final uuid = memo.uuid;
+        final l10n = AppLocalizations.of(context)!;
+        final scaffoldMessenger = ScaffoldMessenger.of(context);
+        final isArchive = direction == DismissDirection.startToEnd;
 
-            await provider.archiveMemoStatus(uuidToArchive, true);
+        if (isArchive) {
+          await provider.archiveMemoStatus(uuid, true);
+        } else {
+          await provider.deleteMemo(uuid);
+        }
 
-            if (!mounted) return;
+        if (!mounted) return;
 
-            scaffoldMessenger.hideCurrentSnackBar();
+        scaffoldMessenger.hideCurrentSnackBar();
 
-            final snackBarController = scaffoldMessenger.showSnackBar(
-              SnackBar(
-                content: Text(l10n.noteArchived),
-                duration: const Duration(seconds: 8),
-                action: SnackBarAction(
-                  label: l10n.undo,
-                  textColor: Colors.amberAccent,
-                  onPressed: () async {
-                    scaffoldMessenger.hideCurrentSnackBar();
-                    await provider.archiveMemoStatus(uuidToArchive, false);
-                  },
-                ),
-              ),
-            );
-
-            Future.delayed(const Duration(seconds: 8), () {
-              try {
-                snackBarController.close();
-              } catch (_) {}
-            });
-          },
-          child: MemoCard(
-            memo: memo,
-            isSelected: isSelected,
-            searchQuery: _isSearching ? _searchQuery : '',
-            // In the reorder view, long-press + drag reorders and a
-            // long-press released without dragging toggles selection.
-            onLongPress: reorderableView ? null : () => _toggleSelection(memo.uuid),
-            onTap: () {
-              if (isSelectionMode) {
-                _toggleSelection(memo.uuid);
+        final snackBarController = scaffoldMessenger.showSnackBar(
+          buildAppSnackBar(
+            context,
+            message: isArchive ? l10n.noteArchived : l10n.noteSentToTrash,
+            duration: const Duration(seconds: 8),
+            actionLabel: l10n.undo,
+            onAction: () async {
+              scaffoldMessenger.hideCurrentSnackBar();
+              if (isArchive) {
+                await provider.archiveMemoStatus(uuid, false);
               } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => MemoDetailScreen(memo: memo),
-                  ),
-                ).then((_) {
-                  if (mounted) setState(() {});
-                });
+                await provider.restoreMultiple([uuid]);
               }
             },
           ),
-        ),
-      ],
+        );
+
+        Future.delayed(const Duration(seconds: 8), () {
+          try {
+            snackBarController.close();
+          } catch (_) {}
+        });
+      },
+      child: MemoCard(
+        memo: memo,
+        isSelected: isSelected,
+        searchQuery: _isSearching ? _searchQuery : '',
+        // In the reorder view, long-press + drag reorders and a
+        // long-press released without dragging toggles selection.
+        onLongPress: reorderableView ? null : () => _toggleSelection(memo.uuid),
+        onTap: () {
+          if (isSelectionMode) {
+            _toggleSelection(memo.uuid);
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MemoDetailScreen(memo: memo),
+              ),
+            ).then((_) {
+              if (mounted) setState(() {});
+            });
+          }
+        },
+      ),
     );
 
     if (reorderableView) {
-      card = Listener(
-        behavior: HitTestBehavior.translucent,
-        onPointerDown: (event) {
-          _pressPointer = event.pointer;
-          _pressDownTime = DateTime.now();
-          _pressUuid = memo.uuid;
-          _reorderFiredForPress = false;
-        },
-        onPointerUp: (event) {
-          if (_pressPointer != event.pointer) return;
-          final down = _pressDownTime;
-          final uuid = _pressUuid;
-          final didReorder = _reorderFiredForPress;
-          _pressPointer = null;
-          _pressDownTime = null;
-          _pressUuid = null;
-          _reorderFiredForPress = false;
-          if (uuid == null || down == null || didReorder) return;
-          // A long-press released without dragging prepares multi-selection.
-          final elapsed = DateTime.now().difference(down);
-          if (elapsed >= kLongPressTimeout) {
-            _toggleSelection(uuid);
-          }
-        },
-        onPointerCancel: (event) {
-          if (_pressPointer == event.pointer) {
-            _pressPointer = null;
-            _pressDownTime = null;
-            _pressUuid = null;
-            _reorderFiredForPress = false;
-          }
-        },
-        // Always enabled: long-press + drag starts a reorder (1 gesture).
-        child: ReorderableDelayedDragStartListener(
-          index: index,
-          enabled: true,
-          child: card,
-        ),
+      // Always enabled: long-press + drag starts a reorder (1 gesture).
+      // Selection comes from the list-level onReorderStart/onReorderEnd.
+      card = ReorderableDelayedDragStartListener(
+        index: index,
+        enabled: true,
+        child: card,
       );
     }
 
@@ -1239,32 +1253,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
                         final snackBarController = scaffoldMessenger
                             .showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  uuidsToArchive.length > 1
-                                      ? AppLocalizations.of(
-                                          context,
-                                        )!.notesArchivedCount(
-                                          '${uuidsToArchive.length}',
-                                        )
-                                      : AppLocalizations.of(
-                                          context,
-                                        )!.noteArchived,
-                                ),
+                              buildAppSnackBar(
+                                context,
+                                message: uuidsToArchive.length > 1
+                                    ? AppLocalizations.of(
+                                        context,
+                                      )!.notesArchivedCount(
+                                        '${uuidsToArchive.length}',
+                                      )
+                                    : AppLocalizations.of(
+                                        context,
+                                      )!.noteArchived,
                                 duration: Duration(seconds: 8),
-                                action: SnackBarAction(
-                                  label: AppLocalizations.of(context)!.undo,
-                                  textColor: Colors.amberAccent,
-                                  onPressed: () async {
-                                    scaffoldMessenger.hideCurrentSnackBar();
-                                    for (var uuid in uuidsToArchive) {
-                                      await memoProvider.archiveMemoStatus(
-                                        uuid,
-                                        false,
-                                      );
-                                    }
-                                  },
-                                ),
+                                actionLabel: AppLocalizations.of(context)!.undo,
+                                onAction: () async {
+                                  scaffoldMessenger.hideCurrentSnackBar();
+                                  for (var uuid in uuidsToArchive) {
+                                    await memoProvider.archiveMemoStatus(
+                                      uuid,
+                                      false,
+                                    );
+                                  }
+                                },
                               ),
                             );
 
@@ -1286,29 +1296,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
                         final snackBarController = scaffoldMessenger
                             .showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  uuidsToDelete.length > 1
-                                      ? AppLocalizations.of(
-                                          context,
-                                        )!.notesSentToTrashCount(
-                                          '${uuidsToDelete.length}',
-                                        )
-                                      : AppLocalizations.of(
-                                          context,
-                                        )!.noteSentToTrash,
-                                ),
+                              buildAppSnackBar(
+                                context,
+                                message: uuidsToDelete.length > 1
+                                    ? AppLocalizations.of(
+                                        context,
+                                      )!.notesSentToTrashCount(
+                                        '${uuidsToDelete.length}',
+                                      )
+                                    : AppLocalizations.of(
+                                        context,
+                                      )!.noteSentToTrash,
                                 duration: Duration(seconds: 8),
-                                action: SnackBarAction(
-                                  label: AppLocalizations.of(context)!.undo,
-                                  textColor: Colors.amberAccent,
-                                  onPressed: () async {
-                                    scaffoldMessenger.hideCurrentSnackBar();
-                                    await memoProvider.restoreMultiple(
-                                      uuidsToDelete,
-                                    );
-                                  },
-                                ),
+                                actionLabel: AppLocalizations.of(context)!.undo,
+                                onAction: () async {
+                                  scaffoldMessenger.hideCurrentSnackBar();
+                                  await memoProvider.restoreMultiple(
+                                    uuidsToDelete,
+                                  );
+                                },
                               ),
                             );
 

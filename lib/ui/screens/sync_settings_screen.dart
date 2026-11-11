@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
 import '../../services/kdrive_storage.dart';
+import '../widgets/app_snackbar.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
 class SyncSettingsScreen extends StatefulWidget {
@@ -274,9 +275,10 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         setState(() => _isSyncing = false);
         if (decryptionFailures > 0) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(context)!.syncPartialFailure('$decryptionFailures'),
+            buildAppSnackBar(
+              context,
+              message: AppLocalizations.of(context)!.syncPartialFailure(
+                '$decryptionFailures',
               ),
               backgroundColor: Colors.orange,
               duration: Duration(seconds: 8),
@@ -288,9 +290,10 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
             listen: false,
           ).lastSyncNoteCount;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                AppLocalizations.of(context)!.syncCompletedWithCount(synced),
+            buildAppSnackBar(
+              context,
+              message: AppLocalizations.of(context)!.syncCompletedWithCount(
+                synced,
               ),
               backgroundColor: Colors.green,
             ),
@@ -378,7 +381,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      buildAppSnackBar(
+        context,
+        message: message,
+        backgroundColor: Colors.red,
+      ),
     );
   }
 
@@ -637,14 +644,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                           ),
                           trailing: Switch(
                             value: _encryptionEnabled,
-                            activeThumbColor: isDarkMode
-                                ? Colors.amber.shade300
-                                : Colors.amber.shade700,
-                            activeTrackColor:
-                                (isDarkMode
-                                        ? Colors.amber.shade300
-                                        : Colors.amber.shade700)
-                                    .withValues(alpha: 0.5),
+                            // Uses the theme primary (vivid amber) so the
+                            // toggle matches every other control in both
+                            // light and dark mode.
                             onChanged: _isSyncing
                                 ? null
                                 : (value) async {
@@ -1088,8 +1090,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                 final name = controller.text.trim();
                 if (name.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(AppLocalizations.of(context)!.enterFolderName),
+                    buildAppSnackBar(
+                      context,
+                      message: AppLocalizations.of(context)!.enterFolderName,
                       backgroundColor: Colors.red,
                     ),
                   );
@@ -1118,8 +1121,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                     await _saveCurrentConfig();
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(AppLocalizations.of(context)!.folderCreatedSuccessfully),
+                        buildAppSnackBar(
+                          context,
+                          message: AppLocalizations.of(context)!.folderCreatedSuccessfully,
                           backgroundColor: Colors.green,
                         ),
                       );
@@ -1523,8 +1527,9 @@ class _PassphraseDialogState extends State<_PassphraseDialog> {
           onPressed: () {
             if (widget.passphraseController.text.isEmpty) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(AppLocalizations.of(context)!.enterPassphrase),
+                buildAppSnackBar(
+                  context,
+                  message: AppLocalizations.of(context)!.enterPassphrase,
                   backgroundColor: Colors.red,
                 ),
               );
@@ -1532,8 +1537,9 @@ class _PassphraseDialogState extends State<_PassphraseDialog> {
             }
             if (widget.passphraseController.text != _confirmController.text) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(AppLocalizations.of(context)!.passphrasesDoNotMatch),
+                buildAppSnackBar(
+                  context,
+                  message: AppLocalizations.of(context)!.passphrasesDoNotMatch,
                   backgroundColor: Colors.red,
                 ),
               );

@@ -225,5 +225,9 @@
   "ascending": "Croissant",
   "descending": "Décroissant",
   "pin": "Épingler",
-  "unpin": "Désépingler"
+  "unpin": "Désépingler",
+  "widget": "WIDGETS",
+  "widgetBackgroundTransparency": "Transparence du fond du widget",
+  "widgetCardTransparency": "Transparence des cartes",
+  "transparencyPercent": "{value} %"
 }

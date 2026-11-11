@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Transparent rounded outline used only to clip the widget content to the same
+  rounded corners as widget_background.xml. The visible window background is
+  drawn by the widget_window_bg ImageView, whose alpha is set from Settings.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="24dp" />
+    <solid android:color="@android:color/transparent" />
+</shape>

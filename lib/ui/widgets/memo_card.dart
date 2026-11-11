@@ -87,6 +87,21 @@ class MemoCard extends StatelessWidget {
       images = List<String>.from(jsonDecode(memo.imageAttachments));
     } catch (_) {}
 
+    // Blocks come from the provider's warmed cache, so scrolling never
+    // triggers a SQLite query and the card height stays stable.
+    final blocks =
+        context.read<MemoProvider>().cachedBlocksFor(memo.uuid) ??
+        const <Block>[];
+    final memoText = blocks
+        .map((b) => b.content['text']?.toString() ?? '')
+        .join('\n');
+
+    // Previews are read synchronously from the preloaded cache, so the card
+    // never grows after layout (which caused scroll jumps).
+    final linkPreview = showLinkPreviews
+        ? _firstCachedPreview(memo.uuid, memoText)
+        : null;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
@@ -177,15 +192,11 @@ class MemoCard extends StatelessWidget {
                         ),
                         SizedBox(height: 6),
                       ],
-                      FutureBuilder<List<Block>>(
-                        future: context.read<MemoProvider>().loadBlocks(
-                          memo.uuid,
-                        ),
-                        builder: (context, snapshot) {
-                          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      Builder(
+                        builder: (context) {
+                          if (blocks.isEmpty) {
                             return SizedBox.shrink();
                           }
-                          final blocks = snapshot.data!;
                           final isChecklist = blocks.any(
                             (b) => b.type == BlockType.checklist,
                           );
@@ -295,9 +306,9 @@ class MemoCard extends StatelessWidget {
                           }
                         },
                       ),
-                      if (showLinkPreviews)
+                      if (linkPreview != null)
                         _CardLinkPreview(
-                          memoUuid: memo.uuid,
+                          preview: linkPreview,
                           textColor: textColor,
                           subtitleColor: subtitleColor,
                         ),
@@ -346,34 +357,30 @@ class MemoCard extends StatelessWidget {
   String _formatDate(DateTime date) {
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
+
+  /// First cached preview that was not removed by the user, read synchronously.
+  LinkPreview? _firstCachedPreview(String memoUuid, String text) {
+    for (final url in LinkPreviewService.extractUrls(text)) {
+      if (LinkPreviewService.isRemovedSync(memoUuid, url)) continue;
+      final preview = LinkPreviewService.cachedPreviewSync(url);
+      if (preview != null) return preview;
+    }
+    return null;
+  }
 }
 
 /// Shows the first cached link preview of a note at the bottom of its card.
 /// Reads local cache only; no network requests are made here.
 class _CardLinkPreview extends StatelessWidget {
-  final String memoUuid;
+  final LinkPreview preview;
   final Color textColor;
   final Color subtitleColor;
 
   const _CardLinkPreview({
-    required this.memoUuid,
+    required this.preview,
     required this.textColor,
     required this.subtitleColor,
   });
-
-  Future<LinkPreview?> _load(BuildContext context) async {
-    final blocks = await context.read<MemoProvider>().loadBlocks(memoUuid);
-    final text = blocks
-        .map((b) => b.content['text']?.toString() ?? '')
-        .join('\n');
-    final removed = await LinkPreviewService.loadRemoved(memoUuid);
-    for (final url in LinkPreviewService.extractUrls(text)) {
-      if (removed.contains(url)) continue;
-      final preview = await LinkPreviewService.loadCached(url);
-      if (preview != null) return preview;
-    }
-    return null;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -381,69 +388,63 @@ class _CardLinkPreview extends StatelessWidget {
     final placeholderColor = isDarkMode
         ? Colors.grey.shade800
         : Colors.grey.shade200;
-    return FutureBuilder<LinkPreview?>(
-      future: _load(context),
-      builder: (context, snapshot) {
-        final preview = snapshot.data;
-        if (preview == null) return SizedBox.shrink();
-        return Padding(
-          padding: EdgeInsets.only(bottom: 6.0),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: preview.localImagePath != null
-                    ? Image.file(
-                        File(preview.localImagePath!),
-                        width: 40,
-                        height: 40,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          width: 40,
-                          height: 40,
-                          color: placeholderColor,
-                          child: Icon(
-                            Icons.link,
-                            size: 18,
-                            color: subtitleColor,
-                          ),
-                        ),
-                      )
-                    : Container(
-                        width: 40,
-                        height: 40,
-                        color: placeholderColor,
-                        child: Icon(Icons.link, size: 18, color: subtitleColor),
+    return Padding(
+      padding: EdgeInsets.only(bottom: 6.0),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: preview.localImagePath != null
+                ? Image.file(
+                    File(preview.localImagePath!),
+                    width: 40,
+                    height: 40,
+                    cacheWidth: 80,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 40,
+                      height: 40,
+                      color: placeholderColor,
+                      child: Icon(
+                        Icons.link,
+                        size: 18,
+                        color: subtitleColor,
                       ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      preview.title,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    Text(
-                      preview.siteName,
-                      style: TextStyle(fontSize: 11, color: subtitleColor),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                  )
+                : Container(
+                    width: 40,
+                    height: 40,
+                    color: placeholderColor,
+                    child: Icon(Icons.link, size: 18, color: subtitleColor),
+                  ),
           ),
-        );
-      },
+          SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  preview.title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  preview.siteName,
+                  style: TextStyle(fontSize: 11, color: subtitleColor),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

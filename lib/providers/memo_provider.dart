@@ -20,6 +20,11 @@ class MemoProvider extends ChangeNotifier {
   final _uuid = const Uuid();
   Timer? _syncDebounce;
 
+  // Preview cache: blocks grouped by memo uuid, warmed on every memo-list
+  // change so cards can render synchronously instead of querying SQLite on
+  // each build (which caused jank and height jumps while scrolling).
+  final Map<String, List<Block>> _blocksByMemo = {};
+
   // Home ordering preferences (persisted in SharedPreferences).
   HomeSortMode _sortMode = HomeSortMode.updated;
   bool _sortAscending = false;
@@ -185,6 +190,7 @@ class MemoProvider extends ChangeNotifier {
         _isLoading = false;
         notifyListeners();
         _updateWidgetData();
+        _refreshBlocksCache();
       },
       onError: (_) {
         _isLoading = false;
@@ -192,6 +198,28 @@ class MemoProvider extends ChangeNotifier {
       },
     );
   }
+
+  /// Rebuilds the block preview cache in a single query. Called whenever the
+  /// memo list changes (add, edit, archive, delete, sync), never while the
+  /// user is scrolling, so card builds stay synchronous.
+  Future<void> _refreshBlocksCache() async {
+    try {
+      final blocks = await _db.getAllBlocks();
+      final grouped = <String, List<Block>>{};
+      for (final block in blocks) {
+        grouped.putIfAbsent(block.memoUuid, () => []).add(block);
+      }
+      _blocksByMemo
+        ..clear()
+        ..addAll(grouped);
+      notifyListeners();
+    } catch (_) {
+      // Keep the previous cache if the query fails.
+    }
+  }
+
+  /// Blocks for [memoUuid] if already cached, or null when not loaded yet.
+  List<Block>? cachedBlocksFor(String memoUuid) => _blocksByMemo[memoUuid];
 
   Future<Memo> createNewMemo() async {
     final now = DateTime.now();
@@ -233,7 +261,11 @@ class MemoProvider extends ChangeNotifier {
   }
 
   Future<List<Block>> loadBlocks(String memoUuid) async {
-    return await _db.getBlocksForMemo(memoUuid);
+    final cached = _blocksByMemo[memoUuid];
+    if (cached != null) return cached;
+    final blocks = await _db.getBlocksForMemo(memoUuid);
+    _blocksByMemo[memoUuid] = blocks;
+    return blocks;
   }
 
   Future<List<Block>> saveMemo(Memo memo, List<Block> blocks) async {

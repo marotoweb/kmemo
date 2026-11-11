@@ -399,5 +399,16 @@
   "ascending": "Ascendente",
   "descending": "Descendente",
   "pin": "Fixar",
-  "unpin": "Desafixar"
+  "unpin": "Desafixar",
+  "widget": "WIDGETS",
+  "widgetBackgroundTransparency": "Transparência do fundo do widget",
+  "widgetCardTransparency": "Transparência dos cards",
+  "transparencyPercent": "{value}%",
+  "@transparencyPercent": {
+    "placeholders": {
+      "value": {
+        "type": "int"
+      }
+    }
+  }
 }

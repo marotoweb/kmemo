@@ -8,6 +8,8 @@ class ThemeProvider extends ChangeNotifier {
   bool _autoWrap = true;
   bool _strikethroughChecked = true;
   bool _showLinkPreviews = true;
+  double _widgetBgOpacity = 1.0;
+  double _widgetCardOpacity = 1.0;
 
 
   ThemeMode get themeMode => _themeMode;
@@ -15,6 +17,8 @@ class ThemeProvider extends ChangeNotifier {
   bool get autoWrap => _autoWrap;
   bool get strikethroughChecked => _strikethroughChecked;
   bool get showLinkPreviews => _showLinkPreviews;
+  double get widgetBgOpacity => _widgetBgOpacity;
+  double get widgetCardOpacity => _widgetCardOpacity;
 
   ThemeProvider() {
     _loadThemePreference();
@@ -27,6 +31,8 @@ class ThemeProvider extends ChangeNotifier {
     _autoWrap = prefs.getBool('auto_wrap') ?? true;
     _strikethroughChecked = prefs.getBool('strikethrough_checked') ?? true;
     _showLinkPreviews = prefs.getBool('show_link_previews') ?? true;
+    _widgetBgOpacity = prefs.getDouble('widget_bg_opacity') ?? 1.0;
+    _widgetCardOpacity = prefs.getDouble('widget_card_opacity') ?? 1.0;
     if (lang != null && lang.isNotEmpty) {
       _locale = Locale(lang);
     }
@@ -80,5 +86,19 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('show_link_previews', value);
+  }
+
+  Future<void> setWidgetBgOpacity(double value) async {
+    _widgetBgOpacity = value.clamp(0.0, 1.0);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('widget_bg_opacity', _widgetBgOpacity);
+  }
+
+  Future<void> setWidgetCardOpacity(double value) async {
+    _widgetCardOpacity = value.clamp(0.0, 1.0);
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('widget_card_opacity', _widgetCardOpacity);
   }
 }

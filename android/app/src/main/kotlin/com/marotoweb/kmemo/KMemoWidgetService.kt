@@ -7,7 +7,6 @@ import android.net.Uri
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.GradientDrawable
-import android.os.Environment
 import android.util.Log
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
@@ -27,6 +26,7 @@ class KMemoWidgetFactory(private val context: Context) : RemoteViewsService.Remo
     private var emptyLabel = "Nota vazia"
     private var autoWrap = true
     private var strikethroughChecked = true
+    private var cardOpacity = 1f
 
     private data class NoteData(
         val uuid: String,
@@ -41,6 +41,7 @@ class KMemoWidgetFactory(private val context: Context) : RemoteViewsService.Remo
         Log.d("KMemoWidget", "onDataSetChanged called")
         notes = loadWidgetData(context)
         Log.d("KMemoWidget", "Loaded ${notes.size} notes")
+        WidgetDebugLog.log(context, "onDataSetChanged notes=${notes.size}")
     }
 
     override fun onDestroy() {}
@@ -48,24 +49,26 @@ class KMemoWidgetFactory(private val context: Context) : RemoteViewsService.Remo
     override fun getCount(): Int = notes.size
 
     override fun getViewAt(position: Int): RemoteViews {
-        val views = RemoteViews(context.packageName, R.layout.kmemo_widget_item)
-
-        if (position >= notes.size) return views
+        if (position >= notes.size) {
+            return RemoteViews(context.packageName, R.layout.kmemo_widget_item_1)
+        }
 
         val note = notes[position]
+
+        // Each card keeps its own height, fixed in XML for that number of
+        // preview lines. Different layouts are also different view types, so
+        // the ListView never recycles a view between heights (that caused the
+        // jump when items were inserted above the viewport).
+        val previewLines = note.preview.count { it == '\n' } + 1
+        val previewMaxLines = previewLines.coerceAtLeast(1).coerceAtMost(PREVIEW_MAX_LINES)
+        val layoutId = itemLayoutFor(previewMaxLines)
+        val views = RemoteViews(context.packageName, layoutId)
 
         try {
             views.setTextViewText(R.id.widget_item_title, note.title)
             views.setTextViewText(R.id.widget_item_preview, note.preview)
 
-            // Respect editor options: line wrapping.
-            // The preview can contain several lines (joined blocks), so the number
-            // of max lines must follow the real line count; autoWrap only controls
-            // whether long lines are truncated with an ellipsis.
-            val previewLines = note.preview.count { it == '\n' } + 1
-            val previewMaxLines = previewLines.coerceAtLeast(1).coerceAtMost(8)
-            val titleMaxLines = 2
-            views.setInt(R.id.widget_item_title, "setMaxLines", titleMaxLines)
+            views.setInt(R.id.widget_item_title, "setMaxLines", TITLE_MAX_LINES)
             views.setInt(R.id.widget_item_preview, "setMaxLines", previewMaxLines)
 
             // Set the text color according to the background luminance
@@ -75,16 +78,15 @@ class KMemoWidgetFactory(private val context: Context) : RemoteViewsService.Remo
             views.setTextColor(R.id.widget_item_title, titleColor)
             views.setTextColor(R.id.widget_item_preview, previewColor)
 
-            // Dynamic background with rounded corners + note color
-            val cardBitmap = createCardBitmap(context, note.colorInt, note.preview)
+            val cardHeightDp = TITLE_MAX_LINES * TITLE_LINE_HEIGHT_DP +
+                previewMaxLines * PREVIEW_LINE_HEIGHT_DP + CARD_PADDING_DP
+
+            // Dynamic background with rounded corners + note color.
+            // The bitmap uses the same height as the item layout.
+            val cardBitmap = createCardBitmap(context, note.colorInt, cardHeightDp)
             views.setImageViewBitmap(R.id.widget_item_bg, cardBitmap)
-
-            // Force the background ImageView height to match the bitmap
-            val bitmapHeight = cardBitmap.height
-            views.setInt(R.id.widget_item_bg, "setMinimumHeight", bitmapHeight)
-
-            // Force the root FrameLayout to be at least as tall as the bitmap
-            views.setInt(R.id.widget_item_root, "setMinimumHeight", bitmapHeight)
+            // Card opacity (Settings), background layer only.
+            views.setFloat(R.id.widget_item_bg, "setAlpha", cardOpacity)
 
             // Individual PendingIntent to open this specific note via App Link
             val fillInIntent = Intent(Intent.ACTION_VIEW).apply {
@@ -98,16 +100,37 @@ class KMemoWidgetFactory(private val context: Context) : RemoteViewsService.Remo
 
         } catch (e: Exception) {
             Log.e("KMemoWidget", "Erro ao criar view da posição $position", e)
+            WidgetDebugLog.log(
+                context,
+                "getViewAt($position) error: ${e.javaClass.simpleName}: ${e.message}"
+            )
         }
 
         return views
     }
 
-    override fun getLoadingView(): RemoteViews? = null
+    /// A compact placeholder instead of the system's "Loading..." view. The
+    /// system derives the loading view height from the first item, which made
+    /// long notes reserve a huge placeholder.
+    override fun getLoadingView(): RemoteViews {
+        val views = RemoteViews(context.packageName, R.layout.kmemo_widget_item_1)
+        views.setTextViewText(R.id.widget_item_title, "")
+        views.setTextViewText(R.id.widget_item_preview, "")
+        return views
+    }
 
-    override fun getViewTypeCount(): Int = 1
+    // One view type per item height (kmemo_widget_item_1..8). The
+    // RemoteViewsAdapter maps each item layout ID to its own view type; without
+    // this, items with a different layout ID are rejected and show the loading
+    // view, and the ListView recycles views between heights (scroll jump).
+    override fun getViewTypeCount(): Int = 8
 
-    override fun getItemId(position: Int): Long = position.toLong()
+    // Stable IDs let the widget keep its scroll position anchored to the same
+    // note when the data is reloaded, instead of using the list position.
+    override fun getItemId(position: Int): Long {
+        val uuid = notes.getOrNull(position)?.uuid ?: return position.toLong()
+        return uuid.hashCode().toLong()
+    }
 
     override fun hasStableIds(): Boolean = true
 
@@ -136,6 +159,8 @@ class KMemoWidgetFactory(private val context: Context) : RemoteViewsService.Remo
             data.optJSONObject("settings")?.let {
                 autoWrap = it.optBoolean("autoWrap", autoWrap)
                 strikethroughChecked = it.optBoolean("strikethroughChecked", strikethroughChecked)
+                cardOpacity = it.optDouble("widgetCardOpacity", cardOpacity.toDouble())
+                    .toFloat().coerceIn(0f, 1f)
             }
 
             val ids = data.getJSONArray("ids")
@@ -186,31 +211,29 @@ class KMemoWidgetFactory(private val context: Context) : RemoteViewsService.Remo
         return if (trimmed.isEmpty() || isUuid(trimmed)) emptyLabel else trimmed
     }
 
-    /// Creates a Bitmap with a GradientDrawable (rounded corners + note color)
-    /// The height is adjusted to the amount of text so it covers title + preview
-    /// Layout: title (1 line) + content (max 8 lines) + "..." (1 line) when truncated
-    /// All dp values are converted to pixels using the screen density.
-    private fun createCardBitmap(context: Context, colorInt: Int, previewText: String): Bitmap {
+    /// Maps the number of preview lines to a wrapper layout with a fixed height.
+    /// The layout ID is also the view type used by RemoteViewsAdapter, so these
+    /// layouts give the ListView one view type per height.
+    private fun itemLayoutFor(previewLines: Int): Int = when (previewLines) {
+        1 -> R.layout.kmemo_widget_item_1
+        2 -> R.layout.kmemo_widget_item_2
+        3 -> R.layout.kmemo_widget_item_3
+        4 -> R.layout.kmemo_widget_item_4
+        5 -> R.layout.kmemo_widget_item_5
+        6 -> R.layout.kmemo_widget_item_6
+        7 -> R.layout.kmemo_widget_item_7
+        else -> R.layout.kmemo_widget_item_8
+    }
+
+    /// Creates a Bitmap with a GradientDrawable (rounded corners + note color).
+    /// The height matches the item's own layout height, so short notes keep
+    /// short cards while every note has a deterministic, stable height.
+    private fun createCardBitmap(context: Context, colorInt: Int, heightDp: Int): Bitmap {
         val density = context.resources.displayMetrics.density
         // Bitmap width = screen width − FrameLayout padding (12dp per side = 24dp total)
         val screenWidth = context.resources.displayMetrics.widthPixels
         val width = screenWidth - (24 * density).toInt()
-
-        // Count real line breaks in the text to estimate visual lines (minimum 2, maximum 9)
-        val previewLines = if (previewText.isEmpty() || previewText == emptyLabel) {
-            2
-        } else {
-            val actualLines = previewText.count { it == '\n' } + 1
-            actualLines.coerceAtLeast(2).coerceAtMost(9)
-        }
-
-        // Title: 1 line (~24dp) + preview: N lines (~22dp each) + padding (~24dp)
-        // Line height increased to 22dp to fully cover the rendered text
-        // 24dp padding for a sufficient bottom margin
-        val titleHeight = (24 * density).toInt()
-        val lineHeight = (22 * density).toInt()
-        val padding = (24 * density).toInt()
-        val height = titleHeight + (previewLines * lineHeight) + padding
+        val height = (heightDp * density).toInt()
 
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -222,5 +245,13 @@ class KMemoWidgetFactory(private val context: Context) : RemoteViewsService.Remo
         drawable.setBounds(0, 0, width, height)
         drawable.draw(canvas)
         return bitmap
+    }
+
+    companion object {
+        private const val TITLE_MAX_LINES = 1
+        private const val PREVIEW_MAX_LINES = 8
+        private const val TITLE_LINE_HEIGHT_DP = 22
+        private const val PREVIEW_LINE_HEIGHT_DP = 18
+        private const val CARD_PADDING_DP = 24
     }
 }

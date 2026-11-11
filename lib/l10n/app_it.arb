@@ -225,5 +225,9 @@
   "ascending": "Crescente",
   "descending": "Decrescente",
   "pin": "Fissa",
-  "unpin": "Rimuovi fissaggio"
+  "unpin": "Rimuovi fissaggio",
+  "widget": "WIDGETS",
+  "widgetBackgroundTransparency": "Trasparenza dello sfondo del widget",
+  "widgetCardTransparency": "Trasparenza delle schede",
+  "transparencyPercent": "{value}%"
 }

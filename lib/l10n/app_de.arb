@@ -225,5 +225,9 @@
   "ascending": "Aufsteigend",
   "descending": "Absteigend",
   "pin": "Anheften",
-  "unpin": "Loslösen"
+  "unpin": "Loslösen",
+  "widget": "WIDGETS",
+  "widgetBackgroundTransparency": "Transparenz des Widget-Hintergrunds",
+  "widgetCardTransparency": "Transparenz der Karten",
+  "transparencyPercent": "{value} %"
 }

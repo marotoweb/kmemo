@@ -27,7 +27,9 @@ class MainActivity : FlutterActivity() {
                 "getPendingNoteUuid" -> {
                     val uuid = pendingNoteUuid
                     if (uuid != null && uuid.isNotEmpty()) {
-                        pendingNoteUuid = null // Clear after reading
+                        // Clear both copies, otherwise the next cold start
+                        // reopens the note that was just handed to Flutter.
+                        clearPendingNoteUuid()
                         Log.d("WIDGET_DEBUG", "getPendingNoteUuid: returning $uuid")
                         result.success(uuid)
                     } else {
@@ -74,8 +76,34 @@ class MainActivity : FlutterActivity() {
         Log.d("WIDGET_DEBUG", "Intent action: ${intent.action}")
         Log.d("WIDGET_DEBUG", "Intent data: ${intent.data}")
         Log.d("WIDGET_DEBUG", "Intent note_uuid: ${intent.getStringExtra("note_uuid")}")
-        handleWidgetIntent(intent)
-        handleSharedTextIntent(intent)
+        // A re-created activity (rotation, process death, back from background)
+        // receives the same intent again. Handling it twice would reopen the
+        // note the widget launched, so only a fresh start is handled.
+        if (savedInstanceState == null) {
+            handleWidgetIntent(intent)
+            handleSharedTextIntent(intent)
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // The app is leaving the foreground: drop any pending widget record so
+        // the note that was already shown is not reopened on the next start.
+        clearPendingNoteUuid()
+    }
+
+    /**
+     * Forgets the note uuid queued by the widget (both the in-memory value and
+     * the SharedPreferences copy used as a cold-start fallback).
+     */
+    private fun clearPendingNoteUuid() {
+        pendingNoteUuid = null
+        val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+        val saved = prefs.getString("flutter.clicked_note_uuid", null)
+        if (!saved.isNullOrEmpty()) {
+            prefs.edit().putString("flutter.clicked_note_uuid", "").apply()
+            Log.d("WIDGET_DEBUG", "clearPendingNoteUuid: cleared $saved")
+        }
     }
 
     override fun onNewIntent(intent: Intent) {

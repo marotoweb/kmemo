@@ -17,7 +17,7 @@
 - **Offline-first persistence:** All data management is local through SQLite (via Drift), ensuring instant speed and absolute privacy.
 - **Automatic dark theme (Dark Mode):** Full, dynamic support adapted to system settings, including dark, deep and desaturated color palettes for note and card backgrounds across all views.
 - **Reactive ecosystem:** Uses `Provider` combined with native Drift streams for real-time updates in the UI and the home screen widget.
-- **Home screen widget (4×3):** Native Android widget that shows the latest notes directly on the home screen, with a colored background per note, text preview and checkbox icons for lists.
+- **Home screen widget (4×3):** Native Android widget that shows the latest notes directly on the home screen, with a colored background per note, text preview and checkbox icons for lists. Background and card transparency can be adjusted in Settings → Widgets.
 - **Internationalization:** Support for Portuguese, English, French, German, Italian and Spanish, with a "System" option to follow the device language.
 - **Text sharing:** Receives text shared from other apps (Share Plus) and automatically creates a new note, or shares your notes with external apps.
 - **Empty note rejection:** Notes created but left empty are automatically deleted on exit, avoiding the accumulation of empty notes.
@@ -67,6 +67,8 @@ The app organizes persistence through two relational tables with automatic casca
 | `linkAttachments` | String (JSON) | Associated links |
 | `isArchived` | Boolean | Archive state |
 | `isDeleted` | Boolean | Trash state (soft delete) |
+| `isPinned` | Boolean | Pinned to the top of the home list and widget (synced) |
+| `sortIndex` | Int | Manual position used by the custom sort order (local only) |
 
 
 ### 2. Blocks (Dynamic Components)
@@ -90,7 +92,9 @@ The native Android widget shows active notes directly on the home screen:
 
 - **Size:** 4×3 cells.
 - **Content:** Note title and content preview.
-- **Colors:** Each card uses the background color defined for each note, respecting the color palette of each theme defined in Settings (Light and Dark).
+- **Ordering:** follows the home list order — pinned notes first, then the selected sort mode.
+- **Colors:** Each card uses the background color defined for each note, respecting the color palette of each theme defined in Settings (Light and Dark). The widget window uses its own background color, so neutral cards never blend into it.
+- **Transparency:** Settings → Widgets has two sliders for the widget window background and the cards (0% = fully opaque, 100% = fully transparent). Adjustments are debounced, so the widget is rebuilt once the value settles.
 - **Editing:** Tapping a note in the widget opens the app in edit mode for the selected note.
 
 ---

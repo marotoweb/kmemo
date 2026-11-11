@@ -17,6 +17,7 @@ import '../../providers/theme_provider.dart';
 import '../../services/kdrive_storage.dart';
 import '../../services/link_preview_service.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
+import '../widgets/app_snackbar.dart';
 import 'sync_settings_screen.dart';
 
 /// Captures editor state to support undo/redo.
@@ -1051,13 +1052,12 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
       if (mounted) {
         final navigator = Navigator.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.kdriveNotConfigured),
-            action: SnackBarAction(
-              label: AppLocalizations.of(context)!.settings,
-              onPressed: () => navigator.push(
-                MaterialPageRoute(builder: (_) => SyncSettingsScreen()),
-              ),
+          buildAppSnackBar(
+            context,
+            message: AppLocalizations.of(context)!.kdriveNotConfigured,
+            actionLabel: AppLocalizations.of(context)!.settings,
+            onAction: () => navigator.push(
+              MaterialPageRoute(builder: (_) => SyncSettingsScreen()),
             ),
           ),
         );
@@ -1090,8 +1090,9 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.copiedToKdrive),
+          buildAppSnackBar(
+            context,
+            message: AppLocalizations.of(context)!.copiedToKdrive,
             duration: Duration(seconds: 3),
           ),
         );
@@ -1099,8 +1100,9 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${AppLocalizations.of(context)!.copyToKdriveFailed}: $e'),
+          buildAppSnackBar(
+            context,
+            message: '${AppLocalizations.of(context)!.copyToKdriveFailed}: $e',
             duration: Duration(seconds: 5),
           ),
         );
@@ -1167,10 +1169,9 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
             await context.read<MemoProvider>().rejectEmptyMemo(widget.memo.uuid);
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    AppLocalizations.of(context)!.emptyNoteRejected,
-                  ),
+                buildAppSnackBar(
+                  context,
+                  message: AppLocalizations.of(context)!.emptyNoteRejected,
                 ),
               );
               Navigator.of(context).pop();
@@ -1197,10 +1198,9 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                   await context.read<MemoProvider>().rejectEmptyMemo(widget.memo.uuid);
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          AppLocalizations.of(context)!.emptyNoteRejected,
-                        ),
+                      buildAppSnackBar(
+                        context,
+                        message: AppLocalizations.of(context)!.emptyNoteRejected,
                       ),
                     );
                     Navigator.of(context).pop();
@@ -1304,7 +1304,11 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                 padding: EdgeInsets.symmetric(horizontal: 16.0),
                 child: _isChecklistMode
                     ? _buildChecklistLayout(textColor, hintColor, isDarkMode, autoWrap, strikethroughChecked)
-                    : _buildTextLayout(textColor, hintColor),
+                    : _buildTextLayout(
+                        textColor,
+                        hintColor,
+                        hasBackgroundImage: bgImagePath != null,
+                      ),
               ),
             ),
             SafeArea(
@@ -1531,18 +1535,16 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final controller = messenger.showSnackBar(
-      SnackBar(
-        content: Text(l10n.linkPreviewRemoved),
+      buildAppSnackBar(
+        context,
+        message: l10n.linkPreviewRemoved,
         duration: Duration(seconds: 8),
-        action: SnackBarAction(
-          label: l10n.undo,
-          textColor: Colors.amberAccent,
-          onPressed: () {
-            messenger.hideCurrentSnackBar();
-            setState(() => _linkPreviewRemoved.remove(url));
-            _persistRemovedPreviews();
-          },
-        ),
+        actionLabel: l10n.undo,
+        onAction: () {
+          messenger.hideCurrentSnackBar();
+          setState(() => _linkPreviewRemoved.remove(url));
+          _persistRemovedPreviews();
+        },
       ),
     );
     Future.delayed(Duration(seconds: 8), () {
@@ -1672,7 +1674,11 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
     }
   }
 
-  Widget _buildTextLayout(Color textColor, Color hintColor) {
+  Widget _buildTextLayout(
+    Color textColor,
+    Color hintColor, {
+    required bool hasBackgroundImage,
+  }) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final showLinkPreviews =
         context.watch<ThemeProvider>().showLinkPreviews;
@@ -1692,7 +1698,11 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
     final bodyStrut = StrutStyle.fromTextStyle(bodyStyle, forceStrutHeight: true);
     final linkStyle = TextStyle(
       decoration: TextDecoration.underline,
-      color: isDarkMode ? Colors.lightBlue.shade200 : Colors.blue.shade700,
+      // Over a background image (or in dark mode) the regular blue is too
+      // dark; use a light blue that stands out on the scrimmed image.
+      color: (hasBackgroundImage || isDarkMode)
+          ? Colors.lightBlue.shade200
+          : Colors.blue.shade700,
     );
     final text = _textNoteController.text;
     final urls = LinkPreviewService.extractUrls(text)
@@ -1786,8 +1796,6 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                 url,
                 _linkPreviews[url],
                 _linkPreviewLoading.contains(url),
-                textColor,
-                hintColor,
               );
             }),
         ],
@@ -1803,10 +1811,14 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
     String url,
     LinkPreview? preview,
     bool loading,
-    Color textColor,
-    Color hintColor,
   ) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    // The preview card uses the theme surface, not the note background, so
+    // its text must use the surface colors. Using the note text color made it
+    // white on the light card when the note had a background image.
+    final scheme = Theme.of(context).colorScheme;
+    final cardTextColor = scheme.onSurface;
+    final cardHintColor = scheme.onSurfaceVariant;
     final domain = Uri.tryParse(url)?.host ?? url;
     final placeholderColor =
         isDarkMode ? Colors.grey.shade800 : Colors.grey.shade200;
@@ -1840,7 +1852,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                       width: 56,
                       height: 56,
                       color: placeholderColor,
-                      child: Icon(Icons.link, color: hintColor),
+                      child: Icon(Icons.link, color: cardHintColor),
                     ),
                   ),
                 )
@@ -1852,7 +1864,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                     color: placeholderColor,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(Icons.link, color: hintColor),
+                  child: Icon(Icons.link, color: cardHintColor),
                 ),
               SizedBox(width: 10),
               Expanded(
@@ -1864,7 +1876,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
-                        color: textColor,
+                        color: cardTextColor,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -1872,7 +1884,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                     SizedBox(height: 2),
                     Text(
                       preview?.siteName ?? domain,
-                      style: TextStyle(fontSize: 12, color: hintColor),
+                      style: TextStyle(fontSize: 12, color: cardHintColor),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1880,15 +1892,18 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                 ),
               ),
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert, size: 18, color: hintColor),
+                icon: Icon(Icons.more_vert, size: 18, color: cardHintColor),
                 onSelected: (value) {
-                  if (value == 'open') {
+                  if (value == 'preview') {
+                    _previewLink(url);
+                  } else if (value == 'open') {
                     _openLink(url);
                   } else if (value == 'copy') {
                     Clipboard.setData(ClipboardData(text: url));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(AppLocalizations.of(context)!.linkCopied),
+                      buildAppSnackBar(
+                        context,
+                        message: AppLocalizations.of(context)!.linkCopied,
                       ),
                     );
                   } else if (value == 'remove') {
@@ -1896,6 +1911,10 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                   }
                 },
                 itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'preview',
+                    child: Text(AppLocalizations.of(context)!.previewLink),
+                  ),
                   PopupMenuItem(
                     value: 'open',
                     child: Text(AppLocalizations.of(context)!.openLink),

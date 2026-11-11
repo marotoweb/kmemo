@@ -225,5 +225,9 @@
   "ascending": "Ascending",
   "descending": "Descending",
   "pin": "Pin",
-  "unpin": "Unpin"
+  "unpin": "Unpin",
+  "widget": "WIDGETS",
+  "widgetBackgroundTransparency": "Widget background transparency",
+  "widgetCardTransparency": "Card transparency",
+  "transparencyPercent": "{value}%"
 }

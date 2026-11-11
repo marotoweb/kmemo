@@ -1,11 +1,17 @@
 // lib/ui/screens/settings_screen.dart
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../providers/memo_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/update_service.dart';
+import '../../services/widget_debug_log.dart';
+import '../widgets/app_snackbar.dart';
 import 'sync_settings_screen.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
@@ -20,10 +26,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _appVersion = 'Loading...';
   bool _isCheckingUpdate = false;
 
+  /// Pending widget refresh after the user stops adjusting an opacity slider.
+  Timer? _widgetRefreshDebounce;
+
   @override
   void initState() {
     super.initState();
     _loadVersion();
+  }
+
+  @override
+  void dispose() {
+    _widgetRefreshDebounce?.cancel();
+    super.dispose();
+  }
+
+  /// Coalesces rapid opacity adjustments into a single widget refresh: each
+  /// slider release reschedules the timer, so dragging back and forth only
+  /// rebuilds the widget once the value settles.
+  void _scheduleWidgetRefresh() {
+    _widgetRefreshDebounce?.cancel();
+    _widgetRefreshDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      Provider.of<MemoProvider>(context, listen: false).refreshWidget();
+    });
   }
 
   Future<void> _loadVersion() async {
@@ -41,8 +67,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (info.error.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.updateCheckFailed),
+        buildAppSnackBar(
+          context,
+          message: AppLocalizations.of(context)!.updateCheckFailed,
         ),
       );
       return;
@@ -50,9 +77,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (!info.hasUpdate) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context)!.upToDateMessage(info.latestVersion),
+        buildAppSnackBar(
+          context,
+          message: AppLocalizations.of(context)!.upToDateMessage(
+            info.latestVersion,
           ),
         ),
       );
@@ -119,6 +147,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
       throw Exception('Could not launch $url');
     }
+  }
+
+  /// Copies the debug-only widget log so it can be pasted into a report when
+  /// ADB/wireless debugging is not available.
+  Future<void> _copyWidgetDebugLog() async {
+    final log = await WidgetDebugLog.read();
+    if (!mounted) return;
+    if (log.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        buildAppSnackBar(
+          context,
+          message: 'Widget log is empty. Reproduce the issue first.',
+        ),
+      );
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: log));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      buildAppSnackBar(
+        context,
+        message: 'Widget log copied to the clipboard.',
+      ),
+    );
   }
 
   @override
@@ -312,6 +364,51 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           SizedBox(height: 24),
 
+          // SECTION: WIDGET
+          Text(
+            AppLocalizations.of(context)!.widget,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? Color(0xFF1E1E1E)
+                  : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+              ),
+            ),
+            child: Column(
+              children: [
+                _buildTransparencyTile(
+                  context,
+                  title:
+                      AppLocalizations.of(context)!.widgetBackgroundTransparency,
+                  // The stored value is opacity; the slider shows transparency
+                  // (0% = fully opaque, 100% = fully transparent).
+                  transparency: 1 - themeProvider.widgetBgOpacity,
+                  onChanged: (value) =>
+                      themeProvider.setWidgetBgOpacity(1 - value),
+                ),
+                Divider(height: 1),
+                _buildTransparencyTile(
+                  context,
+                  title: AppLocalizations.of(context)!.widgetCardTransparency,
+                  transparency: 1 - themeProvider.widgetCardOpacity,
+                  onChanged: (value) =>
+                      themeProvider.setWidgetCardOpacity(1 - value),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 24),
+
           // SECTION: SYNCHRONIZATION
           Text(
             AppLocalizations.of(context)!.syncSection,
@@ -384,6 +481,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     'https://github.com/marotoweb/kmemo/issues/new',
                   ),
                 ),
+                // Debug-only: there is no ADB on devices without wireless
+                // debugging, so the widget log is copied from here.
+                if (kDebugMode) ...[
+                  Divider(
+                    height: 1,
+                    color: isDarkMode
+                        ? Colors.grey.shade800
+                        : Colors.grey.shade300,
+                  ),
+                  ListTile(
+                    title: const Text('Widget debug log'),
+                    subtitle: const Text(
+                      'Copy the recent widget events to the clipboard',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    trailing: const Icon(Icons.copy),
+                    onTap: _copyWidgetDebugLog,
+                  ),
+                ],
               ],
             ),
           ),
@@ -458,6 +574,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Slider tile used by the widget transparency settings. [transparency] is
+  /// 0.0 for fully opaque and 1.0 for fully transparent; the stored value is
+  /// the inverse opacity. The widget payload is refreshed 300 ms after the
+  /// user releases the slider, so dragging stays smooth.
+  Widget _buildTransparencyTile(
+    BuildContext context, {
+    required String title,
+    required double transparency,
+    required Future<void> Function(double) onChanged,
+  }) {
+    final value = transparency.clamp(0.0, 1.0);
+    final percent = (value * 100).round();
+    final label = AppLocalizations.of(context)!.transparencyPercent(percent);
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(title)),
+              Text(
+                label,
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+            ],
+          ),
+          Slider(
+            value: value.clamp(0.0, 1.0),
+            min: 0,
+            max: 1,
+            divisions: 20,
+            label: label,
+            onChanged: (newValue) => onChanged(newValue),
+            onChangeEnd: (_) => _scheduleWidgetRefresh(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildThemeSegment(
     BuildContext context,
     String label,
@@ -472,7 +629,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.amber.shade700 : Colors.transparent,
+          // Same vivid amber in both themes (theme primary), with a dark
+          // foreground that stays readable on the yellow.
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
@@ -480,7 +641,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.white : Colors.grey,
+            color: isSelected
+                ? Theme.of(context).colorScheme.onPrimary
+                : Colors.grey,
           ),
         ),
       ),

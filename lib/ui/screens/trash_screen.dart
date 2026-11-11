@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
+import '../widgets/app_snackbar.dart';
+import '../widgets/swipe_action_card.dart';
 import 'memo_detail_screen.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
@@ -75,12 +77,13 @@ class _TrashScreenState extends State<TrashScreen> {
 
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          uuidsToRestore.length > 1
-                              ? AppLocalizations.of(context)!.notesRestoredCount('${uuidsToRestore.length}')
-                              : AppLocalizations.of(context)!.noteRestored,
-                        ),
+                      buildAppSnackBar(
+                        context,
+                        message: uuidsToRestore.length > 1
+                            ? AppLocalizations.of(
+                                context,
+                              )!.notesRestoredCount('${uuidsToRestore.length}')
+                            : AppLocalizations.of(context)!.noteRestored,
                       ),
                     );
                   },
@@ -101,7 +104,9 @@ class _TrashScreenState extends State<TrashScreen> {
                   itemBuilder: (context) => [
                     PopupMenuItem(
                       value: 'delete_permanent',
-                      child: Text(AppLocalizations.of(context)!.deletePermanently),
+                      child: Text(
+                        AppLocalizations.of(context)!.deletePermanently,
+                      ),
                     ),
                   ],
                 ),
@@ -135,65 +140,58 @@ class _TrashScreenState extends State<TrashScreen> {
                   final memo = deletedMemos[index];
                   final isSelected = _selectedUuids.contains(memo.uuid);
 
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Positioned.fill(
-                        child: Container(
-                          margin: EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 2,
-                          ),
-                          alignment: Alignment.centerLeft,
-                          padding: EdgeInsets.only(left: 20),
-                          decoration: BoxDecoration(
-                            color: isDarkMode
-                                ? Colors.amber.shade900
-                                : Colors.amber,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.restore,
-                            color: isDarkMode ? Colors.white70 : Colors.black87,
-                          ),
-                        ),
+                  return SwipeActionCard(
+                    dismissKey: Key(memo.uuid),
+                    // Restore is the only swipe action here, so a single
+                    // direction is enough; it still requires a near-complete
+                    // swipe (see SwipeActionCard).
+                    direction: DismissDirection.startToEnd,
+                    background: Container(
+                      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                      alignment: Alignment.centerLeft,
+                      padding: EdgeInsets.only(left: 20),
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? Colors.amber.shade900
+                            : Colors.amber,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      Dismissible(
-                        key: Key(memo.uuid),
-                        direction: DismissDirection.startToEnd,
-                        background: SizedBox.shrink(),
-                        onDismissed: (direction) async {
-                          final uuidToRestore = memo.uuid;
-                          await provider.restoreMultiple([uuidToRestore]);
+                      child: Icon(
+                        Icons.restore,
+                        color: isDarkMode ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                    onDismissed: (direction) async {
+                      final uuidToRestore = memo.uuid;
+                      await provider.restoreMultiple([uuidToRestore]);
 
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(AppLocalizations.of(context)!.noteRestored),
-                              duration: Duration(seconds: 4),
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        buildAppSnackBar(
+                          context,
+                          message: AppLocalizations.of(context)!.noteRestored,
+                          duration: Duration(seconds: 4),
+                        ),
+                      );
+                    },
+                    child: MemoCard(
+                      memo: memo,
+                      isSelected: isSelected,
+                      onLongPress: () => _toggleSelection(memo.uuid),
+                      onTap: () {
+                        if (isSelectionMode) {
+                          _toggleSelection(memo.uuid);
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  MemoDetailScreen(memo: memo),
                             ),
                           );
-                        },
-                        child: MemoCard(
-                          memo: memo,
-                          isSelected: isSelected,
-                          onLongPress: () => _toggleSelection(memo.uuid),
-                          onTap: () {
-                            if (isSelectionMode) {
-                              _toggleSelection(memo.uuid);
-                            } else {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      MemoDetailScreen(memo: memo),
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                    ],
+                        }
+                      },
+                    ),
                   );
                 },
               ),

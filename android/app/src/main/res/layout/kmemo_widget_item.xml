@@ -1,21 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/widget_item_root"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginLeft="6dp"
-    android:layout_marginRight="6dp"
-    android:layout_marginTop="2dp"
-    android:layout_marginBottom="1dp"
-    android:padding="0dp">
+<!--
+  Shared content for the widget cards. The per-item wrapper layouts
+  (kmemo_widget_item_1.xml .. kmemo_widget_item_8.xml) only set a fixed
+  android:layout_height so the ListView knows the height before measuring.
+-->
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Dynamic background with rounded corners + note color -->
     <ImageView
         android:id="@+id/widget_item_bg"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_margin="0dp"
-        android:scaleType="fitXY" />
+        android:scaleType="fitXY"
+        android:src="@drawable/widget_card_bg" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -27,7 +25,8 @@
             android:id="@+id/widget_item_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:maxLines="2"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:textColor="#1F1F1F"
             android:textSize="16sp"
             android:textStyle="bold" />
@@ -37,9 +36,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
+            android:ellipsize="end"
             android:maxLines="8"
-            android:minLines="2"
             android:textColor="#444444"
             android:textSize="13sp" />
     </LinearLayout>
-</FrameLayout>
+</merge>

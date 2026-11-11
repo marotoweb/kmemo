@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
+import '../widgets/app_snackbar.dart';
 import 'memo_detail_screen.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
@@ -84,26 +85,22 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                       scaffoldMessenger.hideCurrentSnackBar();
 
                       final snackBarController = scaffoldMessenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            uuidsToUnarchive.length > 1
-                                ? AppLocalizations.of(context)!.notesUnarchivedCount('${uuidsToUnarchive.length}')
-                                : AppLocalizations.of(context)!.noteRemovedFromArchive,
-                          ),
+                        buildAppSnackBar(
+                          context,
+                          message: uuidsToUnarchive.length > 1
+                              ? AppLocalizations.of(context)!.notesUnarchivedCount('${uuidsToUnarchive.length}')
+                              : AppLocalizations.of(context)!.noteRemovedFromArchive,
                           duration: Duration(seconds: 8),
-                          action: SnackBarAction(
-                            label: AppLocalizations.of(context)!.undo,
-                            textColor: Colors.amberAccent,
-                            onPressed: () async {
-                              scaffoldMessenger.hideCurrentSnackBar();
-                              for (var uuid in uuidsToUnarchive) {
-                                await memoProvider.archiveMemoStatus(
-                                  uuid,
-                                  true,
-                                );
-                              }
-                            },
-                          ),
+                          actionLabel: AppLocalizations.of(context)!.undo,
+                          onAction: () async {
+                            scaffoldMessenger.hideCurrentSnackBar();
+                            for (var uuid in uuidsToUnarchive) {
+                              await memoProvider.archiveMemoStatus(
+                                uuid,
+                                true,
+                              );
+                            }
+                          },
                         ),
                       );
 
@@ -162,26 +159,22 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
 
                       final snackBarController =
                           scaffoldMessenger.showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            uuidsToUnarchive.length > 1
-                                ? AppLocalizations.of(context)!.notesUnarchivedCount('${uuidsToUnarchive.length}')
-                                : AppLocalizations.of(context)!.noteRemovedFromArchive,
-                          ),
+                        buildAppSnackBar(
+                          context,
+                          message: uuidsToUnarchive.length > 1
+                              ? AppLocalizations.of(context)!.notesUnarchivedCount('${uuidsToUnarchive.length}')
+                              : AppLocalizations.of(context)!.noteRemovedFromArchive,
                           duration: Duration(seconds: 8),
-                          action: SnackBarAction(
-                            label: AppLocalizations.of(context)!.undo,
-                            textColor: Colors.amberAccent,
-                            onPressed: () async {
-                              scaffoldMessenger.hideCurrentSnackBar();
-                              for (var uuid in uuidsToUnarchive) {
-                                await provider.archiveMemoStatus(
-                                  uuid,
-                                  true,
-                                );
-                              }
-                            },
-                          ),
+                          actionLabel: AppLocalizations.of(context)!.undo,
+                          onAction: () async {
+                            scaffoldMessenger.hideCurrentSnackBar();
+                            for (var uuid in uuidsToUnarchive) {
+                              await provider.archiveMemoStatus(
+                                uuid,
+                                true,
+                              );
+                            }
+                          },
                         ),
                       );
 
@@ -258,22 +251,18 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
 
                           final snackBarController = scaffoldMessenger
                               .showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    AppLocalizations.of(context)!.noteRemovedFromArchive,
-                                  ),
+                                buildAppSnackBar(
+                                  context,
+                                  message: AppLocalizations.of(context)!.noteRemovedFromArchive,
                                   duration: Duration(seconds: 8),
-                                  action: SnackBarAction(
-                                    label: AppLocalizations.of(context)!.undo,
-                                    textColor: Colors.amberAccent,
-                                    onPressed: () async {
-                                      scaffoldMessenger.hideCurrentSnackBar();
-                                      await provider.archiveMemoStatus(
-                                        uuidToUnarchive,
-                                        true,
-                                      );
-                                    },
-                                  ),
+                                  actionLabel: AppLocalizations.of(context)!.undo,
+                                  onAction: () async {
+                                    scaffoldMessenger.hideCurrentSnackBar();
+                                    await provider.archiveMemoStatus(
+                                      uuidToUnarchive,
+                                      true,
+                                    );
+                                  },
                                 ),
                               );
 

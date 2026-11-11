@@ -140,6 +140,15 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
+  /// Loads every non-deleted block in one query. Used to warm the preview
+  /// cache so the home cards never query SQLite while scrolling.
+  Future<List<Block>> getAllBlocks() {
+    return (select(blocks)
+          ..where((t) => t.isDeleted.equals(false))
+          ..orderBy([(t) => OrderingTerm(expression: t.sortOrder)]))
+        .get();
+  }
+
   Future<void> saveMemoWithBlocks(Memo memo, List<Block> memoBlocks) async {
     await transaction(() async {
       await into(memos).insert(memo, mode: InsertMode.insertOrReplace);

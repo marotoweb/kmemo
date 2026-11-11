@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.1.17
+
+### 🐛 Fixes
+- **Note reopened on every start after a widget tap:** the note uuid queued by the widget is now consumed as soon as the note opens and cleared when the app leaves the foreground, instead of surviving in `SharedPreferences` and reopening that note on the next start.
+- **Long-press selection:** long-pressing a note card without dragging now selects it for multi-selection again. Selection is detected from the reorder callbacks, because the card widget is unmounted as soon as the delayed drag starts and a pointer listener on it never received the release.
+- **Accidental selection while scrolling:** scrolling over note cards no longer selects the card under the finger.
+- **Scroll stutter and jumps:** note cards now render their body text and link previews synchronously from preloaded caches. Previously every visible card ran a SQLite query for its blocks and loaded its URL preview asynchronously, so the list jumped when a preview appeared and stuttered while scrolling.
+- **Accidental archive/restore while swiping:** a swipe only acts after the card is dragged almost the full width (90%). A short or fast swipe no longer triggers the action; the home and trash screens share the same guard.
+- **Readable snackbars in dark mode:** all snackbars use theme-aware text and action colors, so the "Undo" action is no longer amber on a light background.
+- **Link preview card contrast:** the preview card now uses the theme surface colors for its title and domain, so the text stays readable over a note background image in light mode. Links in the note body use a lighter blue over background images.
+- **Preview from the card menu:** the three-dot menu on a link preview card now includes "Preview", which re-downloads the metadata and restores a removed preview.
+- **Widget card spacing:** the widget reserves a single title line (instead of two) and uses tighter line heights, so short and long notes no longer show a large empty area under the text.
+- **Widget background contrast:** the widget window now uses `#212121` (the dark home screen background), a color that is not in the dark card palette, so neutral `#1E1E1E` cards no longer blend into the widget background.
+- **Widget scroll jumps:** each card height now has its own XML layout and view type, so the ListView never recycles a view between different heights. On Android 12+ the widget now passes the whole collection inline with `RemoteCollectionItems`, removing the asynchronous loading placeholder that still caused a jump when an item loaded with a different height; card backgrounds use a tinted rounded shape instead of a per-item bitmap.
+- **Widget reload while scrolling:** while the app is in the background the widget payload is frozen (the JSON is not rewritten and the widget is not notified), so background sync/edits cannot reorder or reset the list while the user is scrolling the home-screen widget. The latest data is applied when the app returns to the foreground. The payload also carries a version hash, so a launcher-initiated update with unchanged data no longer calls `notifyAppWidgetViewDataChanged` and keeps the scroll position. Widgets are rebuilt after an app update that changes the item layout.
+
+### ✨ Improvements
+- **Swipe actions:** on the home screen, swiping a card to the right archives it and swiping it to the left moves it to the trash. Both show a SnackBar with Undo.
+- **Unified accent color:** switches, selected segments and buttons use the same vivid amber in light and dark mode. Text and outlined buttons use a darker/lighter amber where needed to keep the contrast readable.
+- **Widget transparency:** Settings has a new Widgets section with two transparency sliders for the widget window background and the cards (0% = fully opaque, 100% = fully transparent). The window background is now a separate layer, so changing its transparency does not affect the cards, and the rounded corners are preserved. The values are stored locally and applied to the native widget; rapid adjustments are debounced (300 ms) so the widget is rebuilt once after the value settles.
+
+### 🔧 Internal
+- **Block preview cache:** all non-deleted blocks are loaded in a single query whenever the note list changes and served from memory to the cards; no database access happens while scrolling.
+- **Link preview cache:** cached link previews and the per-note removed-URL sets are preloaded into memory at startup, and `fetchAndCache`/`saveRemoved` keep them up to date.
+- **Single-query preview lookup:** home cards no longer open a `FutureBuilder` per card for blocks or URL previews.
+- **Shared snackbar helper:** a single `buildAppSnackBar()` helper builds every snackbar with theme-aware colors.
+
 ## 0.1.16
 
 ### ✨ Features

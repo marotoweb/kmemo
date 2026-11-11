@@ -688,4 +688,18 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get unpin => 'Désépingler';
+
+  @override
+  String get widget => 'WIDGETS';
+
+  @override
+  String get widgetBackgroundTransparency => 'Transparence du fond du widget';
+
+  @override
+  String get widgetCardTransparency => 'Transparence des cartes';
+
+  @override
+  String transparencyPercent(int value) {
+    return '$value %';
+  }
 }
