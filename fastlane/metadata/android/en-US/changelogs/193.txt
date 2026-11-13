@@ -1,0 +1,6 @@
+Important fixes:
+- Notes are no longer uploaded without encryption, and the kDrive token/passphrase are gone from the log.
+- Sync no longer creates duplicate remote notes.
+- Swipe actions: no more red screen, scrolling no longer triggers them, and they now act at 35% of the card width.
+- An open search updates when notes change.
+- New action: Clear old versions (Sync settings).

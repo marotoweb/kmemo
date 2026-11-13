@@ -58,7 +58,4 @@ abstract class StorageRepository {
   /// Downloads a complete note from remote storage.
   /// Returns null if the note cannot be decrypted (wrong passphrase or corrupted data).
   Future<RemoteMemo?> downloadMemo(String remoteFileId);
-
-  /// Executes full sync (push + pull). Subclasses may override or ignore.
-  Future<void> sync();
 }

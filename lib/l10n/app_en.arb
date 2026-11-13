@@ -48,9 +48,7 @@
   "folderCreatedSuccessfully": "Folder created successfully",
   "removeFromArchive": "Remove from archive",
   "sync": "Sync",
-  "syncAllNotes": "Sync all notes",
   "syncTitle": "Sync",
-  "syncCompleted": "Sync completed",
   "syncCompletedWithCount": "Sync completed: {count} note(s) synced.",
   "@syncCompletedWithCount": {
     "placeholders": {
@@ -86,7 +84,6 @@
   "generateTokenAtManager": "Generate a token at manager.infomaniak.com",
   "noKdriveInAccount": "No kDrive drive in this account. Enable kDrive at manager.infomaniak.com.",
   "encryptNotesOnClient": "Encrypt notes on the client before sending to the cloud",
-  "wantToSyncAllNotes": "Do you want to sync all local notes",
   "stepsToConfigure": "Steps to configure:",
   "step1EnterToken": "1. Enter the Infomaniak token",
   "step2SelectDrive": "2. Select the kDrive drive",
@@ -110,13 +107,9 @@
   "auto": "Auto",
   "syncSubtitle": "Sync your notes with kDrive or WebDAV",
   "reportBugSubtitle": "Report a bug, suggest a feature, or leave a comment",
-  "archiveScreenTitle": "Archive",
-  "trashScreenTitle": "Trash",
-  "settingsTitle": "Settings",
   "sharedNote": "Shared note",
   "colorsTab": "Colors (16)",
   "imagesTab": "Images (16)",
-  "bgLabel": "Background {index}",
   "noteSentToTrash": "Note moved to trash",
   "notesArchivedCount": "{count} notes archived",
   "notesSentToTrashCount": "{count} notes moved to trash",
@@ -136,7 +129,6 @@
   "selectedFolder": "Selected folder: {name}",
   "selectFolderToStoreNotes": "Select a folder to store your notes",
   "folderWord": "Folder",
-  "fileWord": "File",
   "itemWord": "Item",
   "folderIdLabel": "Folder (ID: {id})",
   "fileIdLabel": "File (ID: {id})",
@@ -155,7 +147,6 @@
   "restore": "Restore",
   "imageAttachmentsCount": "Image attachments ({count})",
   "updatedOn": "Updated: {date}",
-  "configureRemoteStorageToSync": "Configure remote storage to sync your notes.",
   "notesUnarchivedCount": "{count} notes removed from archive",
   "notesRestoredCount": "{count} notes restored",
   "searchCounter": "{current} of {total}",
@@ -183,8 +174,6 @@
   "copiedToKdrive": "Copied to kDrive",
   "copyToKdriveFailed": "Failed to copy to kDrive",
   "checkForUpdates": "Check for updates",
-  "checkingForUpdates": "Checking for updates...",
-  "upToDate": "You're up to date",
   "upToDateMessage": "You're running the latest version ({version}).",
   "@upToDateMessage": {
     "placeholders": {
@@ -229,5 +218,13 @@
   "widget": "WIDGETS",
   "widgetBackgroundTransparency": "Widget background transparency",
   "widgetCardTransparency": "Card transparency",
-  "transparencyPercent": "{value}%"
+  "transparencyPercent": "{value}%",
+  "maintenanceSection": "MAINTENANCE",
+  "clearOldVersions": "Clear old versions",
+  "clearOldVersionsSubtitle": "Deletes the version history stored in kDrive. The current version of each note is kept.",
+  "clearOldVersionsTitle": "Clear old versions?",
+  "clearOldVersionsMessage": "Every change keeps the previous content as a version in kDrive. Old versions keep the content they were written with, including plain text saved before encryption was enabled. This removes the history of every note in the selected folder and keeps only the current version. It cannot be undone in kMemo or in the kDrive web app.",
+  "clearingVersions": "Clearing old versions…",
+  "clearOldVersionsDone": "Old versions removed from {count} note(s).",
+  "clearOldVersionsError": "Could not clear versions: {error}"
 }

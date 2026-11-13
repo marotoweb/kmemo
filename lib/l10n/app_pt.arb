@@ -48,9 +48,7 @@
   "folderCreatedSuccessfully": "Pasta criada com sucesso",
   "removeFromArchive": "Remover do arquivo",
   "sync": "Sincronizar",
-  "syncAllNotes": "Sincronizar todas as notas",
   "syncTitle": "Sincronização",
-  "syncCompleted": "Sincronização concluída",
   "syncCompletedWithCount": "Sincronização concluída: {count} nota(s) sincronizada(s).",
   "@syncCompletedWithCount": {
     "placeholders": {
@@ -86,7 +84,6 @@
   "generateTokenAtManager": "Gere um token em manager.infomaniak.com",
   "noKdriveInAccount": "Nenhum drive kDrive nesta conta. Ative o kDrive em manager.infomaniak.com.",
   "encryptNotesOnClient": "Encripta as notas no cliente antes de enviar para a nuvem",
-  "wantToSyncAllNotes": "Pretende sincronizar todas as notas locais",
   "stepsToConfigure": "Passos para configurar:",
   "step1EnterToken": "1. Insira o token da Infomaniak",
   "step2SelectDrive": "2. Selecione o drive kDrive",
@@ -95,7 +92,6 @@
   "generateTokenWithScopes": "Gere um token em manager.infomaniak.com com os seguintes scopes:",
   "definePassphrase": "Defina uma passphrase para encriptar as suas notas. Sem ela, não será possível recuperar os dados.",
   "emptyFolder": "Pasta vazia",
-  "configureRemoteStorageToSync": "Configure um armazenamento remoto para sincronizar as suas notas.",
   "trashIsEmpty": "A lixeira está vazia.",
   "language": "IDIOMA",
   "appearance": "APARÊNCIA",
@@ -111,20 +107,9 @@
   "auto": "Auto",
   "syncSubtitle": "Sincronize as suas notas com kDrive ou WebDAV",
   "reportBugSubtitle": "Reporte um bug, sugira uma funcionalidade, ou deixe um comentário",
-  "archiveScreenTitle": "Arquivo",
-  "trashScreenTitle": "Lixeira",
-  "settingsTitle": "Definições",
   "sharedNote": "Nota partilhada",
   "colorsTab": "Cores (16)",
   "imagesTab": "Imagens (16)",
-  "bgLabel": "Fundo {index}",
-  "@bgLabel": {
-    "placeholders": {
-      "index": {
-        "type": "String"
-      }
-    }
-  },
   "noteSentToTrash": "Nota enviada para a lixeira",
   "notesArchivedCount": "{count} notas arquivadas",
   "@notesArchivedCount": {
@@ -200,7 +185,6 @@
   },
   "selectFolderToStoreNotes": "Selecione uma pasta para guardar as notas",
   "folderWord": "Pasta",
-  "fileWord": "Ficheiro",
   "itemWord": "Item",
   "folderIdLabel": "Pasta (ID: {id})",
   "@folderIdLabel": {
@@ -357,8 +341,6 @@
   "copiedToKdrive": "Copiado para kDrive",
   "copyToKdriveFailed": "Falha ao copiar para kDrive",
   "checkForUpdates": "Verificar atualizações",
-  "checkingForUpdates": "A verificar atualizações...",
-  "upToDate": "Está atualizado",
   "upToDateMessage": "Está a usar a versão mais recente ({version}).",
   "@upToDateMessage": {
     "placeholders": {
@@ -408,6 +390,28 @@
     "placeholders": {
       "value": {
         "type": "int"
+      }
+    }
+  },
+  "maintenanceSection": "MANUTENÇÃO",
+  "clearOldVersions": "Limpar versões antigas",
+  "clearOldVersionsSubtitle": "Apaga o histórico de versões guardado no kDrive. A versão atual de cada nota é mantida.",
+  "clearOldVersionsTitle": "Limpar versões antigas?",
+  "clearOldVersionsMessage": "Cada alteração guarda o conteúdo anterior como uma versão no kDrive. As versões antigas mantêm o conteúdo com que foram escritas, incluindo texto simples guardado antes de ativar a encriptação. Esta operação remove o histórico de todas as notas da pasta selecionada e mantém apenas a versão atual. Não pode ser desfeita no kMemo nem na aplicação web do kDrive.",
+  "clearingVersions": "A limpar versões antigas…",
+  "clearOldVersionsDone": "Versões antigas removidas de {count} nota(s).",
+  "@clearOldVersionsDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearOldVersionsError": "Não foi possível limpar as versões: {error}",
+  "@clearOldVersionsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
       }
     }
   }

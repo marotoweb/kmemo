@@ -1,8 +1,0 @@
-Deslizar, correções do widget e listas fluidas.
-
-- Deslize para a direita para arquivar e para a esquerda para o lixo (com Anular).
-- Só um arrasto quase completo age, pelo que deslizes rápidos não arquivam por engano.
-- Corrigida a nota que reabria em cada arranque após ser aberta pelo widget.
-- Corrigida a seleção por toque longo e a acidental ao fazer scroll.
-- Lista mais fluida: pré-visualizações vêm da memória.
-- Widget: sem saltos de scroll; novos controlos de transparência.

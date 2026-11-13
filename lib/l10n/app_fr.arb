@@ -48,9 +48,7 @@
   "folderCreatedSuccessfully": "Dossier créé avec succès",
   "removeFromArchive": "Retirer des archives",
   "sync": "Synchroniser",
-  "syncAllNotes": "Synchroniser toutes les notes",
   "syncTitle": "Synchronisation",
-  "syncCompleted": "Synchronisation terminée",
   "syncCompletedWithCount": "Synchronisation terminée : {count} note(s) synchronisée(s).",
   "@syncCompletedWithCount": {
     "placeholders": {
@@ -86,7 +84,6 @@
   "generateTokenAtManager": "Générez un token sur manager.infomaniak.com",
   "noKdriveInAccount": "Aucun drive kDrive dans ce compte. Activez kDrive sur manager.infomaniak.com.",
   "encryptNotesOnClient": "Chiffrer les notes côté client avant envoi au cloud",
-  "wantToSyncAllNotes": "Voulez-vous synchroniser toutes les notes locales",
   "stepsToConfigure": "Étapes de configuration :",
   "step1EnterToken": "1. Entrez le token Infomaniak",
   "step2SelectDrive": "2. Sélectionnez le drive kDrive",
@@ -110,13 +107,9 @@
   "auto": "Auto",
   "syncSubtitle": "Synchronisez vos notes avec kDrive ou WebDAV",
   "reportBugSubtitle": "Signalez un bug, suggérez une fonctionnalité ou laissez un commentaire",
-  "archiveScreenTitle": "Archive",
-  "trashScreenTitle": "Corbeille",
-  "settingsTitle": "Paramètres",
   "sharedNote": "Note partagée",
   "colorsTab": "Couleurs (16)",
   "imagesTab": "Images (16)",
-  "bgLabel": "Fond {index}",
   "noteSentToTrash": "Note envoyée à la corbeille",
   "notesArchivedCount": "{count} notes archivées",
   "notesSentToTrashCount": "{count} notes envoyées à la corbeille",
@@ -136,7 +129,6 @@
   "selectedFolder": "Dossier sélectionné : {name}",
   "selectFolderToStoreNotes": "Sélectionnez un dossier pour enregistrer vos notes",
   "folderWord": "Dossier",
-  "fileWord": "Fichier",
   "itemWord": "Élément",
   "folderIdLabel": "Dossier (ID : {id})",
   "fileIdLabel": "Fichier (ID : {id})",
@@ -155,7 +147,6 @@
   "restore": "Restaurer",
   "imageAttachmentsCount": "Pièces jointes image ({count})",
   "updatedOn": "Mis à jour : {date}",
-  "configureRemoteStorageToSync": "Configurez un stockage distant pour synchroniser vos notes.",
   "notesUnarchivedCount": "{count} notes retirées des archives",
   "notesRestoredCount": "{count} notes restaurées",
   "searchCounter": "{current} sur {total}",
@@ -183,8 +174,6 @@
   "copiedToKdrive": "Copié sur kDrive",
   "copyToKdriveFailed": "Échec de la copie sur kDrive",
   "checkForUpdates": "Vérifier les mises à jour",
-  "checkingForUpdates": "Vérification des mises à jour...",
-  "upToDate": "Vous êtes à jour",
   "upToDateMessage": "Vous utilisez la dernière version ({version}).",
   "@upToDateMessage": {
     "placeholders": {
@@ -229,5 +218,13 @@
   "widget": "WIDGETS",
   "widgetBackgroundTransparency": "Transparence du fond du widget",
   "widgetCardTransparency": "Transparence des cartes",
-  "transparencyPercent": "{value} %"
+  "transparencyPercent": "{value} %",
+  "maintenanceSection": "MAINTENANCE",
+  "clearOldVersions": "Supprimer les anciennes versions",
+  "clearOldVersionsSubtitle": "Supprime l'historique des versions stocké dans kDrive. La version actuelle de chaque note est conservée.",
+  "clearOldVersionsTitle": "Supprimer les anciennes versions ?",
+  "clearOldVersionsMessage": "Chaque modification conserve le contenu précédent comme version dans kDrive. Les anciennes versions gardent le contenu avec lequel elles ont été écrites, y compris le texte en clair enregistré avant l'activation du chiffrement. Cette opération supprime l'historique de toutes les notes du dossier sélectionné et ne garde que la version actuelle. Elle est irréversible dans kMemo et dans l'application web kDrive.",
+  "clearingVersions": "Suppression des anciennes versions…",
+  "clearOldVersionsDone": "Anciennes versions supprimées de {count} note(s).",
+  "clearOldVersionsError": "Impossible de supprimer les versions : {error}"
 }

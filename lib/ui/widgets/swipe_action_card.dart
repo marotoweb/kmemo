@@ -1,18 +1,28 @@
 // lib/ui/widgets/swipe_action_card.dart
 
+import 'dart:async';
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-/// Card wrapper that runs [onDismissed] only after a near-complete swipe.
+/// Card wrapper that runs [onDismissed] only after a deliberate swipe.
 ///
-/// A plain [Dismissible] also dismisses on a fast fling, no matter how little
-/// the card moved, which archived notes on the home screen and restored notes
-/// in the trash by accident after a small swipe. The pointer travel is recorded
-/// here and [Dismissible.confirmDismiss] rejects any dismissal that did not
-/// drag the card at least [threshold] of its width.
+/// A plain [Dismissible] accepts the drag as soon as the pointer travels one
+/// touch slop, so a diagonal scroll grabbed the card and revealed the action
+/// by accident, and a fast fling dismissed it no matter how little it moved.
 ///
-/// The recorded travel is used instead of the [Dismissible] progress because
-/// the progress is already 1.0 by the time `confirmDismiss` runs (the dismiss
-/// animation has completed), so it cannot tell a long drag from a fast fling.
+/// This wrapper owns the horizontal drag instead:
+///  * the gesture is accepted only after twice the normal horizontal slop and
+///    when the card moved clearly more sideways than vertically (see
+///    [_GuardedHorizontalDragRecognizer]), so a vertical or diagonal scroll
+///    keeps scrolling the list and never touches the card;
+///  * the action runs only when the card itself was dragged [threshold] of
+///    its width, measured from where the drag was recognised.
+///
+/// The card is moved with a [Transform]; [onDismissed] runs on release and the
+/// card disappears when the list rebuilds after the database write. It is
+/// never removed by Flutter, so there is no "dismissed widget still in the
+/// tree" failure to avoid.
 class SwipeActionCard extends StatefulWidget {
   const SwipeActionCard({
     super.key,
@@ -20,113 +30,216 @@ class SwipeActionCard extends StatefulWidget {
     required this.child,
     required this.onDismissed,
     this.direction = DismissDirection.horizontal,
-    this.threshold = 0.9,
+    this.threshold = 0.35,
     this.background,
     this.secondaryBackground,
   });
 
-  /// Key for the inner [Dismissible]; must be unique per item (the memo uuid).
+  /// Key applied to the card itself, so a list can find the entry by note id.
   final Key dismissKey;
-
   final Widget child;
-
   final void Function(DismissDirection direction) onDismissed;
 
+  /// Which horizontal drags move the card.
   final DismissDirection direction;
 
-  /// Fraction of the card width the finger must travel for the swipe to count.
+  /// Fraction of the card width that must be dragged to run [onDismissed].
+  ///
+  /// 35% is a comfortable one-thumb travel on a full-width card (about 370 px
+  /// on a 1080-wide screen, plus the slop consumed before the drag starts).
+  /// It is safe because the drag itself is only accepted when the movement is
+  /// clearly horizontal: a scroll can never reach this offset.
   final double threshold;
 
-  /// Shown behind the card while it is dragged towards the end (right in LTR).
+  /// Painted behind the card when it is dragged to the right.
   final Widget? background;
 
-  /// Shown behind the card while it is dragged towards the start (left in LTR).
+  /// Painted behind the card when it is dragged to the left.
   final Widget? secondaryBackground;
 
   @override
   State<SwipeActionCard> createState() => _SwipeActionCardState();
 }
 
-class _SwipeActionCardState extends State<SwipeActionCard> {
-  int? _pointer;
-  double _startX = 0;
-  double _distance = 0;
+/// Horizontal drag that ignores diagonal movement.
+///
+/// [HorizontalDragGestureRecognizer] accepts as soon as the pointer moves one
+/// touch slop sideways, without looking at the vertical movement. Inside a
+/// scrolling list that is too eager: a scroll flicked slightly off-axis was
+/// taken as a swipe. Requiring twice the slop and a clearly horizontal
+/// direction lets the scroll view's vertical recogniser win those gestures.
+class _GuardedHorizontalDragRecognizer extends HorizontalDragGestureRecognizer {
+  Offset _down = Offset.zero;
 
-  /// Direction of the current drag, used to pick the background to reveal.
-  late DismissDirection _dragDirection = _initialDirection;
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    _down = event.position;
+    super.addAllowedPointer(event);
+  }
 
-  DismissDirection get _initialDirection =>
-      widget.direction == DismissDirection.horizontal
-      ? DismissDirection.startToEnd
-      : widget.direction;
+  @override
+  bool hasSufficientGlobalDistanceToAccept(
+    PointerDeviceKind pointerDeviceKind,
+    double? deviceTouchSlop,
+  ) {
+    final slop = computeHitSlop(pointerDeviceKind, gestureSettings);
+    final moved = lastPosition.global - _down;
+    return moved.dx.abs() >= slop * 2 &&
+        moved.dx.abs() >= moved.dy.abs() * 1.5;
+  }
+}
 
-  void _handleUpdate(DismissUpdateDetails details) {
-    final direction = details.direction;
-    if (direction == _dragDirection) return;
-    // Only the revealed background changes; the pointer travel keeps counting
-    // from the same origin, exactly like the Dismissible drag extent.
-    setState(() => _dragDirection = direction);
+class _SwipeActionCardState extends State<SwipeActionCard>
+    with SingleTickerProviderStateMixin {
+  /// Horizontal displacement of the card in pixels; positive is to the right.
+  double _offset = 0;
+
+  /// Where the drag was recognised, in global coordinates.
+  double _dragStartX = 0;
+
+  /// Width of the card, captured on every layout.
+  double _width = 0;
+
+  /// Animates the card back to its place after a short or rejected swipe.
+  late final AnimationController _settleController;
+  Animation<double>? _settleAnimation;
+
+  /// Blocks a second action while the note is being removed from the list.
+  bool _actionFired = false;
+  Timer? _resetTimer;
+
+  bool get _allowsRight =>
+      widget.direction == DismissDirection.horizontal ||
+      widget.direction == DismissDirection.startToEnd;
+
+  bool get _allowsLeft =>
+      widget.direction == DismissDirection.horizontal ||
+      widget.direction == DismissDirection.endToStart;
+
+  @override
+  void initState() {
+    super.initState();
+    _settleController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 180),
+    )..addListener(_onSettleTick);
+  }
+
+  @override
+  void dispose() {
+    _resetTimer?.cancel();
+    _settleController.dispose();
+    super.dispose();
+  }
+
+  void _onSettleTick() {
+    final animation = _settleAnimation;
+    if (animation == null) return;
+    setState(() => _offset = animation.value);
+  }
+
+  void _settleBack() {
+    if (_offset == 0) return;
+    _settleAnimation = Tween<double>(begin: _offset, end: 0).animate(
+      CurvedAnimation(parent: _settleController, curve: Curves.easeOut),
+    );
+    _settleController.forward(from: 0);
+  }
+
+  void _handleDragStart(DragStartDetails details) {
+    if (_actionFired) return;
+    _settleController.stop();
+    _settleAnimation = null;
+    // DragStartBehavior.start: the drag is measured from the point where it
+    // was recognised, so the card starts moving from its resting place.
+    _dragStartX = details.globalPosition.dx;
+  }
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    if (_actionFired || _width <= 0) return;
+    var next = details.globalPosition.dx - _dragStartX;
+    if (next > 0 && !_allowsRight) next = 0;
+    if (next < 0 && !_allowsLeft) next = 0;
+    next = next.clamp(-_width, _width);
+    if (next == _offset) return;
+    setState(() => _offset = next);
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    if (_actionFired) return;
+    final width = _width;
+    final offset = _offset;
+    if (width > 0 && offset.abs() >= width * widget.threshold) {
+      _fireAction(
+        offset > 0 ? DismissDirection.startToEnd : DismissDirection.endToStart,
+      );
+    }
+    _settleBack();
+  }
+
+  void _fireAction(DismissDirection direction) {
+    if (_actionFired) return;
+    _actionFired = true;
+    widget.onDismissed(direction);
+    // The list rebuild after the database write removes this card. If the
+    // action failed and the card is still here, allow swiping again.
+    _resetTimer?.cancel();
+    _resetTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) setState(() => _actionFired = false);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final cardWidth = constraints.maxWidth;
+        _width = constraints.maxWidth;
 
         // The reveal background is painted behind the card instead of using
-        // the Dismissible background/secondaryBackground: Dismissible clips
-        // those with a straight edge at the card's leading edge, which leaves
-        // a white gap and a white wedge at the card's rounded corners.
-        final background = _dragDirection == DismissDirection.endToStart
+        // a Dismissible background: those are clipped with a straight edge at
+        // the card's leading edge, which leaves a white gap and a white wedge
+        // at the card's rounded corners.
+        final background = _offset < 0
             ? (widget.secondaryBackground ?? widget.background)
             : (widget.background ?? widget.secondaryBackground);
 
-        final card = Listener(
-          onPointerDown: (event) {
-            // Always restart tracking: a missed pointer up (e.g. the card
-            // unmounting during a reorder) must not disable swiping.
-            _pointer = event.pointer;
-            _startX = event.position.dx;
-            _distance = 0;
-          },
-          onPointerMove: (event) {
-            if (event.pointer != _pointer) return;
-            _distance = event.position.dx - _startX;
-          },
-          onPointerUp: (event) {
-            // Keep the distance: confirmDismiss runs after the pointer up.
-            if (event.pointer == _pointer) _pointer = null;
-          },
-          onPointerCancel: (event) {
-            if (event.pointer == _pointer) _pointer = null;
-          },
-          child: Dismissible(
-            key: widget.dismissKey,
-            direction: widget.direction,
-            dismissThresholds: {
-              DismissDirection.startToEnd: widget.threshold,
-              DismissDirection.endToStart: widget.threshold,
-            },
-            onUpdate: _handleUpdate,
-            confirmDismiss: (_) async {
-              if (cardWidth <= 0) return false;
-              return _distance.abs() >= cardWidth * widget.threshold;
-            },
-            onDismissed: widget.onDismissed,
-            child: widget.child,
-          ),
-        );
+        // Dim the reveal until the drag is far enough to act: lifting the
+        // finger before that does nothing, so the card tells the user when it
+        // is armed instead of leaving them to guess.
+        final armed =
+            _width > 0 && _offset.abs() >= _width * widget.threshold;
 
-        // StackFit.passthrough gives the card the same constraints it had
-        // before being wrapped, so it still fills the row and receives the
-        // drag. The background keeps its own slot at all times: changing the
-        // tree shape would remount the Dismissible mid-dismissal.
         return Stack(
           fit: StackFit.passthrough,
           children: [
-            Positioned.fill(child: background ?? const SizedBox.shrink()),
-            card,
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Opacity(
+                  opacity: armed ? 1 : 0.55,
+                  child: background ?? const SizedBox.shrink(),
+                ),
+              ),
+            ),
+            RawGestureDetector(
+              behavior: HitTestBehavior.opaque,
+              gestures: {
+                _GuardedHorizontalDragRecognizer:
+                    GestureRecognizerFactoryWithHandlers<
+                      _GuardedHorizontalDragRecognizer
+                    >(_GuardedHorizontalDragRecognizer.new, (recognizer) {
+                      recognizer
+                        ..dragStartBehavior = DragStartBehavior.start
+                        ..onStart = _handleDragStart
+                        ..onUpdate = _handleDragUpdate
+                        ..onEnd = _handleDragEnd
+                        ..onCancel = _settleBack;
+                    }),
+              },
+              child: Transform.translate(
+                offset: Offset(_offset, 0),
+                child: KeyedSubtree(key: widget.dismissKey, child: widget.child),
+              ),
+            ),
           ],
         );
       },

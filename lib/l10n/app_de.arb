@@ -48,9 +48,7 @@
   "folderCreatedSuccessfully": "Ordner erfolgreich erstellt",
   "removeFromArchive": "Aus Archiv entfernen",
   "sync": "Synchronisieren",
-  "syncAllNotes": "Alle Notizen synchronisieren",
   "syncTitle": "Synchronisation",
-  "syncCompleted": "Synchronisation abgeschlossen",
   "syncCompletedWithCount": "Synchronisierung abgeschlossen: {count} Notiz(en) synchronisiert.",
   "@syncCompletedWithCount": {
     "placeholders": {
@@ -86,7 +84,6 @@
   "generateTokenAtManager": "Token auf manager.infomaniak.com generieren",
   "noKdriveInAccount": "Kein kDrive-Laufwerk in diesem Konto. Aktivieren Sie kDrive auf manager.infomaniak.com.",
   "encryptNotesOnClient": "Notizen vor dem Senden an die Cloud clientseitig verschlüsseln",
-  "wantToSyncAllNotes": "Möchten Sie alle lokalen Notizen synchronisieren",
   "stepsToConfigure": "Schritte zur Konfiguration:",
   "step1EnterToken": "1. Infomaniak-Token eingeben",
   "step2SelectDrive": "2. kDrive-Laufwerk wählen",
@@ -95,7 +92,6 @@
   "generateTokenWithScopes": "Token auf manager.infomaniak.com mit folgenden Scopes generieren:",
   "definePassphrase": "Legen Sie eine Passphrase zum Verschlüsseln Ihrer Notizen fest. Ohne sie sind Daten nicht wiederherstellbar.",
   "emptyFolder": "Leerer Ordner",
-  "configureRemoteStorageToSync": "Richte einen Remote-Speicher ein, um deine Notizen zu synchronisieren.",
   "trashIsEmpty": "Der Papierkorb ist leer.",
   "language": "SPRACHE",
   "appearance": "ERSCHEINUNGSBILD",
@@ -111,13 +107,9 @@
   "auto": "Auto",
   "syncSubtitle": "Synchronisieren Sie Ihre Notizen mit kDrive oder WebDAV",
   "reportBugSubtitle": "Melden Sie einen Fehler, schlagen Sie eine Funktion vor oder hinterlassen Sie einen Kommentar",
-  "archiveScreenTitle": "Archiv",
-  "trashScreenTitle": "Papierkorb",
-  "settingsTitle": "Einstellungen",
   "sharedNote": "Geteilte Notiz",
   "colorsTab": "Farben (16)",
   "imagesTab": "Bilder (16)",
-  "bgLabel": "Hintergrund {index}",
   "noteSentToTrash": "Notiz in den Papierkorb verschoben",
   "notesArchivedCount": "{count} Notizen archiviert",
   "notesSentToTrashCount": "{count} Notizen in den Papierkorb verschoben",
@@ -137,7 +129,6 @@
   "selectedFolder": "Ausgewählter Ordner: {name}",
   "selectFolderToStoreNotes": "Wähle einen Ordner zum Speichern deiner Notizen",
   "folderWord": "Ordner",
-  "fileWord": "Datei",
   "itemWord": "Element",
   "folderIdLabel": "Ordner (ID: {id})",
   "fileIdLabel": "Datei (ID: {id})",
@@ -183,8 +174,6 @@
   "copiedToKdrive": "In kDrive kopiert",
   "copyToKdriveFailed": "Kopie nach kDrive fehlgeschlagen",
   "checkForUpdates": "Auf Updates prüfen",
-  "checkingForUpdates": "Prüfe auf Updates...",
-  "upToDate": "Sie sind auf dem neuesten Stand",
   "upToDateMessage": "Sie verwenden die neueste Version ({version}).",
   "@upToDateMessage": {
     "placeholders": {
@@ -229,5 +218,13 @@
   "widget": "WIDGETS",
   "widgetBackgroundTransparency": "Transparenz des Widget-Hintergrunds",
   "widgetCardTransparency": "Transparenz der Karten",
-  "transparencyPercent": "{value} %"
+  "transparencyPercent": "{value} %",
+  "maintenanceSection": "WARTUNG",
+  "clearOldVersions": "Alte Versionen löschen",
+  "clearOldVersionsSubtitle": "Löscht den in kDrive gespeicherten Versionsverlauf. Die aktuelle Version jeder Notiz bleibt erhalten.",
+  "clearOldVersionsTitle": "Alte Versionen löschen?",
+  "clearOldVersionsMessage": "Jede Änderung speichert den vorherigen Inhalt als Version in kDrive. Alte Versionen behalten den Inhalt, mit dem sie geschrieben wurden, einschließlich Klartext, der vor dem Aktivieren der Verschlüsselung gespeichert wurde. Dieser Vorgang entfernt den Verlauf aller Notizen im ausgewählten Ordner und behält nur die aktuelle Version. Er kann weder in kMemo noch in der kDrive-Web-App rückgängig gemacht werden.",
+  "clearingVersions": "Alte Versionen werden gelöscht…",
+  "clearOldVersionsDone": "Alte Versionen von {count} Notiz(en) entfernt.",
+  "clearOldVersionsError": "Versionen konnten nicht gelöscht werden: {error}"
 }

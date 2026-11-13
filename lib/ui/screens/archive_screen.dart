@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
 import '../widgets/app_snackbar.dart';
+import '../widgets/swipe_action_card.dart';
 import 'memo_detail_screen.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
@@ -88,17 +89,20 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                         buildAppSnackBar(
                           context,
                           message: uuidsToUnarchive.length > 1
-                              ? AppLocalizations.of(context)!.notesUnarchivedCount('${uuidsToUnarchive.length}')
-                              : AppLocalizations.of(context)!.noteRemovedFromArchive,
+                              ? AppLocalizations.of(
+                                  context,
+                                )!.notesUnarchivedCount(
+                                  '${uuidsToUnarchive.length}',
+                                )
+                              : AppLocalizations.of(
+                                  context,
+                                )!.noteRemovedFromArchive,
                           duration: Duration(seconds: 8),
                           actionLabel: AppLocalizations.of(context)!.undo,
                           onAction: () async {
                             scaffoldMessenger.hideCurrentSnackBar();
                             for (var uuid in uuidsToUnarchive) {
-                              await memoProvider.archiveMemoStatus(
-                                uuid,
-                                true,
-                              );
+                              await memoProvider.archiveMemoStatus(uuid, true);
                             }
                           },
                         ),
@@ -119,11 +123,15 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                   itemBuilder: (context) => [
                     PopupMenuItem(
                       value: 'unarchive',
-                      child: Text(AppLocalizations.of(context)!.removeFromArchive),
+                      child: Text(
+                        AppLocalizations.of(context)!.removeFromArchive,
+                      ),
                     ),
                     PopupMenuItem(
                       value: 'delete',
-                      child: Text(AppLocalizations.of(context)!.deletePermanently2),
+                      child: Text(
+                        AppLocalizations.of(context)!.deletePermanently2,
+                      ),
                     ),
                   ],
                 ),
@@ -144,8 +152,9 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                       color: isDarkMode ? Colors.white70 : Colors.black87,
                     ),
                     onPressed: () async {
-                      final uuidsToUnarchive =
-                          archivedMemos.map((m) => m.uuid).toList();
+                      final uuidsToUnarchive = archivedMemos
+                          .map((m) => m.uuid)
+                          .toList();
 
                       for (var uuid in uuidsToUnarchive) {
                         await provider.archiveMemoStatus(uuid, false);
@@ -153,26 +162,27 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
 
                       if (!context.mounted) return;
 
-                      final scaffoldMessenger =
-                          ScaffoldMessenger.of(context);
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
                       scaffoldMessenger.hideCurrentSnackBar();
 
-                      final snackBarController =
-                          scaffoldMessenger.showSnackBar(
+                      final snackBarController = scaffoldMessenger.showSnackBar(
                         buildAppSnackBar(
                           context,
                           message: uuidsToUnarchive.length > 1
-                              ? AppLocalizations.of(context)!.notesUnarchivedCount('${uuidsToUnarchive.length}')
-                              : AppLocalizations.of(context)!.noteRemovedFromArchive,
+                              ? AppLocalizations.of(
+                                  context,
+                                )!.notesUnarchivedCount(
+                                  '${uuidsToUnarchive.length}',
+                                )
+                              : AppLocalizations.of(
+                                  context,
+                                )!.noteRemovedFromArchive,
                           duration: Duration(seconds: 8),
                           actionLabel: AppLocalizations.of(context)!.undo,
                           onAction: () async {
                             scaffoldMessenger.hideCurrentSnackBar();
                             for (var uuid in uuidsToUnarchive) {
-                              await provider.archiveMemoStatus(
-                                uuid,
-                                true,
-                              );
+                              await provider.archiveMemoStatus(uuid, true);
                             }
                           },
                         ),
@@ -207,91 +217,79 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                   final memo = archivedMemos[index];
                   final isSelected = _selectedUuids.contains(memo.uuid);
 
-                  return Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Positioned.fill(
-                        child: Container(
-                          margin: EdgeInsets.symmetric(
-                            vertical: 4,
-                            horizontal: 2,
-                          ),
-                          alignment: Alignment.centerLeft,
-                          padding: EdgeInsets.only(left: 20),
-                          decoration: BoxDecoration(
-                            color: isDarkMode
-                                ? Colors.amber.shade900
-                                : Colors.amber,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.unarchive,
-                            color: isDarkMode ? Colors.white70 : Colors.black87,
-                          ),
-                        ),
+                  return SwipeActionCard(
+                    dismissKey: Key(memo.uuid),
+                    // Unarchive is the only swipe action here, so a single
+                    // direction is enough; it still requires a near-complete
+                    // swipe (see SwipeActionCard).
+                    direction: DismissDirection.startToEnd,
+                    background: Container(
+                      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                      alignment: Alignment.centerLeft,
+                      padding: EdgeInsets.only(left: 20),
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? Colors.amber.shade900
+                            : Colors.amber,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      Dismissible(
-                        key: Key(memo.uuid),
-                        direction: DismissDirection.startToEnd,
-                        background: SizedBox.shrink(),
-                        onDismissed: (direction) async {
-                          final uuidToUnarchive = memo.uuid;
+                      child: Icon(
+                        Icons.unarchive,
+                        color: isDarkMode ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                    onDismissed: (direction) async {
+                      final uuidToUnarchive = memo.uuid;
 
-                          await provider.archiveMemoStatus(
-                            uuidToUnarchive,
-                            false,
-                          );
+                      await provider.archiveMemoStatus(uuidToUnarchive, false);
 
-                          if (!context.mounted) return;
+                      if (!context.mounted) return;
 
-                          final scaffoldMessenger = ScaffoldMessenger.of(
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
+                      scaffoldMessenger.hideCurrentSnackBar();
+
+                      final snackBarController = scaffoldMessenger.showSnackBar(
+                        buildAppSnackBar(
+                          context,
+                          message: AppLocalizations.of(
                             context,
-                          );
-                          scaffoldMessenger.hideCurrentSnackBar();
-
-                          final snackBarController = scaffoldMessenger
-                              .showSnackBar(
-                                buildAppSnackBar(
-                                  context,
-                                  message: AppLocalizations.of(context)!.noteRemovedFromArchive,
-                                  duration: Duration(seconds: 8),
-                                  actionLabel: AppLocalizations.of(context)!.undo,
-                                  onAction: () async {
-                                    scaffoldMessenger.hideCurrentSnackBar();
-                                    await provider.archiveMemoStatus(
-                                      uuidToUnarchive,
-                                      true,
-                                    );
-                                  },
-                                ),
-                              );
-
-                          Future.delayed(Duration(seconds: 8), () {
-                            try {
-                              snackBarController.close();
-                            } catch (_) {}
-                          });
-                        },
-                        child: MemoCard(
-                          memo: memo,
-                          isSelected: isSelected,
-                          onLongPress: () => _toggleSelection(memo.uuid),
-                          onTap: () {
-                            if (isSelectionMode) {
-                              _toggleSelection(memo.uuid);
-                            } else {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      MemoDetailScreen(memo: memo),
-                                ),
-                              );
-                            }
+                          )!.noteRemovedFromArchive,
+                          duration: Duration(seconds: 8),
+                          actionLabel: AppLocalizations.of(context)!.undo,
+                          onAction: () async {
+                            scaffoldMessenger.hideCurrentSnackBar();
+                            await provider.archiveMemoStatus(
+                              uuidToUnarchive,
+                              true,
+                            );
                           },
                         ),
-                      ),
-                    ],
+                      );
+
+                      Future.delayed(Duration(seconds: 8), () {
+                        try {
+                          snackBarController.close();
+                        } catch (_) {}
+                      });
+                    },
+                    child: MemoCard(
+                      memo: memo,
+                      isSelected: isSelected,
+                      onLongPress: () => _toggleSelection(memo.uuid),
+                      onTap: () {
+                        if (isSelectionMode) {
+                          _toggleSelection(memo.uuid);
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  MemoDetailScreen(memo: memo),
+                            ),
+                          );
+                        }
+                      },
+                    ),
                   );
                 },
               ),

@@ -210,7 +210,6 @@ kMemo **is not affiliated with, endorsed by or sponsored by Infomaniak**. The **
 | `lib/ui/screens/archive_screen.dart` | Archived notes |
 | `lib/ui/screens/settings_screen.dart` | Settings, theme, language, sync, open-source info |
 | `lib/ui/screens/sync_settings_screen.dart` | kDrive configuration: token, drive, folder, encryption |
-| `lib/models/block.dart` | BlockType and Block model definitions |
 | `android/app/src/main/kotlin/com/marotoweb/kmemo/MainActivity.kt` | Intent handling (widget + shared text) |
 | `android/app/src/main/kotlin/com/marotoweb/kmemo/KMemoWidgetService.kt` | Native widget view factory |
 | `android/app/src/main/kotlin/com/marotoweb/kmemo/KMemoWidgetProvider.kt` | AppWidget lifecycle |

@@ -66,9 +66,6 @@ class KDriveStorage extends StorageRepository {
   /// Configured remote folder (path or numeric id).
   String get remoteFolder => _remoteFolder;
 
-  /// Destination folder name (for display to the user).
-  String get folderDisplayName => _folderName ?? _remoteFolder;
-
   /// Indicates whether encryption is active.
   bool get encryptionEnabled => _encryptionEnabled;
 
@@ -119,11 +116,14 @@ class KDriveStorage extends StorageRepository {
 
     debugPrint('[KDriveStorage] init(): READING from prefs...');
     debugPrint(
-      '[KDriveStorage] init(): token_raw=$_token, driveId_raw=$driveIdRaw (${driveIdRaw.runtimeType}), folderId_raw=$_folderId, remoteFolder_raw=$_remoteFolder, encryptionEnabled_raw=$_encryptionEnabled, lastSync_raw=$_lastSync',
+      // Never log the token itself: logcat is readable by other tools.
+      '[KDriveStorage] init(): token=${_token != null ? 'present' : 'null'}, '
+      'driveId_raw=$driveIdRaw (${driveIdRaw.runtimeType}), '
+      'folderId_raw=$_folderId, remoteFolder_raw=$_remoteFolder, '
+      'encryptionEnabled_raw=$_encryptionEnabled, lastSync_raw=$_lastSync',
     );
     debugPrint(
-      '[KDriveStorage] init(): token=${_token != null ? 'present' : 'null'}, '
-      'driveId=$_driveId, remoteFolder=$_remoteFolder, '
+      '[KDriveStorage] init(): driveId=$_driveId, remoteFolder=$_remoteFolder, '
       'encryptionEnabled=$_encryptionEnabled, lastSync=$_lastSync',
     );
 
@@ -241,15 +241,27 @@ class KDriveStorage extends StorageRepository {
       '[KDriveStorage] configure() Verified: driveId=$verifyDriveId, remoteFolder=$verifyRemoteFolder, encryptionEnabled=$verifyEncryption',
     );
 
-    if (encryptionEnabled && encryptionPassphrase != null) {
-      EncryptionService.instance.enable(encryptionPassphrase);
-      await _secureStorage.write(
-        key: _prefsEncryptionPassphrase,
-        value: encryptionPassphrase,
-      );
-    } else {
+    if (!encryptionEnabled) {
       EncryptionService.instance.disable();
       await _secureStorage.delete(key: _prefsEncryptionPassphrase);
+    } else if ((encryptionPassphrase ?? '').trim().isNotEmpty) {
+      EncryptionService.instance.enable(encryptionPassphrase!.trim());
+      await _secureStorage.write(
+        key: _prefsEncryptionPassphrase,
+        value: encryptionPassphrase.trim(),
+      );
+    } else {
+      // The passphrase field is intentionally left empty when the user only
+      // changes the token or the folder. Keep the saved passphrase instead of
+      // overwriting it with an empty string: an empty key encrypts with 32
+      // spaces, and after the next start it looks like "no passphrase", which
+      // used to make every upload plain text.
+      final stored = await _secureStorage.read(key: _prefsEncryptionPassphrase);
+      if (stored != null && stored.isNotEmpty) {
+        EncryptionService.instance.enable(stored);
+      }
+      // If nothing is stored the service stays disabled on purpose: the push
+      // guard refuses to upload instead of writing plain text.
     }
 
     debugPrint(
@@ -384,12 +396,6 @@ class KDriveStorage extends StorageRepository {
       );
       rethrow;
     }
-  }
-
-  /// Lists the folders at the drive root (id=1).
-  /// Useful to let the user choose where to store notes.
-  Future<List<Map<String, dynamic>>> listRootFolders() async {
-    return listFolders('1');
   }
 
   /// Lists the drives accessible to the account, with pagination support.
@@ -738,6 +744,17 @@ class KDriveStorage extends StorageRepository {
       return null;
     }
 
+    // Never write a note in plain text when encryption is configured: a lost
+    // passphrase (secure storage unreadable, wrong passphrase, app started
+    // before the passphrase was loaded) must fail the upload instead of
+    // silently leaking the note to the remote storage.
+    if (encryptionEnabled && !EncryptionService.instance.isEnabled) {
+      throw StateError(
+        'Encryption is enabled but the passphrase is not loaded; '
+        'refusing to upload ${memo.uuid} in plain text',
+      );
+    }
+
     // Retry logic with exponential backoff
     int maxRetries = 3;
     Duration backoff = const Duration(seconds: 2);
@@ -833,46 +850,11 @@ class KDriveStorage extends StorageRepository {
       '[KDriveStorage] uploadMemo(${memo.uuid}): colorIndex=${memo.colorIndex}, bgImageIndex=${memo.bgImageIndex}, imageAttachments=${memo.imageAttachments}',
     );
 
-    // If the memo already has a remoteFileId, try to update the existing file first.
-    if (memo.remoteFileId != null && memo.remoteFileId!.isNotEmpty) {
-      final params = <String, String>{
-        'total_size': bytes.length.toString(),
-        'file_name': '${memo.uuid}.json',
-        'conflict': 'version',
-        'file_id': memo.remoteFileId!,
-      };
-      final uri = Uri.parse(
-        '$_apiBase/3/drive/$_driveIdValue/upload',
-      ).replace(queryParameters: params);
-      debugPrint(
-        '[KDriveStorage] uploadMemo(${memo.uuid}): POST update file_id=${memo.remoteFileId} to $uri',
-      );
-      var response = await _client.post(
-        uri,
-        headers: {
-          'Authorization': 'Bearer $_token',
-          'Content-Type': 'application/octet-stream',
-        },
-        body: bytes,
-      );
-      debugPrint(
-        '[KDriveStorage] uploadMemo(${memo.uuid}): update status=${response.statusCode} body=${response.body}',
-      );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final remoteId =
-            _extractFileIdFromUploadResponse(response.body) ??
-            memo.remoteFileId;
-        debugPrint(
-          '[KDriveStorage] uploadMemo(${memo.uuid}): updated remoteId=$remoteId',
-        );
-        return remoteId;
-      }
-      debugPrint(
-        '[KDriveStorage] uploadMemo(${memo.uuid}): update failed, trying to create new file instead',
-      );
-    }
-
-    // Create new file in the selected folder.
+    // The kDrive upload endpoint has no "update by file id": an existing note
+    // is overwritten by uploading the same file name into the same folder,
+    // which `conflict=version` turns into a new version of that file. Passing
+    // `file_id` together with `file_name`/`conflict` is rejected with HTTP 422,
+    // so there is a single upload path for new and existing notes.
     final paramsBase = <String, String>{
       'total_size': bytes.length.toString(),
       'file_name': '${memo.uuid}.json',
@@ -983,6 +965,31 @@ class KDriveStorage extends StorageRepository {
       );
     } catch (e) {
       debugPrint('[KDriveStorage] error deleting remote $remoteFileId: $e');
+    }
+  }
+
+  /// Deletes the version history of a remote note, keeping the current file.
+  ///
+  /// The kDrive upload endpoint always keeps the previous content as a new
+  /// version (`conflict=version`), so old copies accumulate as the note is
+  /// edited. Those versions preserve the content they were written with,
+  /// including plain text saved before encryption was enabled, which is why
+  /// the settings screen offers an explicit cleanup. A failure here is
+  /// non-fatal: the current note is never touched.
+  Future<bool> clearVersions(String remoteFileId) async {
+    if (!isConfigured) return false;
+    try {
+      await _request(
+        uri: Uri.parse(
+          '$_apiBase/2/drive/$_driveIdValue/files/$remoteFileId/versions',
+        ),
+        method: 'DELETE',
+      );
+      debugPrint('[KDriveStorage] clearVersions($remoteFileId): ok');
+      return true;
+    } catch (e) {
+      debugPrint('[KDriveStorage] clearVersions($remoteFileId): failed: $e');
+      return false;
     }
   }
 
@@ -1155,13 +1162,5 @@ class KDriveStorage extends StorageRepository {
   Future<void> _persistLastSync() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_prefsLastSync, _lastSync!.millisecondsSinceEpoch);
-  }
-
-  /// Orchestrated by MemoProvider (push + pull per memo). Kept to satisfy
-  /// the StorageRepository contract; performs a no-op.
-  @override
-  Future<void> sync() async {
-    // MemoProvider coordinates push/pull per note to associate
-    // remoteFileId and isSynced individually.
   }
 }

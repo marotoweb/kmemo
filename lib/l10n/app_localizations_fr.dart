@@ -154,13 +154,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sync => 'Synchroniser';
 
   @override
-  String get syncAllNotes => 'Synchroniser toutes les notes';
-
-  @override
   String get syncTitle => 'Synchronisation';
-
-  @override
-  String get syncCompleted => 'Synchronisation terminée';
 
   @override
   String syncCompletedWithCount(int count) {
@@ -255,10 +249,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Chiffrer les notes côté client avant envoi au cloud';
 
   @override
-  String get wantToSyncAllNotes =>
-      'Voulez-vous synchroniser toutes les notes locales';
-
-  @override
   String get stepsToConfigure => 'Étapes de configuration :';
 
   @override
@@ -284,10 +274,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get emptyFolder => 'Dossier vide';
-
-  @override
-  String get configureRemoteStorageToSync =>
-      'Configurez un stockage distant pour synchroniser vos notes.';
 
   @override
   String get trashIsEmpty => 'La corbeille est vide.';
@@ -336,15 +322,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Signalez un bug, suggérez une fonctionnalité ou laissez un commentaire';
 
   @override
-  String get archiveScreenTitle => 'Archive';
-
-  @override
-  String get trashScreenTitle => 'Corbeille';
-
-  @override
-  String get settingsTitle => 'Paramètres';
-
-  @override
   String get sharedNote => 'Note partagée';
 
   @override
@@ -352,11 +329,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get imagesTab => 'Images (16)';
-
-  @override
-  String bgLabel(String index) {
-    return 'Fond $index';
-  }
 
   @override
   String get noteSentToTrash => 'Note envoyée à la corbeille';
@@ -431,9 +403,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get folderWord => 'Dossier';
-
-  @override
-  String get fileWord => 'Fichier';
 
   @override
   String get itemWord => 'Élément';
@@ -605,12 +574,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get checkForUpdates => 'Vérifier les mises à jour';
 
   @override
-  String get checkingForUpdates => 'Vérification des mises à jour...';
-
-  @override
-  String get upToDate => 'Vous êtes à jour';
-
-  @override
   String upToDateMessage(String version) {
     return 'Vous utilisez la dernière version ($version).';
   }
@@ -701,5 +664,35 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String transparencyPercent(int value) {
     return '$value %';
+  }
+
+  @override
+  String get maintenanceSection => 'MAINTENANCE';
+
+  @override
+  String get clearOldVersions => 'Supprimer les anciennes versions';
+
+  @override
+  String get clearOldVersionsSubtitle =>
+      'Supprime l\'historique des versions stocké dans kDrive. La version actuelle de chaque note est conservée.';
+
+  @override
+  String get clearOldVersionsTitle => 'Supprimer les anciennes versions ?';
+
+  @override
+  String get clearOldVersionsMessage =>
+      'Chaque modification conserve le contenu précédent comme version dans kDrive. Les anciennes versions gardent le contenu avec lequel elles ont été écrites, y compris le texte en clair enregistré avant l\'activation du chiffrement. Cette opération supprime l\'historique de toutes les notes du dossier sélectionné et ne garde que la version actuelle. Elle est irréversible dans kMemo et dans l\'application web kDrive.';
+
+  @override
+  String get clearingVersions => 'Suppression des anciennes versions…';
+
+  @override
+  String clearOldVersionsDone(int count) {
+    return 'Anciennes versions supprimées de $count note(s).';
+  }
+
+  @override
+  String clearOldVersionsError(String error) {
+    return 'Impossible de supprimer les versions : $error';
   }
 }

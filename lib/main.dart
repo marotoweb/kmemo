@@ -1,5 +1,6 @@
 // lib/main.dart
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +19,14 @@ const Color kVividAmber = Color(0xFFFFC107);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // No app logging in production builds. Logcat can be read by other apps and
+  // tools, and one careless log line is enough to expose the kDrive token or a
+  // note's content.
+  if (kReleaseMode) {
+    debugPrint = (String? message, {int? wrapWidth}) {};
+  }
+
   // Discover bundled background images before the UI is built.
   await loadNoteBackgroundImages();
   // Warm the link preview cache so cards render previews synchronously.

@@ -154,13 +154,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sync => 'Sync';
 
   @override
-  String get syncAllNotes => 'Sync all notes';
-
-  @override
   String get syncTitle => 'Sync';
-
-  @override
-  String get syncCompleted => 'Sync completed';
 
   @override
   String syncCompletedWithCount(int count) {
@@ -255,9 +249,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Encrypt notes on the client before sending to the cloud';
 
   @override
-  String get wantToSyncAllNotes => 'Do you want to sync all local notes';
-
-  @override
   String get stepsToConfigure => 'Steps to configure:';
 
   @override
@@ -283,10 +274,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get emptyFolder => 'Empty folder';
-
-  @override
-  String get configureRemoteStorageToSync =>
-      'Configure remote storage to sync your notes.';
 
   @override
   String get trashIsEmpty => 'The trash is empty.';
@@ -335,15 +322,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Report a bug, suggest a feature, or leave a comment';
 
   @override
-  String get archiveScreenTitle => 'Archive';
-
-  @override
-  String get trashScreenTitle => 'Trash';
-
-  @override
-  String get settingsTitle => 'Settings';
-
-  @override
   String get sharedNote => 'Shared note';
 
   @override
@@ -351,11 +329,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get imagesTab => 'Images (16)';
-
-  @override
-  String bgLabel(String index) {
-    return 'Background $index';
-  }
 
   @override
   String get noteSentToTrash => 'Note moved to trash';
@@ -429,9 +402,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get folderWord => 'Folder';
-
-  @override
-  String get fileWord => 'File';
 
   @override
   String get itemWord => 'Item';
@@ -603,12 +573,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get checkForUpdates => 'Check for updates';
 
   @override
-  String get checkingForUpdates => 'Checking for updates...';
-
-  @override
-  String get upToDate => 'You\'re up to date';
-
-  @override
   String upToDateMessage(String version) {
     return 'You\'re running the latest version ($version).';
   }
@@ -699,5 +663,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String transparencyPercent(int value) {
     return '$value%';
+  }
+
+  @override
+  String get maintenanceSection => 'MAINTENANCE';
+
+  @override
+  String get clearOldVersions => 'Clear old versions';
+
+  @override
+  String get clearOldVersionsSubtitle =>
+      'Deletes the version history stored in kDrive. The current version of each note is kept.';
+
+  @override
+  String get clearOldVersionsTitle => 'Clear old versions?';
+
+  @override
+  String get clearOldVersionsMessage =>
+      'Every change keeps the previous content as a version in kDrive. Old versions keep the content they were written with, including plain text saved before encryption was enabled. This removes the history of every note in the selected folder and keeps only the current version. It cannot be undone in kMemo or in the kDrive web app.';
+
+  @override
+  String get clearingVersions => 'Clearing old versions…';
+
+  @override
+  String clearOldVersionsDone(int count) {
+    return 'Old versions removed from $count note(s).';
+  }
+
+  @override
+  String clearOldVersionsError(String error) {
+    return 'Could not clear versions: $error';
   }
 }

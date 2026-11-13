@@ -19,7 +19,19 @@ class EncryptionService {
   bool _enabled = false;
 
   /// Enables encryption with the provided passphrase.
+  ///
+  /// An empty passphrase is ignored: it would encrypt with a key made of 32
+  /// spaces, and the note would look unencrypted on the next start (the empty
+  /// value is what "no passphrase saved" means). Leaving encryption disabled
+  /// makes the upload guard refuse to write anything in plain text.
   void enable(String passphrase) {
+    if (passphrase.trim().isEmpty) {
+      debugPrint(
+        '[EncryptionService] enable(): empty passphrase ignored, '
+        'encryption stays disabled',
+      );
+      return;
+    }
     final key = enc.Key.fromUtf8(passphrase.padRight(32).substring(0, 32));
     _encrypter = enc.Encrypter(enc.AES(key));
     _enabled = true;

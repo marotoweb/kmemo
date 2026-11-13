@@ -86,6 +86,10 @@ class Blocks extends Table {
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
+  /// Database backed by the given executor, used by tests (for example an
+  /// in-memory `NativeDatabase.memory()`).
+  AppDatabase.forTesting(super.e);
+
   @override
   int get schemaVersion => 5; // v5 adds isPinned and sortIndex
 
@@ -114,16 +118,6 @@ class AppDatabase extends _$AppDatabase {
   );
 
   // Listing with descending order
-  Stream<List<Memo>> watchActiveMemos() {
-    return (select(memos)
-          ..where((t) => t.isArchived.equals(false) & t.isDeleted.equals(false))
-          ..orderBy([
-            (t) =>
-                OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc),
-          ]))
-        .watch();
-  }
-
   Stream<List<Memo>> watchAllMemos() {
     return (select(memos)..orderBy([
           (t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc),
@@ -175,12 +169,6 @@ class AppDatabase extends _$AppDatabase {
   Future<void> updateMemoArchiveStatus(String memoUuid, bool archived) async {
     await (update(memos)..where((t) => t.uuid.equals(memoUuid))).write(
       MemosCompanion(isArchived: Value(archived)),
-    );
-  }
-
-  Future<void> updateMemoDeleteStatus(String memoUuid, bool deleted) async {
-    await (update(memos)..where((t) => t.uuid.equals(memoUuid))).write(
-      MemosCompanion(isDeleted: Value(deleted)),
     );
   }
 

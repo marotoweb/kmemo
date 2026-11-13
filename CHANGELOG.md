@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.18
+
+### 🐛 Fixes
+- **Notes could be uploaded without encryption:** with encryption configured but the passphrase not loaded (the sync settings had been saved once with the passphrase field empty, which stored an empty passphrase and looked like "no passphrase" on the next start), a sync uploaded the notes in plain text — the encryption check only ran before the download, never before the upload. Uploads are now refused in that state.
+- **Encryption can no longer be bypassed:** saving the sync settings with the passphrase field empty keeps the saved passphrase instead of overwriting it with an empty one, an empty passphrase never enables encryption, and an upload fails instead of writing a note in plain text when the passphrase is missing. Restoring the passphrase re-uploads every note encrypted; use "Clear old versions" afterwards to remove the plain-text history.
+- **No secrets in the log:** the kDrive token was printed on startup, and the sync settings logged the token and passphrase lengths. Those lines now only say `present`/`empty`, and release builds no longer write any app log at all.
+- **Trash keeps the remote note:** sending a note to the trash no longer deletes its `.json` from kDrive. The note is uploaded flagged as being in the trash, so other devices show it in their trash too; the remote file is deleted only when the note is permanently removed from the trash.
+- **kDrive sync no longer duplicates notes:** updating an existing note sent a `file_id` that the kDrive API rejects when combined with `file_name`/`conflict` (HTTP 422), so every sync fell back to creating a new remote file and left the previous one orphaned — the origin of the "note not found" errors when deleting. Existing notes are now overwritten by name in a single request with `conflict=version`.
+- **Shared text without a checklist stays plain text:** text shared from another app only becomes a checklist when it contains real markers (`[ ]`, `[x]`, `- [ ]`, `* [X]`). Anything else opens as paragraphs, and a line without a marker inside a checklist continues the previous item instead of creating an empty checkbox.
+- **Red screen after swiping a note:** archiving or trashing a note no longer throws "A dismissed Dismissible widget is still part of the tree". The card now disappears when the list rebuilds after the note is saved, instead of being dismissed before it is removed. The archive screen (unarchive swipe) uses the same wrapper.
+- **Scrolling no longer triggers the swipe:** a diagonal up/down scroll used to grab the note card and reveal the archive/trash action, and a fast fling could even run it. The card now takes the gesture only when the finger moves clearly sideways, so a vertical or diagonal scroll always scrolls the list.
+- **Easier swipe actions:** a swipe now triggers at 35% of the card width instead of 90%, which was hard to reach on a long note card (walking the thumb across more than half the screen). The icon behind the card is dimmed until the drag is far enough, so it is clear when releasing will act. A short or fast fling still does nothing.
+- **Open search stays in sync with the notes:** archiving, trashing, restoring or editing a note while the search is open now refreshes the results right away. Before, the results were a snapshot taken when the query ran, so a note that had just been archived or deleted stayed in the list until the user typed again (and a restored or edited note was missing from it).
+- **Sort button stays in place:** the sort icon keeps the same position when the search field opens; the close button now sits before it.
+
+### ✨ Improvements
+- **Clear old versions:** each edit keeps the previous content as a version on kDrive, which is useful to recover an older note but also keeps the text as it was written (including plain text saved before encryption was enabled). Settings → Sync now has a "Clear old versions" action that deletes that history for every note in the selected folder and keeps only the current version. It is explicit, confirmed and irreversible.
+
+### 🔧 Internal
+- **Dead code removed:** unreferenced helpers in the database, provider and kDrive layers, the old `BlockExtension` leftover, eleven unused strings, three widget drawables that no layout referenced, the `docx_template` and `cupertino_icons` dependencies (never imported) and the unreferenced `old_icon.png`.
+
 ## 0.1.17
 
 ### 🐛 Fixes

@@ -13,6 +13,7 @@ import '../../database/database.dart';
 import '../../models/background_images.dart';
 import '../../models/home_sort.dart';
 import '../../models/note_palette.dart';
+import '../../models/shared_text.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
 import '../widgets/app_snackbar.dart';
@@ -49,6 +50,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Memo> _searchResults = [];
   Timer? _searchDebounce;
 
+  /// One search query runs at a time. A change that arrives while a query is
+  /// in flight is remembered and the query is repeated once it finishes, so the
+  /// list always ends up reflecting the latest memo data.
+  bool _searchQueryRunning = false;
+  bool _searchQueryPending = false;
+
+  MemoProvider? _memoProvider;
+
   // Hybrid gesture (reorder-allowed view): long-press + drag reorders;
   // long-press + release without moving toggles multi-selection.
   //
@@ -62,6 +71,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // Re-run an open search when the memo data changes: the results are a
+    // snapshot, so archiving, trashing, restoring or editing a note used to
+    // leave stale cards in the list until the user typed again.
+    final provider = context.read<MemoProvider>();
+    if (!identical(provider, _memoProvider)) {
+      _memoProvider?.removeListener(_onMemoDataChanged);
+      _memoProvider = provider;
+      provider.addListener(_onMemoDataChanged);
+    }
     final l10n = AppLocalizations.of(context)!;
     WidgetService.saveLabels(
       untitled: l10n.widgetUntitled,
@@ -315,36 +333,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final sanitized = _sanitizeSharedText(sharedText);
         if (sanitized.isEmpty) return;
 
-        final lines = sanitized.split('\n');
+        // Plain text stays text; only real checklist markers become items.
+        final parsed = parseSharedText(
+          sanitized,
+          fallbackTitle: AppLocalizations.of(context)!.sharedNote,
+        );
 
-        // Detect checklist pattern: if the FIRST line is a checklist item,
-        // treat the entire text as a checklist (first line becomes first item,
-        // title defaults to "shared note").
-        final checklistRegex = RegExp(r'^\s*[-*]?\s*\[([xX ]?)\]\s*(.*)$');
-        final firstLine = lines.first.trim();
-        final firstLineIsChecklist =
-            firstLine.isNotEmpty && checklistRegex.hasMatch(firstLine);
-
-        String title;
-        List<String> bodyLines;
-        if (firstLineIsChecklist) {
-          title = AppLocalizations.of(context)!.sharedNote;
-          bodyLines = lines; // all lines are checklist items
-        } else {
-          title = firstLine.isNotEmpty
-              ? firstLine
-              : AppLocalizations.of(context)!.sharedNote;
-          // the body is the rest (or the full text if it's the only line)
-          bodyLines = lines.length > 1 ? lines.sublist(1) : [];
-        }
-
-        debugPrint('[HomeScreen] title: "$title"');
-        debugPrint('[HomeScreen] firstLineIsChecklist: $firstLineIsChecklist');
-        debugPrint('[HomeScreen] bodyLines: $bodyLines');
+        debugPrint('[HomeScreen] title: "${parsed.title}"');
+        debugPrint('[HomeScreen] blocks: ${parsed.blocks.length}');
 
         final memo = Memo(
           uuid: Uuid().v4(),
-          title: title,
+          title: parsed.title,
           createdAt: now,
           updatedAt: now,
           isSynced: false,
@@ -361,50 +361,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         final List<Block> blocks = [];
         int sortOrder = 0;
-        for (final line in bodyLines) {
-          if (line.trim().isEmpty) continue;
-          final match = checklistRegex.firstMatch(line);
-          if (match != null) {
-            final marker = match.group(1) ?? '';
-            final text = match.group(2) ?? '';
-            blocks.add(
-              Block(
-                id: 0,
-                uuid: Uuid().v4(),
-                memoUuid: memo.uuid,
-                type: BlockType.checklist,
-                content: {
-                  'text': text.trim(),
-                  'checked': marker.toLowerCase() == 'x',
-                },
-                sortOrder: sortOrder++,
-                isDeleted: false,
-              ),
-            );
-          } else if (line.trim().isNotEmpty) {
-            // Non-checklist line: keep as checklist item with original text
-            blocks.add(
-              Block(
-                id: 0,
-                uuid: Uuid().v4(),
-                memoUuid: memo.uuid,
-                type: BlockType.checklist,
-                content: {'text': line.trim(), 'checked': false},
-                sortOrder: sortOrder++,
-                isDeleted: false,
-              ),
-            );
-          }
-        }
-        if (blocks.isEmpty) {
+        for (final spec in parsed.blocks) {
+          final isChecklist = spec.type == SharedTextBlockType.checklist;
           blocks.add(
             Block(
               id: 0,
               uuid: Uuid().v4(),
               memoUuid: memo.uuid,
-              type: BlockType.text,
-              content: {'text': bodyLines.join('\n')},
-              sortOrder: 0,
+              type: isChecklist ? BlockType.checklist : BlockType.text,
+              content: isChecklist
+                  ? {'text': spec.text, 'checked': spec.checked}
+                  : {'text': spec.text},
+              sortOrder: sortOrder++,
               isDeleted: false,
             ),
           );
@@ -421,7 +389,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         );
 
-        debugPrint('[HomeScreen] New note created from shared text: $title');
+        debugPrint(
+          '[HomeScreen] New note created from shared text: ${parsed.title}',
+        );
       }
     } catch (e) {
       debugPrint('[HomeScreen] error processing shared text: $e');
@@ -432,6 +402,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _memoProvider?.removeListener(_onMemoDataChanged);
     _searchDebounce?.cancel();
     _searchController.dispose();
     _searchFocus.dispose();
@@ -506,12 +477,42 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (query.isEmpty) _searchResults = [];
     });
     if (query.isEmpty) return;
-    _searchDebounce = Timer(const Duration(milliseconds: 200), () async {
-      final provider = context.read<MemoProvider>();
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+      unawaited(_runSearch(query));
+    });
+  }
+
+  /// A memo changed (edit, archive, trash, restore, sync). An open search is
+  /// refreshed so cards that no longer match disappear and new matches appear.
+  void _onMemoDataChanged() {
+    if (!_isSearching || _searchQuery.isEmpty) return;
+    unawaited(_runSearch(_searchQuery));
+  }
+
+  /// Runs [MemoProvider.searchMemos] for [query], one query at a time. Results
+  /// for a query the user already replaced are dropped, and a change that
+  /// arrives mid-query repeats the query once it finishes.
+  Future<void> _runSearch(String query) async {
+    if (query.isEmpty) return;
+    final provider = _memoProvider;
+    if (provider == null) return;
+    if (_searchQueryRunning) {
+      _searchQueryPending = true;
+      return;
+    }
+    _searchQueryRunning = true;
+    try {
       final results = await provider.searchMemos(query);
       if (!mounted || _searchQuery != query) return;
       setState(() => _searchResults = results);
-    });
+    } finally {
+      _searchQueryRunning = false;
+      final repeat = _searchQueryPending;
+      _searchQueryPending = false;
+      if (repeat && mounted && _isSearching && _searchQuery.isNotEmpty) {
+        unawaited(_runSearch(_searchQuery));
+      }
+    }
   }
 
   /// Fully rounded search field that replaces the AppBar title.
@@ -1375,17 +1376,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       icon: const Icon(Icons.search),
                       onPressed: _toggleSearch,
                     ),
-                  IconButton(
-                    tooltip: l10n.sortBy,
-                    icon: const Icon(Icons.sort),
-                    onPressed: _showSortMenu,
-                  ),
+                  // The search field replaces the title, so the actions keep
+                  // the same width in both states: the sort icon is always the
+                  // last one (rightmost) and never shifts when the search opens.
                   if (_isSearching)
                     IconButton(
                       tooltip: l10n.cancel,
                       icon: const Icon(Icons.close),
                       onPressed: _closeSearch,
                     ),
+                  IconButton(
+                    tooltip: l10n.sortBy,
+                    icon: const Icon(Icons.sort),
+                    onPressed: _showSortMenu,
+                  ),
                 ],
               ),
         drawer: Drawer(

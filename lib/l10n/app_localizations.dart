@@ -394,23 +394,11 @@ abstract class AppLocalizations {
   /// **'Sincronizar'**
   String get sync;
 
-  /// No description provided for @syncAllNotes.
-  ///
-  /// In pt, this message translates to:
-  /// **'Sincronizar todas as notas'**
-  String get syncAllNotes;
-
   /// No description provided for @syncTitle.
   ///
   /// In pt, this message translates to:
   /// **'Sincronização'**
   String get syncTitle;
-
-  /// No description provided for @syncCompleted.
-  ///
-  /// In pt, this message translates to:
-  /// **'Sincronização concluída'**
-  String get syncCompleted;
 
   /// No description provided for @syncCompletedWithCount.
   ///
@@ -580,12 +568,6 @@ abstract class AppLocalizations {
   /// **'Encripta as notas no cliente antes de enviar para a nuvem'**
   String get encryptNotesOnClient;
 
-  /// No description provided for @wantToSyncAllNotes.
-  ///
-  /// In pt, this message translates to:
-  /// **'Pretende sincronizar todas as notas locais'**
-  String get wantToSyncAllNotes;
-
   /// No description provided for @stepsToConfigure.
   ///
   /// In pt, this message translates to:
@@ -633,12 +615,6 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Pasta vazia'**
   String get emptyFolder;
-
-  /// No description provided for @configureRemoteStorageToSync.
-  ///
-  /// In pt, this message translates to:
-  /// **'Configure um armazenamento remoto para sincronizar as suas notas.'**
-  String get configureRemoteStorageToSync;
 
   /// No description provided for @trashIsEmpty.
   ///
@@ -730,24 +706,6 @@ abstract class AppLocalizations {
   /// **'Reporte um bug, sugira uma funcionalidade, ou deixe um comentário'**
   String get reportBugSubtitle;
 
-  /// No description provided for @archiveScreenTitle.
-  ///
-  /// In pt, this message translates to:
-  /// **'Arquivo'**
-  String get archiveScreenTitle;
-
-  /// No description provided for @trashScreenTitle.
-  ///
-  /// In pt, this message translates to:
-  /// **'Lixeira'**
-  String get trashScreenTitle;
-
-  /// No description provided for @settingsTitle.
-  ///
-  /// In pt, this message translates to:
-  /// **'Definições'**
-  String get settingsTitle;
-
   /// No description provided for @sharedNote.
   ///
   /// In pt, this message translates to:
@@ -765,12 +723,6 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Imagens (16)'**
   String get imagesTab;
-
-  /// No description provided for @bgLabel.
-  ///
-  /// In pt, this message translates to:
-  /// **'Fundo {index}'**
-  String bgLabel(String index);
 
   /// No description provided for @noteSentToTrash.
   ///
@@ -885,12 +837,6 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Pasta'**
   String get folderWord;
-
-  /// No description provided for @fileWord.
-  ///
-  /// In pt, this message translates to:
-  /// **'Ficheiro'**
-  String get fileWord;
 
   /// No description provided for @itemWord.
   ///
@@ -1162,18 +1108,6 @@ abstract class AppLocalizations {
   /// **'Verificar atualizações'**
   String get checkForUpdates;
 
-  /// No description provided for @checkingForUpdates.
-  ///
-  /// In pt, this message translates to:
-  /// **'A verificar atualizações...'**
-  String get checkingForUpdates;
-
-  /// No description provided for @upToDate.
-  ///
-  /// In pt, this message translates to:
-  /// **'Está atualizado'**
-  String get upToDate;
-
   /// No description provided for @upToDateMessage.
   ///
   /// In pt, this message translates to:
@@ -1341,6 +1275,54 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'{value}%'**
   String transparencyPercent(int value);
+
+  /// No description provided for @maintenanceSection.
+  ///
+  /// In pt, this message translates to:
+  /// **'MANUTENÇÃO'**
+  String get maintenanceSection;
+
+  /// No description provided for @clearOldVersions.
+  ///
+  /// In pt, this message translates to:
+  /// **'Limpar versões antigas'**
+  String get clearOldVersions;
+
+  /// No description provided for @clearOldVersionsSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Apaga o histórico de versões guardado no kDrive. A versão atual de cada nota é mantida.'**
+  String get clearOldVersionsSubtitle;
+
+  /// No description provided for @clearOldVersionsTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Limpar versões antigas?'**
+  String get clearOldVersionsTitle;
+
+  /// No description provided for @clearOldVersionsMessage.
+  ///
+  /// In pt, this message translates to:
+  /// **'Cada alteração guarda o conteúdo anterior como uma versão no kDrive. As versões antigas mantêm o conteúdo com que foram escritas, incluindo texto simples guardado antes de ativar a encriptação. Esta operação remove o histórico de todas as notas da pasta selecionada e mantém apenas a versão atual. Não pode ser desfeita no kMemo nem na aplicação web do kDrive.'**
+  String get clearOldVersionsMessage;
+
+  /// No description provided for @clearingVersions.
+  ///
+  /// In pt, this message translates to:
+  /// **'A limpar versões antigas…'**
+  String get clearingVersions;
+
+  /// No description provided for @clearOldVersionsDone.
+  ///
+  /// In pt, this message translates to:
+  /// **'Versões antigas removidas de {count} nota(s).'**
+  String clearOldVersionsDone(int count);
+
+  /// No description provided for @clearOldVersionsError.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível limpar as versões: {error}'**
+  String clearOldVersionsError(String error);
 }
 
 class _AppLocalizationsDelegate

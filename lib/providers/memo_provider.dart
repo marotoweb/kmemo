@@ -270,13 +270,26 @@ class MemoProvider extends ChangeNotifier {
 
   Future<List<Block>> saveMemo(Memo memo, List<Block> blocks) async {
     // Local changes mark the note as not synced (needs upload)
-    final updatedMemo = memo.copyWith(
-      updatedAt: DateTime.now(),
-      isSynced: false,
-    );
     final List<Block> updatedBlocksList = List.from(blocks);
 
     await _db.transaction(() async {
+      // The editor can hold a snapshot taken before the first upload finished
+      // (a note created and edited while it was still syncing). Never drop the
+      // remoteFileId already stored locally: without it the remote .json can
+      // no longer be overwritten by id or deleted when the note is purged.
+      var remoteFileId = memo.remoteFileId;
+      if (remoteFileId == null || remoteFileId.isEmpty) {
+        final stored = await (_db.select(
+          _db.memos,
+        )..where((t) => t.uuid.equals(memo.uuid))).getSingleOrNull();
+        remoteFileId = stored?.remoteFileId;
+      }
+      final updatedMemo = memo.copyWith(
+        updatedAt: DateTime.now(),
+        isSynced: false,
+        remoteFileId: Value(remoteFileId),
+      );
+
       await _db
           .into(_db.memos)
           .insert(updatedMemo, mode: InsertMode.insertOrReplace);
@@ -388,6 +401,18 @@ class MemoProvider extends ChangeNotifier {
     lastSyncNoteCount = 0;
     if (storage == null || !storage.isConfigured) return 0;
 
+    // Encryption is configured but the passphrase is not loaded (secure
+    // storage unreadable, wrong passphrase, or the app started before it was
+    // loaded). Abort before the push: uploading now would write every note in
+    // plain text. This used to be checked only before the pull, so a sync in
+    // that state uploaded plain-text copies while blocking the download.
+    if (storage.encryptionEnabled && !EncryptionService.instance.isEnabled) {
+      throw StateError(
+        'Encryption enabled but passphrase not configured. '
+        'Enter the passphrase in sync settings before syncing.',
+      );
+    }
+
     // Rate-limit guard (ignored if force=true)
     if (!force && !storage.syncAllowed) return 0;
 
@@ -469,15 +494,6 @@ class MemoProvider extends ChangeNotifier {
     // ---------------------------------------------------------------
     // PULL: download remote notes not present locally
     // ---------------------------------------------------------------
-    // If encryption is enabled in storage but the passphrase was not loaded into EncryptionService,
-    // we need to ask the user before attempting decryption
-    if (storage.encryptionEnabled && !EncryptionService.instance.isEnabled) {
-      throw Exception(
-        'Encryption enabled but passphrase not configured. '
-        'Enter the passphrase in sync settings before restoring notes.',
-      );
-    }
-
     try {
       debugPrint(
         '[MemoProvider] performSync(): ${pendingRemote.length} remote notes to pull',
@@ -578,45 +594,6 @@ class MemoProvider extends ChangeNotifier {
     return decryptionFailures;
   }
 
-  /// Forces sync of all notes (ignores isSynced state).
-  /// Useful to re-upload all notes after changing passphrase or disabling encryption.
-  Future<int> syncAll() async {
-    final storage = _storage;
-    if (storage == null || !storage.isConfigured) return 0;
-
-    debugPrint('[MemoProvider] syncAll(): starting re-sync of all notes');
-
-    // Mark all notes as not synced using an explicit transaction
-    await _db.transaction(() async {
-      await _db.customStatement(
-        'UPDATE memos SET is_synced = 0, remote_file_id = NULL',
-      );
-    });
-    debugPrint(
-      '[MemoProvider] syncAll(): all notes marked as not synced and remoteFileId cleared',
-    );
-
-    // Reload memo list from DB to ensure we have the latest data
-    _memos = await _db.watchAllMemos().first;
-    final localMemos = List<Memo>.from(_memos);
-
-    debugPrint(
-      '[MemoProvider] syncAll(): ${localMemos.length} total notes for re-sync',
-    );
-    for (var memo in localMemos) {
-      debugPrint(
-        '[MemoProvider] syncAll(): note ${memo.uuid} isSynced=${memo.isSynced}, remoteFileId=${memo.remoteFileId}, colorIndex=${memo.colorIndex}',
-      );
-    }
-
-    // Force performSync with force=true
-    return await performSync(force: true);
-  }
-
-  Future<void> archiveMemo(String memoUuid) async {
-    await _db.updateMemoArchiveStatus(memoUuid, true);
-  }
-
   Future<void> archiveMultiple(List<String> uuids) async {
     for (var id in uuids) {
       await _db.updateMemoArchiveStatus(id, true);
@@ -645,18 +622,15 @@ class MemoProvider extends ChangeNotifier {
         orElse: () => null,
       );
       if (match != null) {
-        // Remove remotely if exists in kDrive
-        if (match.remoteFileId != null &&
-            _storage != null &&
-            _storage.isConfigured) {
-          try {
-            await _storage.deleteMemo(match.remoteFileId!);
-          } catch (_) {
-            // Remote delete failure does not block local soft delete
-          }
-        }
+        // Sending to the trash keeps the remote file: it is only deleted from
+        // kDrive when the note is permanently removed (trash screen). The note
+        // is marked as unsynced so the isDeleted flag is uploaded and other
+        // devices pull it already flagged as being in the trash.
         final blocks = await _db.getBlocksForMemo(match.uuid);
-        await _db.saveMemoWithBlocks(match.copyWith(isDeleted: true), blocks);
+        await _db.saveMemoWithBlocks(
+          match.copyWith(isDeleted: true, isSynced: false),
+          blocks,
+        );
         debugPrint(
           '[MemoProvider] softDeleteMultiple: saved ${match.uuid} isDeleted=true',
         );
@@ -673,8 +647,13 @@ class MemoProvider extends ChangeNotifier {
         orElse: () => null,
       );
       if (match != null) {
+        // Restoring uploads the un-deleted state so the remote copy no longer
+        // reports the note as being in the trash.
         final blocks = await _db.getBlocksForMemo(match.uuid);
-        await _db.saveMemoWithBlocks(match.copyWith(isDeleted: false), blocks);
+        await _db.saveMemoWithBlocks(
+          match.copyWith(isDeleted: false, isSynced: false),
+          blocks,
+        );
       }
     }
     _scheduleSync();
@@ -682,19 +661,23 @@ class MemoProvider extends ChangeNotifier {
 
   // Permanently delete from database
   Future<void> deleteMultiplePermanent(List<String> uuids) async {
-    for (var id in uuids) {
-      final memo = _memos.firstWhere(
-        (m) => m.uuid == id,
-        orElse: () => throw StateError('Memo not found'),
+    for (final id in uuids) {
+      final cached = _memos.cast<Memo?>().firstWhere(
+        (m) => m?.uuid == id,
+        orElse: () => null,
       );
-      if (memo.remoteFileId != null &&
+      // Fall back to the database so a note that is no longer in memory can
+      // still be permanently removed instead of throwing.
+      final memo =
+          cached ??
+          await (_db.select(_db.memos)..where((t) => t.uuid.equals(id)))
+              .getSingleOrNull();
+      // The kDrive file is deleted only here, when the note is permanently
+      // removed from the trash.
+      if (memo?.remoteFileId != null &&
           _storage != null &&
           _storage.isConfigured) {
-        try {
-          await _storage.deleteMemo(memo.remoteFileId!);
-        } catch (_) {
-          // Remote delete failure does not block local delete
-        }
+        await _storage.deleteMemo(memo!.remoteFileId!);
       }
       await _db.deleteMemoCascading(id);
     }

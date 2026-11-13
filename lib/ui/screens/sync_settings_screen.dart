@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
+import '../../services/encryption_service.dart';
 import '../../services/kdrive_storage.dart';
 import '../widgets/app_snackbar.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
@@ -20,6 +21,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   late final KDriveStorage _storage;
   bool _isLoading = true;
   bool _isSyncing = false;
+  bool _isClearingVersions = false;
   int _syncDone = 0;
   int _syncTotal = 0;
 
@@ -166,27 +168,14 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     );
 
     debugPrint(
-      '[SyncSettings] _saveCurrentConfig(): token_length=${_tokenController.text.trim().length}, driveId=$_selectedDriveId, folderId=$_selectedFolderId, remoteFolder="$_remoteFolder", encryptionEnabled=$_encryptionEnabled, passphrase_length=${_passphraseController.text.trim().length}',
+      '[SyncSettings] _saveCurrentConfig(): token=${_tokenController.text.trim().isEmpty ? 'empty' : 'set'}, driveId=$_selectedDriveId, folderId=$_selectedFolderId, remoteFolder="$_remoteFolder", encryptionEnabled=$_encryptionEnabled, passphrase=${_passphraseController.text.trim().isEmpty ? 'empty' : 'set'}',
     );
     try {
       // Check if encryption changed (enabled or disabled)
       final wasEncryptionEnabled = _storage.encryptionEnabled;
       final encryptionChanged = wasEncryptionEnabled != _encryptionEnabled;
-
-      // If encryption changed, mark all notes as not synced
-      // so they are re-uploaded with/without encryption
-      if (encryptionChanged) {
-        debugPrint(
-          '[SyncSettings] _saveCurrentConfig(): encryption changed ($wasEncryptionEnabled -> $_encryptionEnabled), marking all notes as not synced',
-        );
-        final db = Provider.of<AppDatabase>(context, listen: false);
-        await db.customStatement(
-          'UPDATE memos SET is_synced = 0, remote_file_id = NULL',
-        );
-        debugPrint(
-          '[SyncSettings] _saveCurrentConfig(): all notes marked as not synced and remoteFileId cleared',
-        );
-      }
+      final wasServiceEnabled = EncryptionService.instance.isEnabled;
+      final db = Provider.of<AppDatabase>(context, listen: false);
 
       await _storage.configure(
         token: _tokenController.text.trim(),
@@ -200,6 +189,27 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
             ? _passphraseController.text.trim()
             : null,
       );
+
+      // Re-upload every note when encryption changed, and also when the
+      // passphrase was just restored (it was missing at start, so the notes
+      // uploaded during that time are plain text on the remote storage).
+      final passphraseRestored =
+          _encryptionEnabled &&
+          !wasServiceEnabled &&
+          EncryptionService.instance.isEnabled;
+      if (encryptionChanged || passphraseRestored) {
+        debugPrint(
+          '[SyncSettings] _saveCurrentConfig(): re-upload all notes '
+          '(encryptionChanged=$encryptionChanged, '
+          'passphraseRestored=$passphraseRestored)',
+        );
+        await db.customStatement(
+          'UPDATE memos SET is_synced = 0, remote_file_id = NULL',
+        );
+        debugPrint(
+          '[SyncSettings] _saveCurrentConfig(): all notes marked as not synced and remoteFileId cleared',
+        );
+      }
       debugPrint(
         '[SyncSettings] _saveCurrentConfig(): configure() completed successfully',
       );
@@ -308,6 +318,76 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     }
   }
 
+  /// Deletes the kDrive version history of every note in the selected folder.
+  ///
+  /// Versioning itself stays on: each upload still keeps the previous content
+  /// as a version. This is an explicit maintenance action for users who do not
+  /// want old copies of their notes (including plain text written before
+  /// encryption was enabled) kept on the remote server.
+  Future<void> _clearOldVersions() async {
+    if (_isSyncing || _isClearingVersions) return;
+    final l10n = AppLocalizations.of(context)!;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.clearOldVersionsTitle),
+        content: Text(l10n.clearOldVersionsMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _isClearingVersions = true;
+      _syncDone = 0;
+      _syncTotal = 0;
+    });
+    try {
+      final remoteMemos = await _storage.listRemoteMemos();
+      if (!mounted) return;
+      setState(() => _syncTotal = remoteMemos.length);
+
+      var cleared = 0;
+      for (var i = 0; i < remoteMemos.length; i++) {
+        if (await _storage.clearVersions(remoteMemos[i].remoteFileId)) {
+          cleared++;
+        }
+        if (!mounted) return;
+        setState(() => _syncDone++);
+        // The kDrive API allows 60 requests per minute. Pace the cleanup so a
+        // folder with many notes does not hit the rate limit and fail midway.
+        if (i < remoteMemos.length - 1) {
+          await Future.delayed(const Duration(milliseconds: 1100));
+          if (!mounted) return;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() => _isClearingVersions = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        buildAppSnackBar(
+          context,
+          message: l10n.clearOldVersionsDone(cleared),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isClearingVersions = false);
+      _showError(l10n.clearOldVersionsError('$e'));
+    }
+  }
+
   /// Performs sync with passphrase prompts and confirmation of
   /// deletion for non-decryptable remote notes.
   Future<int> _runSyncWithPrompts({bool force = false}) async {
@@ -397,7 +477,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.syncTitle), elevation: 0),
-      bottomNavigationBar: _isSyncing
+      bottomNavigationBar: (_isSyncing || _isClearingVersions)
           ? SafeArea(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -410,7 +490,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          AppLocalizations.of(context)!.syncingNow,
+                          _isClearingVersions
+                              ? AppLocalizations.of(context)!.clearingVersions
+                              : AppLocalizations.of(context)!.syncingNow,
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         SizedBox(height: 8),
@@ -715,6 +797,49 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   ),
                   SizedBox(height: 24),
 
+                  // Maintenance: version history is kept by default, but it
+                  // can be cleared explicitly (e.g. after enabling encryption,
+                  // so older plain-text copies stop living on the server).
+                  if (configured) ...[
+                    Text(
+                      AppLocalizations.of(context)!.maintenanceSection,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? Color(0xFF1E1E1E)
+                            : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDarkMode
+                              ? Colors.grey.shade800
+                              : Colors.grey.shade300,
+                        ),
+                      ),
+                      child: ListTile(
+                        leading: Icon(Icons.history_toggle_off),
+                        title: Text(
+                          AppLocalizations.of(context)!.clearOldVersions,
+                        ),
+                        subtitle: Text(
+                          AppLocalizations.of(context)!.clearOldVersionsSubtitle,
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        trailing: Icon(Icons.chevron_right),
+                        onTap: _isSyncing || _isClearingVersions
+                            ? null
+                            : _clearOldVersions,
+                      ),
+                    ),
+                    SizedBox(height: 24),
+                  ],
+
                 ] else ...[
                   // WebDAV - coming soon
                   Center(
@@ -800,7 +925,9 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton.icon(
-                      onPressed: _isSyncing ? null : _syncNow,
+                      onPressed: _isSyncing || _isClearingVersions
+                          ? null
+                          : _syncNow,
                       icon: _isSyncing
                           ? SizedBox(
                               width: 20,
