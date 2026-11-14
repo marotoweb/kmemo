@@ -1,6 +1,0 @@
-Correções importantes:
-- As notas deixaram de ser enviadas sem encriptação, e o token/passphrase já não aparecem no log.
-- A sincronização deixou de criar notas duplicadas.
-- Ações de swipe: sem ecrã vermelho, o scroll já não as ativa, e agora bastam 35% da largura.
-- A pesquisa aberta atualiza quando as notas mudam.
-- Nova ação: Limpar versões antigas (Definições de sincronização).

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.19
+
+### 🖼️ Store listing
+- **New screenshots:** the store listing now shows six screenshots for each language (Portuguese and English), taken with neutral demo notes: the home screen with pinned and coloured notes, the text editor, a checklist with struck-through items, a note with a background image, the settings screen and the home screen widget. The previous images were taller than the 9:16 ratio accepted by F-Droid, so the store could not display them.
+
 ## 0.1.18
 
 ### 🐛 Fixes

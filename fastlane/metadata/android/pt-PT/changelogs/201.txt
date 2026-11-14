@@ -1,0 +1,4 @@
+Novos screenshots da loja:
+- Seis screenshots por idioma (português e inglês), com notas de exemplo neutras.
+- Início com notas fixas e cores, editor de texto, checklist, nota com imagem de fundo, definições e o widget.
+- As imagens antigas não cabiam no formato 9:16 aceite pelo F-Droid.
