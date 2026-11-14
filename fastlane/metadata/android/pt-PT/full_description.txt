@@ -6,8 +6,9 @@ Funcionalidades:
 - Editor por blocos com blocos de texto e de lista de verificação.
 - Temas claro, escuro e do sistema, com cores personalizadas por nota.
 - Arquivo e lixo, com restauro e eliminação permanente.
-- Widget de ecrã principal (Android) com as notas mais recentes.
-- Sincronização remota opcional com o kDrive (Infomaniak), incluindo encriptação AES-256 opcional no cliente.
+- Widget de ecrã principal (Android) com as notas mais recentes, fixas primeiro.
+- Sincronização remota opcional com o kDrive (Infomaniak) ou qualquer servidor WebDAV, incluindo um servidor próprio. Usam o mesmo formato e só um backend fica configurado de cada vez.
+- Encriptação AES-256 opcional no cliente. Com a encriptação ativa, as notas nunca são enviadas em texto simples.
 - Pré-visualizações de links (Open Graph) apenas quando as pedes; nada é obtido automaticamente.
 - Exportação para .docx e partilha de notas pela folha de partilha do sistema.
 - Seis idiomas: português, inglês, francês, alemão, italiano e espanhol.

@@ -44,6 +44,10 @@ abstract class StorageRepository {
   /// Indicate if the repository is configured and ready for sync.
   bool get isConfigured;
 
+  /// Removes the stored configuration and every secret of this backend, so it
+  /// can be configured again from scratch (the symmetric pair of configure()).
+  Future<void> clearConfiguration();
+
   /// Human-readable name of the storage type (e.g. "kDrive", "WebDAV").
   String get storageName;
 

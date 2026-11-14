@@ -284,7 +284,8 @@ class KDriveStorage extends StorageRepository {
     );
   }
 
-  Future<void> logout() async {
+  @override
+  Future<void> clearConfiguration() async {
     final prefs = await SharedPreferences.getInstance();
     _token = null;
     _driveId = null;
@@ -303,7 +304,7 @@ class KDriveStorage extends StorageRepository {
     await prefs.remove(_prefsEncryptionEnabled);
     await prefs.remove(_prefsLastSync);
 
-    debugPrint('[KDriveStorage] logout(): all config cleared');
+    debugPrint('[KDriveStorage] clearConfiguration(): all config cleared');
   }
 
   // ------------------------------------------------------------------------

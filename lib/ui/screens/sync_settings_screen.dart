@@ -468,10 +468,10 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     );
   }
 
-  Future<void> _logout() async {
+  Future<void> _disableSync() async {
     // Mark all notes as not synced in all states (Drift, memory)
     await Provider.of<MemoProvider>(context, listen: false).disableSync();
-    await _storage.logout();
+    await _storage.clearConfiguration();
     if (mounted) {
       setState(() {
         _tokenController.clear();
@@ -677,7 +677,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
 
       // Only one backend may be configured at a time: activating WebDAV
       // removes the kDrive token, drive and folder.
-      await _storage.logout();
+      await _storage.clearConfiguration();
       _resetKdriveForm();
 
       // A passphrase that was missing at start means the notes uploaded until
@@ -1457,7 +1457,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                     width: double.infinity,
                     height: 48,
                     child: OutlinedButton.icon(
-                      onPressed: _logout,
+                      onPressed: _disableSync,
                       icon: Icon(Icons.logout),
                       label: Text(AppLocalizations.of(context)!.disableSync),
                     ),

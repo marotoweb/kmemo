@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+### ✨ Improvements
+- **Store description updated:** the F-Droid listing now presents WebDAV as an equal backend to kDrive (any WebDAV server, including self-hosted ones) and states that notes are never uploaded in plain text while encryption is enabled. No functional changes in this release.
+
 ## 0.2.0
 
 ### ✨ Features

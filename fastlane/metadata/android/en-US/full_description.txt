@@ -6,8 +6,9 @@ Features:
 - Block-based editor with text and checklist blocks.
 - Light, dark and system themes, with custom colors per note.
 - Archive and trash, with restore and permanent deletion.
-- Home screen widget (Android) showing your latest notes.
-- Optional remote sync with kDrive (Infomaniak), including optional client-side AES-256 encryption.
+- Home screen widget (Android) showing your latest notes, pinned first.
+- Optional remote sync with kDrive (Infomaniak) or any WebDAV server, including self-hosted ones. Both use the same format, and only one backend is configured at a time.
+- Optional client-side AES-256 encryption. Notes are never uploaded in plain text while encryption is enabled.
 - Link previews (Open Graph) with an explicit opt-in fetch; nothing is fetched automatically.
 - Export to .docx and share notes through the system share sheet.
 - Six languages: Portuguese, English, French, German, Italian and Spanish.

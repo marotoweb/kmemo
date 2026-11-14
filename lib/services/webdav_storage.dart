@@ -206,6 +206,7 @@ class WebDAVStorage extends StorageRepository {
   }
 
   /// Removes the WebDAV configuration and the stored secrets.
+  @override
   Future<void> clearConfiguration() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_prefsUrl);

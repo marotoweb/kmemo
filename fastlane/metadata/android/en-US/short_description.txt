@@ -1,1 +1,1 @@
-Offline-first block-based notes with optional kDrive sync
+Offline-first block notes with kDrive or WebDAV sync
