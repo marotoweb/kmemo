@@ -154,7 +154,6 @@
   "widgetUntitled": "Untitled",
   "widgetEmptyNote": "Empty note",
   "emptyNoteRejected": "Empty note rejected",
-  "webdavComingSoon": "Coming soon — WebDAV protocol not implemented yet.",
   "languageSetting": "Language",
   "system": "System",
   "editor": "EDITOR",
@@ -226,5 +225,25 @@
   "clearOldVersionsMessage": "Every change keeps the previous content as a version in kDrive. Old versions keep the content they were written with, including plain text saved before encryption was enabled. This removes the history of every note in the selected folder and keeps only the current version. It cannot be undone in kMemo or in the kDrive web app.",
   "clearingVersions": "Clearing old versions…",
   "clearOldVersionsDone": "Old versions removed from {count} note(s).",
-  "clearOldVersionsError": "Could not clear versions: {error}"
+  "clearOldVersionsError": "Could not clear versions: {error}",
+  "webdavServerUrl": "Server URL",
+  "webdavUsername": "Username",
+  "webdavPassword": "Password",
+  "webdavPasswordKeepHint": "Leave empty to keep the saved password",
+  "webdavFolderLabel": "Destination folder",
+  "webdavTestConnection": "Test connection",
+  "webdavConnectionOk": "Connection successful",
+  "webdavConnectionFailed": "Could not connect: {error}",
+  "@webdavConnectionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavConfigurationSaved": "Configuration saved",
+  "webdavRemoveConfiguration": "Remove configuration",
+  "webdavMissingFields": "Fill in the URL, the username and the password.",
+  "save": "Save",
+  "webdavServerUrlHint": "No http/https needed — https is assumed. e.g. cloud.example.com/remote.php/dav"
 }

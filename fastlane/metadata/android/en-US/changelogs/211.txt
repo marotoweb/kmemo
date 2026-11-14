@@ -1,0 +1,6 @@
+WebDAV support:
+- Sync notes with any WebDAV server (Nextcloud, Synology, self-hosted) besides kDrive.
+- Same encryption, conflict handling and offline-first behaviour on both.
+- Activating one backend removes the other configuration.
+- Archive: the "Delete permanently" label is now just "Delete", and swiping a note left moves it to the trash.
+- The home widget is no longer rebuilt on every keystroke (less battery).

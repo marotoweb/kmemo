@@ -4,11 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'database/database.dart';
 import 'providers/memo_provider.dart';
 import 'providers/theme_provider.dart';
 import 'models/background_images.dart';
 import 'services/kdrive_storage.dart';
+import 'services/storage_repository.dart';
+import 'services/webdav_storage.dart';
 import 'services/link_preview_service.dart';
 import 'ui/screens/home_screen.dart';
 import 'l10n/app_localizations.dart';
@@ -32,9 +35,20 @@ void main() async {
   // Warm the link preview cache so cards render previews synchronously.
   await LinkPreviewService.preload();
   final database = AppDatabase();
-  final storage = KDriveStorage();
-  // Load saved configuration (token, drive) before creating the provider
-  await storage.init();
+  final kdriveStorage = KDriveStorage();
+  final webdavStorage = WebDAVStorage();
+
+  // Only the selected backend is initialised: it is the one that loads the
+  // encryption passphrase into EncryptionService (both backends share it).
+  final prefs = await SharedPreferences.getInstance();
+  final backend = prefs.getString(kSyncBackendKey) ?? kSyncBackendKDrive;
+  final isWebDav = backend == kSyncBackendWebDav;
+  // Both backends load their configuration (so the settings screens can show
+  // it), but only the active one pushes the passphrase into EncryptionService.
+  await kdriveStorage.init(applyEncryption: !isWebDav);
+  await webdavStorage.init(applyEncryption: isWebDav);
+  final storage = isWebDav ? webdavStorage : kdriveStorage;
+  debugPrint('[main] sync backend: ${storage.storageName}');
 
   runApp(
     MultiProvider(
@@ -44,7 +58,8 @@ void main() async {
           create: (_) => MemoProvider(database, storage: storage),
         ),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
-        Provider<KDriveStorage>.value(value: storage),
+        Provider<KDriveStorage>.value(value: kdriveStorage),
+        Provider<WebDAVStorage>.value(value: webdavStorage),
       ],
       child: const KMemoApp(),
     ),

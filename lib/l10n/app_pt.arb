@@ -321,7 +321,6 @@
   "widgetUntitled": "Sem título",
   "widgetEmptyNote": "Nota vazia",
   "emptyNoteRejected": "Nota vazia rejeitada",
-  "webdavComingSoon": "Em breve — protocolo WebDAV ainda não implementado.",
   "languageSetting": "Idioma",
   "system": "Sistema",
   "editor": "EDITOR",
@@ -414,5 +413,25 @@
         "type": "String"
       }
     }
-  }
+  },
+  "webdavServerUrl": "URL do servidor",
+  "webdavUsername": "Utilizador",
+  "webdavPassword": "Palavra-passe",
+  "webdavPasswordKeepHint": "Deixe vazio para manter a palavra-passe guardada",
+  "webdavFolderLabel": "Pasta de destino",
+  "webdavTestConnection": "Testar ligação",
+  "webdavConnectionOk": "Ligação estabelecida",
+  "webdavConnectionFailed": "Não foi possível ligar: {error}",
+  "@webdavConnectionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavConfigurationSaved": "Configuração guardada",
+  "webdavRemoveConfiguration": "Remover configuração",
+  "webdavMissingFields": "Preencha o URL, o utilizador e a palavra-passe.",
+  "save": "Guardar",
+  "webdavServerUrlHint": "Sem http/https — assume https. Ex.: cloud.example.com/remote.php/dav"
 }

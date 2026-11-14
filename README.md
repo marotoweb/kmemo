@@ -21,7 +21,7 @@
 - **Internationalization:** Support for Portuguese, English, French, German, Italian and Spanish, with a "System" option to follow the device language.
 - **Text sharing:** Receives text shared from other apps (Share Plus) and automatically creates a new note, or shares your notes with external apps.
 - **Empty note rejection:** Notes created but left empty are automatically deleted on exit, avoiding the accumulation of empty notes.
-- **kDrive (Infomaniak) sync:** Upload and download notes to the cloud with optional client-side AES encryption.
+- **Remote sync (kDrive or WebDAV):** Upload and download notes to kDrive (Infomaniak) or to any WebDAV server, with optional client-side AES encryption.
 - **Home Screen Widget integration:** Automatic synchronization with a native system widget for quick viewing of the latest notes and quick editing directly from the device desktop.
 - **APP link:** Support for opening notes via APP link *kmemo://*
 - **Editor options:** automatic line wrapping in titles and list items, and optional strikethrough for checked checklist items (configurable in Settings). The home screen widget respects these options in the preview.
@@ -81,7 +81,7 @@ The app organizes persistence through two relational tables with automatic casca
 | `content` | Map<String, dynamic> | Flexible content (text, checked, etc.) |
 | `sortOrder` | Int | Display order |
 
-> **Note on remote sync:** The `isSynced` and `remoteFileId` fields are local Drift state and are not sent in the JSON payload to kDrive.
+> **Note on remote sync:** The `isSynced` and `remoteFileId` fields are local Drift state and are not sent in the JSON payload to the remote storage (kDrive or WebDAV).
 
 
 ---
@@ -142,7 +142,30 @@ Since version 0.1.3+, kMemo supports remote note sync through **kDrive**, Infoma
 
 ## ☁️ Remote Sync (WebDAV)
 
-- WebDAV protocol under development. The protocol selector is available in Settings → Sync, but the WebDAV implementation is not yet complete. Currently, only kDrive (Infomaniak) is functional.
+kMemo can also sync to any **WebDAV** server (Nextcloud, ownCloud, Synology, Box, a self-hosted server, …). The protocol selector at the top of **Settings → Sync** switches between kDrive and WebDAV.
+
+### Configuration
+
+1. Go to **Settings → Sync** and select **WebDAV**.
+2. Enter the **server URL**, including the path where your files live. The scheme is optional — HTTPS is assumed, so `cloud.example.com/...` and `https://cloud.example.com/...` are the same (use `http://` only for a local server without TLS). Examples:
+   - Nextcloud: `cloud.example.com/remote.php/dav/files/<username>/`
+   - Synology: `nas.example.com:5006/`
+3. Enter the **username** and **password** (or an app password, which is what Nextcloud and most servers recommend).
+4. The destination folder defaults to `kmemo/notes`; it is created automatically on the first sync.
+5. (Optional) Enable encryption and define a passphrase.
+6. Tap **Test connection** to check the URL and credentials, then **Save** and **Sync now**.
+
+### How it works
+
+- Notes are stored as `<uuid>.json`, using exactly the same payload as kDrive, so a note can be moved between the two backends.
+- **Push / pull / conflicts** behave like kDrive: offline-first, last-write-wins on `updatedAt`.
+- **No version history:** an upload overwrites the file. The "Clear old versions" action is therefore kDrive-only.
+- **Only one backend may be configured at a time.** Saving the WebDAV configuration removes the kDrive token, drive, folder and passphrase, and saving kDrive removes the WebDAV server and credentials. The notes of the backend being activated are re-uploaded, so the new destination receives the whole library.
+
+### Known limitations
+
+- The server must accept HTTP Basic authentication. Use HTTPS (the default) except for a local server without TLS. Digest authentication and OAuth are not supported.
+- The WebDAV server has no rate limit of its own, but some providers throttle requests; the app syncs one note at a time.
 
 ---
 
@@ -200,6 +223,8 @@ kMemo **is not affiliated with, endorsed by or sponsored by Infomaniak**. The **
 | `lib/providers/memo_provider.dart` | Memo logic, streams, bulk actions, sync |
 | `lib/services/widget_service.dart` | Data sync for the widget |
 | `lib/services/kdrive_storage.dart` | kDrive implementation (upload/download/list/delete) |
+| `lib/services/webdav_storage.dart` | WebDAV implementation (PROPFIND/PUT/GET/DELETE, MKCOL) |
+| `lib/services/memo_serialization.dart` | Remote payload shared by both backends (build, encrypt, parse) |
 | `lib/services/encryption_service.dart` | Optional client-side AES encryption |
 | `lib/services/storage_repository.dart` | Abstract remote storage interface |
 | `lib/services/link_preview_service.dart` | Link detection, Open Graph fetch, local cache |

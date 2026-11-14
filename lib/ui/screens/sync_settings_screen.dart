@@ -6,7 +6,10 @@ import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
 import '../../services/encryption_service.dart';
 import '../../services/kdrive_storage.dart';
+import '../../services/storage_repository.dart';
+import '../../services/webdav_storage.dart';
 import '../widgets/app_snackbar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
 class SyncSettingsScreen extends StatefulWidget {
@@ -38,6 +41,17 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   // Selected sync protocol: 'kdrive' or 'webdav'
   String _selectedProtocol = 'kdrive';
 
+  // WebDAV form state
+  late final WebDAVStorage _webdav;
+  final _webdavUrlController = TextEditingController();
+  final _webdavUserController = TextEditingController();
+  final _webdavPasswordController = TextEditingController();
+  final _webdavFolderController = TextEditingController();
+  final _webdavPassphraseController = TextEditingController();
+  bool _webdavEncryption = false;
+  bool _webdavConfigured = false;
+  bool _webdavBusy = false;
+
   // Discovered drives list
   List<Map<String, dynamic>> _drives = [];
   bool _isLoadingDrives = false;
@@ -57,6 +71,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   void initState() {
     super.initState();
     _storage = Provider.of<KDriveStorage>(context, listen: false);
+    _webdav = Provider.of<WebDAVStorage>(context, listen: false);
+    _loadWebdavValues();
+    final active = Provider.of<MemoProvider>(context, listen: false).storage;
+    _selectedProtocol =
+        active?.storageName == 'WebDAV' ? kSyncBackendWebDav : kSyncBackendKDrive;
     debugPrint(
       '[SyncSettings] initState(): storage.isConfigured=${_storage.isConfigured}, '
       'driveId=${_storage.driveId}, remoteFolder=${_storage.remoteFolder}, '
@@ -75,6 +94,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   void dispose() {
     _tokenController.dispose();
     _passphraseController.dispose();
+    _webdavUrlController.dispose();
+    _webdavUserController.dispose();
+    _webdavPasswordController.dispose();
+    _webdavFolderController.dispose();
+    _webdavPassphraseController.dispose();
     // Do not close _storage: it is shared with MemoProvider
     super.dispose();
   }
@@ -210,6 +234,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           '[SyncSettings] _saveCurrentConfig(): all notes marked as not synced and remoteFileId cleared',
         );
       }
+      // Only one backend may be configured at a time: activating kDrive
+      // removes the WebDAV URL, credentials and passphrase.
+      await _webdav.clearConfiguration();
+      _resetWebdavForm();
+      await _switchBackend(_storage);
       debugPrint(
         '[SyncSettings] _saveCurrentConfig(): configure() completed successfully',
       );
@@ -251,8 +280,11 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   }
 
   /// Formats the last sync date for display.
-  String _formatLastSync() {
-    final last = _storage.lastSync;
+  String _formatLastSync() => _formatSyncDate(_storage.lastSync);
+
+  String _formatWebdavLastSync() => _formatSyncDate(_webdav.lastSync);
+
+  String _formatSyncDate(DateTime? last) {
     if (last == null) return AppLocalizations.of(context)!.lastSyncNever;
     final now = DateTime.now();
     final diff = now.difference(last);
@@ -457,6 +489,503 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         _passphraseController.clear();
       });
     }
+  }
+
+
+  // -------------------------------------------------------------------
+  // WebDAV
+  // -------------------------------------------------------------------
+
+  /// True when the WebDAV form has enough data to be saved (or to switch
+  /// encryption): the same rule as the kDrive switch needing a token.
+  bool get _canConfigureWebdav =>
+      _webdavUrlController.text.trim().isNotEmpty &&
+      _webdavUserController.text.trim().isNotEmpty &&
+      (_webdav.hasPassword || _webdavPasswordController.text.isNotEmpty);
+
+  /// Clears the kDrive form/state after its configuration was removed because
+  /// WebDAV became the active backend.
+  void _resetKdriveForm() {
+    _tokenController.clear();
+    _selectedDriveId = '';
+    _selectedDriveName = '';
+    _drives = [];
+    _selectedFolderId = '';
+    _selectedFolderName = '';
+    _remoteFolder = 'kmemo/notes';
+    _breadcrumb = [];
+    _currentFolderContents = [];
+    _currentFolderId = '5';
+    _currentFolderName = 'Private';
+    _encryptionEnabled = false;
+    _passphraseController.clear();
+  }
+
+  /// Clears the WebDAV form/state after its configuration was removed because
+  /// kDrive became the active backend.
+  void _resetWebdavForm() {
+    _webdavUrlController.clear();
+    _webdavUserController.clear();
+    _webdavPasswordController.clear();
+    _webdavFolderController.clear();
+    _webdavPassphraseController.clear();
+    _webdavEncryption = false;
+    _webdavConfigured = false;
+  }
+
+  void _loadWebdavValues() {
+    _webdavUrlController.text = _webdav.baseUrl;
+    _webdavUserController.text = _webdav.username;
+    _webdavFolderController.text = _webdav.folder;
+    _webdavEncryption = _webdav.encryptionEnabled;
+    _webdavConfigured = _webdav.isConfigured;
+  }
+
+  /// Makes [storage] the backend used by the next sync.
+  ///
+  /// The backend being replaced has the only copies of the notes, so every
+  /// note is marked as not synced: the new backend receives a full upload
+  /// instead of staying empty.
+  Future<void> _switchBackend(StorageRepository storage) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      kSyncBackendKey,
+      storage.storageName == 'WebDAV' ? kSyncBackendWebDav : kSyncBackendKDrive,
+    );
+    if (!mounted) return;
+    final provider = Provider.of<MemoProvider>(context, listen: false);
+    if (provider.storage != storage) {
+      await provider.disableSync();
+      provider.useStorage(storage);
+      debugPrint('[SyncSettings] switched backend to ${storage.storageName}');
+    }
+  }
+
+  /// Same dialog as kDrive: passphrase + confirmation, validated add nothing
+  /// is enabled until both match.
+  Future<bool> _showWebdavPassphraseDialog() async {
+    _webdavPassphraseController.clear();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => _PassphraseDialog(
+        passphraseController: _webdavPassphraseController,
+        dialogWidth: MediaQuery.of(context).size.width * 0.90,
+      ),
+    );
+    return confirmed == true;
+  }
+
+  Future<void> _onWebdavEncryptionChanged(bool value) async {
+    final l10n = AppLocalizations.of(context)!;
+    if (value) {
+      // Ask for the passphrase (with confirmation) before enabling.
+      if (!await _showWebdavPassphraseDialog()) return;
+    } else {
+      _webdavPassphraseController.clear();
+    }
+    if (!mounted) return;
+
+    // Explain what happens to the remote copies before rewriting them.
+    final enabling = value;
+    final confirmedSync = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          enabling ? l10n.enableEncryptionTitle : l10n.disableEncryptionTitle,
+        ),
+        content: Text(
+          enabling
+              ? l10n.enableEncryptionMessage
+              : l10n.disableEncryptionMessage,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.sync),
+          ),
+        ],
+      ),
+    );
+    if (confirmedSync != true) return;
+    if (!mounted) return;
+
+    setState(() => _webdavEncryption = value);
+    await _saveWebdav(sync: true);
+  }
+
+  Future<void> _testWebdav() async {
+    final l10n = AppLocalizations.of(context)!;
+    if (_webdavUrlController.text.trim().isEmpty ||
+        _webdavUserController.text.trim().isEmpty ||
+        (!_webdav.hasPassword && _webdavPasswordController.text.isEmpty)) {
+      _showError(l10n.webdavMissingFields);
+      return;
+    }
+    setState(() => _webdavBusy = true);
+    try {
+      await _webdav.testConnectionWith(
+        baseUrl: _webdavUrlController.text,
+        username: _webdavUserController.text,
+        password: _webdavPasswordController.text,
+        folder: _webdavFolderController.text,
+      );
+      if (!mounted) return;
+      setState(() => _webdavBusy = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        buildAppSnackBar(
+          context,
+          message: l10n.webdavConnectionOk,
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _webdavBusy = false);
+      _showError(l10n.webdavConnectionFailed('$e'));
+    }
+  }
+
+  Future<bool> _saveWebdav({bool sync = false}) async {
+    final l10n = AppLocalizations.of(context)!;
+    if (_webdavUrlController.text.trim().isEmpty ||
+        _webdavUserController.text.trim().isEmpty ||
+        (!_webdav.hasPassword && _webdavPasswordController.text.isEmpty)) {
+      _showError(l10n.webdavMissingFields);
+      return false;
+    }
+
+    setState(() => _webdavBusy = true);
+    try {
+      final provider = Provider.of<MemoProvider>(context, listen: false);
+      final switching = provider.storage != _webdav;
+      final wasConfigured = _webdav.isConfigured;
+      final wasEncryption = _webdav.encryptionEnabled;
+      final wasServiceEnabled = EncryptionService.instance.isEnabled;
+
+      await _webdav.configure(
+        baseUrl: _webdavUrlController.text,
+        username: _webdavUserController.text,
+        password: _webdavPasswordController.text,
+        folder: _webdavFolderController.text,
+        encryptionEnabled: _webdavEncryption,
+        passphrase: _webdavPassphraseController.text,
+      );
+
+      // Only one backend may be configured at a time: activating WebDAV
+      // removes the kDrive token, drive and folder.
+      await _storage.logout();
+      _resetKdriveForm();
+
+      // A passphrase that was missing at start means the notes uploaded until
+      // now are plain text on the remote storage (same rule as kDrive).
+      final passphraseRestored =
+          _webdavEncryption &&
+          !wasServiceEnabled &&
+          EncryptionService.instance.isEnabled;
+      if (switching ||
+          !wasConfigured ||
+          wasEncryption != _webdavEncryption ||
+          passphraseRestored) {
+        await provider.disableSync();
+      }
+      await _switchBackend(_webdav);
+
+      _webdavPasswordController.clear();
+      _webdavPassphraseController.clear();
+      // Reflect the normalised URL (scheme added, trailing slash) in the form.
+      _webdavUrlController.text = _webdav.baseUrl;
+      if (!mounted) return true;
+      setState(() {
+        _webdavBusy = false;
+        _webdavConfigured = _webdav.isConfigured;
+        _webdavEncryption = _webdav.encryptionEnabled;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        buildAppSnackBar(
+          context,
+          message: l10n.webdavConfigurationSaved,
+          backgroundColor: Colors.green,
+        ),
+      );
+      if (sync) await _syncWebdavNow();
+      return true;
+    } catch (e) {
+      if (mounted) {
+        setState(() => _webdavBusy = false);
+        _showError(l10n.syncErrorWithDetail('$e'));
+      }
+      return false;
+    }
+  }
+
+  Future<void> _syncWebdavNow() async {
+    if (_isSyncing) return;
+    setState(() {
+      _isSyncing = true;
+      _syncDone = 0;
+      _syncTotal = 0;
+    });
+    try {
+      final decryptionFailures = await _runSyncWithPrompts(force: true);
+      if (!mounted) return;
+      setState(() => _isSyncing = false);
+      final l10n = AppLocalizations.of(context)!;
+      if (decryptionFailures > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          buildAppSnackBar(
+            context,
+            message: l10n.syncPartialFailure('$decryptionFailures'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 8),
+          ),
+        );
+      } else {
+        final synced = Provider.of<MemoProvider>(
+          context,
+          listen: false,
+        ).lastSyncNoteCount;
+        ScaffoldMessenger.of(context).showSnackBar(
+          buildAppSnackBar(
+            context,
+            message: l10n.syncCompletedWithCount(synced),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSyncing = false);
+        _showError(AppLocalizations.of(context)!.syncErrorWithDetail('$e'));
+      }
+    }
+  }
+
+  Future<void> _removeWebdav() async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.webdavRemoveConfiguration),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await _webdav.clearConfiguration();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(kSyncBackendKey, kSyncBackendKDrive);
+    if (!mounted) return;
+    // Nothing is configured now: keep kDrive as the selected protocol so the
+    // next configuration starts from a clean form.
+    Provider.of<MemoProvider>(context, listen: false).useStorage(_storage);
+    setState(_resetWebdavForm);
+  }
+
+  List<Widget> _buildWebdavSection(bool isDarkMode) {
+    final l10n = AppLocalizations.of(context)!;
+    final cardColor = isDarkMode
+        ? const Color(0xFF1E1E1E)
+        : Colors.grey.shade100;
+    final borderColor = isDarkMode
+        ? Colors.grey.shade800
+        : Colors.grey.shade300;
+
+    Widget card(List<Widget> children) => Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
+      ),
+    );
+
+    Widget field(
+      TextEditingController controller,
+      String label, {
+      bool obscure = false,
+      String? hint,
+      TextInputType? keyboardType,
+    }) => Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextField(
+        controller: controller,
+        obscureText: obscure,
+        keyboardType: keyboardType,
+        // Rebuild so the encryption switch enables as soon as the form has
+        // URL + username + password (same rule as kDrive needing a token).
+        onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(
+          labelText: label,
+          helperText: hint,
+          helperMaxLines: 2,
+          border: const OutlineInputBorder(),
+        ),
+      ),
+    );
+
+    return [
+      // Mirrors the kDrive status card: same colours, same active/inactive
+      // wording and the same lines (server, folder, encryption, last sync).
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _webdavConfigured
+              ? cardColor
+              : (isDarkMode ? const Color(0xFF2C2C2C) : Colors.white),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: borderColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  _webdavConfigured ? Icons.cloud_done : Icons.cloud_off,
+                  color: isDarkMode
+                      ? Colors.amber.shade300
+                      : Colors.amber.shade700,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _webdavConfigured
+                      ? l10n.activeSyncTitle
+                      : l10n.inactiveSyncTitle,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _webdavConfigured
+                        ? Colors.amber.shade700
+                        : Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (_webdavConfigured) ...[
+              Text(
+                '${l10n.webdavServerUrl}: ${_webdav.baseUrl}\n'
+                '${l10n.destinationFolder}: ${_webdav.folder}\n'
+                '${l10n.encryption}: ${_webdavEncryption ? l10n.active : l10n.inactive}\n'
+                '${l10n.lastSync}: ${_formatWebdavLastSync()}',
+                style: const TextStyle(fontSize: 13),
+              ),
+            ] else
+              Text(
+                l10n.configureRemoteStorage,
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 16),
+      card([
+        field(
+          _webdavUrlController,
+          l10n.webdavServerUrl,
+          hint: l10n.webdavServerUrlHint,
+          keyboardType: TextInputType.url,
+        ),
+        field(_webdavUserController, l10n.webdavUsername),
+        field(
+          _webdavPasswordController,
+          l10n.webdavPassword,
+          obscure: true,
+          hint: l10n.webdavPasswordKeepHint,
+        ),
+        field(_webdavFolderController, l10n.webdavFolderLabel),
+        const Divider(height: 24),
+        // Same control and same passphrase dialog as kDrive.
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.encryptNotes),
+          subtitle: Text(
+            l10n.encryptNotesOnClient,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          trailing: Switch(
+            value: _webdavEncryption,
+            onChanged: (_webdavBusy || _isSyncing || !_canConfigureWebdav)
+                ? null
+                : _onWebdavEncryptionChanged,
+          ),
+        ),
+      ]),
+      const SizedBox(height: 16),
+      SizedBox(
+        width: double.infinity,
+        height: 44,
+        child: OutlinedButton.icon(
+          onPressed: _webdavBusy ? null : _testWebdav,
+          icon: const Icon(Icons.wifi_tethering),
+          label: Text(l10n.webdavTestConnection),
+        ),
+      ),
+      const SizedBox(height: 8),
+      SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: ElevatedButton.icon(
+          onPressed: _webdavBusy ? null : () => _saveWebdav(),
+          icon: _webdavBusy
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.save),
+          label: Text(l10n.save),
+        ),
+      ),
+      const SizedBox(height: 8),
+      SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: ElevatedButton.icon(
+          onPressed: (_isSyncing || !_webdavConfigured)
+              ? null
+              : _syncWebdavNow,
+          icon: _isSyncing
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.sync),
+          label: Text(
+            _isSyncing ? l10n.syncingNow : l10n.syncNowButton,
+          ),
+        ),
+      ),
+      if (_webdavConfigured) ...[
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton.icon(
+            onPressed: _webdavBusy ? null : _removeWebdav,
+            icon: const Icon(Icons.delete_outline),
+            label: Text(l10n.webdavRemoveConfiguration),
+          ),
+        ),
+      ],
+    ];
   }
 
   void _showError(String message) {
@@ -729,7 +1258,12 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                             // Uses the theme primary (vivid amber) so the
                             // toggle matches every other control in both
                             // light and dark mode.
-                            onChanged: _isSyncing
+                            // Without a token there is nothing to configure,
+                            // so the switch stays disabled (WebDAV works the
+                            // same way until its own fields are filled).
+                            onChanged:
+                                _isSyncing ||
+                                    _tokenController.text.trim().isEmpty
                                 ? null
                                 : (value) async {
                               if (value) {
@@ -841,29 +1375,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   ],
 
                 ] else ...[
-                  // WebDAV - coming soon
-                  Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.storage, size: 64, color: Colors.grey),
-                          SizedBox(height: 16),
-                          Text(
-                            'WebDAV',
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.grey),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            AppLocalizations.of(context)!.webdavComingSoon,
-                            style: TextStyle(fontSize: 13, color: Colors.grey),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  ..._buildWebdavSection(isDarkMode),
                 ],
                 // Action buttons
                 if (_selectedProtocol == 'kdrive' && !configured) ...[
@@ -919,7 +1431,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                     ),
                   ),
                   SizedBox(height: 16),
-                ] else ...[
+                ] else if (_selectedProtocol == 'kdrive') ...[
                   // Manual sync (push + pull)
                   SizedBox(
                     width: double.infinity,

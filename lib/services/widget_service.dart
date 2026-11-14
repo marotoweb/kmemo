@@ -74,11 +74,41 @@ class WidgetService {
     return hash;
   }
 
+  // Only one build/write may run at a time. Calls that arrive while a run is
+  // in progress are coalesced into a single rerun with the latest parameters:
+  // two concurrent updates could otherwise write an older payload after a
+  // newer one, leaving widget_data.json stale until the next change.
+  static bool _updating = false;
+  static bool _rerun = false;
+  static AppDatabase? _pendingDb;
+  static bool _pendingDark = false;
+
   /// Syncs active notes with the JSON file shared with the native Android side
   /// [isDark] controls whether light or dark color palette is used for note cards
   static Future<void> updateWidgetData({
     required AppDatabase db,
     bool isDark = false,
+  }) async {
+    _pendingDb = db;
+    _pendingDark = isDark;
+    if (_updating) {
+      _rerun = true;
+      return;
+    }
+    _updating = true;
+    try {
+      do {
+        _rerun = false;
+        await _updateWidgetDataOnce(db: _pendingDb!, isDark: _pendingDark);
+      } while (_rerun);
+    } finally {
+      _updating = false;
+    }
+  }
+
+  static Future<void> _updateWidgetDataOnce({
+    required AppDatabase db,
+    required bool isDark,
   }) async {
     try {
       final dir = await getApplicationDocumentsDirectory();
@@ -128,6 +158,14 @@ class WidgetService {
       final widgetCardOpacity =
           prefs.getDouble('widget_card_opacity') ?? 1.0;
 
+      // Every note's preview is built from the same table: fetch the blocks
+      // once and group them, instead of one query per note (this runs on every
+      // memo change, including each keystroke in the editor).
+      final blocksByMemo = <String, List<Block>>{};
+      for (final block in await db.getAllBlocks()) {
+        (blocksByMemo[block.memoUuid] ??= <Block>[]).add(block);
+      }
+
       final List<String> idsList = [];
       final List<String> titlesList = [];
       final List<String> previewsList = [];
@@ -150,7 +188,7 @@ class WidgetService {
             : (isDark ? 0xFF1E1E1E : 0xFFFFFFFF);
         colorsList.add(hexColor);
 
-        final blocks = await db.getBlocksForMemo(memo.uuid);
+        final blocks = blocksByMemo[memo.uuid] ?? const <Block>[];
         String previewText = '';
 
         if (blocks.isNotEmpty) {

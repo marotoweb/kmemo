@@ -1,0 +1,6 @@
+Suporte WebDAV:
+- Sincronize notas com qualquer servidor WebDAV (Nextcloud, Synology, próprio) além do kDrive.
+- A mesma encriptação, resolução de conflitos e funcionamento offline nos dois.
+- Ativar um backend remove a configuração do outro.
+- Arquivo: a opção "Eliminar permanentemente" passou a "Eliminar", e o swipe para a esquerda envia a nota para a lixeira.
+- O widget deixou de ser reconstruído a cada tecla (menos bateria).

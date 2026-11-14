@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0
+
+### ✨ Features
+- **WebDAV sync:** remote sync now works with any WebDAV server (Nextcloud, ownCloud, Synology, self-hosted, …) besides kDrive. The server URL needs no scheme: HTTPS is assumed (an explicit `http://` is kept for local servers). Notes use the same JSON payload, so they can be moved between backends; switching backend re-uploads the whole library, and activating one backend removes the other's configuration (token, server, credentials and passphrase). Encryption, passphrase handling and conflict resolution work exactly as with kDrive. WebDAV has no version history, so "Clear old versions" remains kDrive-only.
+
+### 🐛 Fixes
+- **Home widget updates:** the payload is now built with one block query instead of one per note, updates that arrive while another build is running are coalesced, and the rebuild waits 300 ms after the last change instead of running on every keystroke. Before, typing rebuilt the widget dozens of times per second (invisible, since the widget is only seen when the app is in the background) and two overlapping updates could leave the widget showing stale data.
+- **Archive screen: clear wording and a delete swipe:** the three-dot menu option that moves the selected notes to the trash was labelled "Delete permanently", even though the notes stay recoverable in the trash. It now just says "Delete". Archived notes can also be swiped to the left to move them to the trash, with an undo action — before, only the unarchive swipe existed.
+
 ## 0.1.19
 
 ### 🖼️ Store listing

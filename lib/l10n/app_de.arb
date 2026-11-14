@@ -154,7 +154,6 @@
   "widgetUntitled": "Ohne Titel",
   "widgetEmptyNote": "Leere Notiz",
   "emptyNoteRejected": "Leere Notiz abgelehnt",
-  "webdavComingSoon": "Demnächst verfügbar — WebDAV-Protokoll noch nicht implementiert.",
   "languageSetting": "Sprache",
   "system": "System",
   "editor": "EDITOR",
@@ -226,5 +225,25 @@
   "clearOldVersionsMessage": "Jede Änderung speichert den vorherigen Inhalt als Version in kDrive. Alte Versionen behalten den Inhalt, mit dem sie geschrieben wurden, einschließlich Klartext, der vor dem Aktivieren der Verschlüsselung gespeichert wurde. Dieser Vorgang entfernt den Verlauf aller Notizen im ausgewählten Ordner und behält nur die aktuelle Version. Er kann weder in kMemo noch in der kDrive-Web-App rückgängig gemacht werden.",
   "clearingVersions": "Alte Versionen werden gelöscht…",
   "clearOldVersionsDone": "Alte Versionen von {count} Notiz(en) entfernt.",
-  "clearOldVersionsError": "Versionen konnten nicht gelöscht werden: {error}"
+  "clearOldVersionsError": "Versionen konnten nicht gelöscht werden: {error}",
+  "webdavServerUrl": "Server-URL",
+  "webdavUsername": "Benutzername",
+  "webdavPassword": "Passwort",
+  "webdavPasswordKeepHint": "Leer lassen, um das gespeicherte Passwort zu behalten",
+  "webdavFolderLabel": "Zielordner",
+  "webdavTestConnection": "Verbindung testen",
+  "webdavConnectionOk": "Verbindung erfolgreich",
+  "webdavConnectionFailed": "Verbindung fehlgeschlagen: {error}",
+  "@webdavConnectionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavConfigurationSaved": "Konfiguration gespeichert",
+  "webdavRemoveConfiguration": "Konfiguration entfernen",
+  "webdavMissingFields": "Füllen Sie URL, Benutzername und Passwort aus.",
+  "save": "Speichern",
+  "webdavServerUrlHint": "Kein http/https nötig — https wird angenommen. Z. B. cloud.example.com/remote.php/dav"
 }

@@ -2,6 +2,14 @@
 
 import '../database/database.dart';
 
+/// SharedPreferences key holding the active sync backend ("kdrive" or
+/// "webdav"). Read by main() to pick the storage injected into MemoProvider.
+const String kSyncBackendKey = 'sync_backend';
+
+/// Backend names accepted by [kSyncBackendKey].
+const String kSyncBackendKDrive = 'kdrive';
+const String kSyncBackendWebDav = 'webdav';
+
 /// Result of remote note listing.
 class RemoteMemoInfo {
   final String remoteFileId;
@@ -38,6 +46,21 @@ abstract class StorageRepository {
 
   /// Human-readable name of the storage type (e.g. "kDrive", "WebDAV").
   String get storageName;
+
+  /// Whether the notes must be encrypted before leaving the device.
+  ///
+  /// When this is true and [EncryptionService] has no passphrase loaded, the
+  /// caller aborts the sync and every upload throws instead of writing a note
+  /// in plain text.
+  bool get encryptionEnabled => false;
+
+  /// Passphrase stored by the backend, used to retry a note that failed to
+  /// decrypt with the passphrase loaded at startup.
+  Future<String?> getEncryptionPassphrase() async => null;
+
+  /// Whether the backend keeps a version history that can be cleared.
+  /// kDrive versions every upload; WebDAV simply overwrites the file.
+  bool get supportsVersionHistory => false;
 
   /// Guards used by the caller (MemoProvider) to throttle sync frequency.
   bool get syncAllowed => true;

@@ -988,12 +988,6 @@ abstract class AppLocalizations {
   /// **'Nota vazia rejeitada'**
   String get emptyNoteRejected;
 
-  /// No description provided for @webdavComingSoon.
-  ///
-  /// In pt, this message translates to:
-  /// **'Em breve — protocolo WebDAV ainda não implementado.'**
-  String get webdavComingSoon;
-
   /// No description provided for @languageSetting.
   ///
   /// In pt, this message translates to:
@@ -1323,6 +1317,84 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Não foi possível limpar as versões: {error}'**
   String clearOldVersionsError(String error);
+
+  /// No description provided for @webdavServerUrl.
+  ///
+  /// In pt, this message translates to:
+  /// **'URL do servidor'**
+  String get webdavServerUrl;
+
+  /// No description provided for @webdavUsername.
+  ///
+  /// In pt, this message translates to:
+  /// **'Utilizador'**
+  String get webdavUsername;
+
+  /// No description provided for @webdavPassword.
+  ///
+  /// In pt, this message translates to:
+  /// **'Palavra-passe'**
+  String get webdavPassword;
+
+  /// No description provided for @webdavPasswordKeepHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Deixe vazio para manter a palavra-passe guardada'**
+  String get webdavPasswordKeepHint;
+
+  /// No description provided for @webdavFolderLabel.
+  ///
+  /// In pt, this message translates to:
+  /// **'Pasta de destino'**
+  String get webdavFolderLabel;
+
+  /// No description provided for @webdavTestConnection.
+  ///
+  /// In pt, this message translates to:
+  /// **'Testar ligação'**
+  String get webdavTestConnection;
+
+  /// No description provided for @webdavConnectionOk.
+  ///
+  /// In pt, this message translates to:
+  /// **'Ligação estabelecida'**
+  String get webdavConnectionOk;
+
+  /// No description provided for @webdavConnectionFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível ligar: {error}'**
+  String webdavConnectionFailed(String error);
+
+  /// No description provided for @webdavConfigurationSaved.
+  ///
+  /// In pt, this message translates to:
+  /// **'Configuração guardada'**
+  String get webdavConfigurationSaved;
+
+  /// No description provided for @webdavRemoveConfiguration.
+  ///
+  /// In pt, this message translates to:
+  /// **'Remover configuração'**
+  String get webdavRemoveConfiguration;
+
+  /// No description provided for @webdavMissingFields.
+  ///
+  /// In pt, this message translates to:
+  /// **'Preencha o URL, o utilizador e a palavra-passe.'**
+  String get webdavMissingFields;
+
+  /// No description provided for @save.
+  ///
+  /// In pt, this message translates to:
+  /// **'Guardar'**
+  String get save;
+
+  /// No description provided for @webdavServerUrlHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Sem http/https — assume https. Ex.: cloud.example.com/remote.php/dav'**
+  String get webdavServerUrlHint;
 }
 
 class _AppLocalizationsDelegate

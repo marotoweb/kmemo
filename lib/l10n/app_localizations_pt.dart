@@ -511,10 +511,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get emptyNoteRejected => 'Nota vazia rejeitada';
 
   @override
-  String get webdavComingSoon =>
-      'Em breve — protocolo WebDAV ainda não implementado.';
-
-  @override
   String get languageSetting => 'Idioma';
 
   @override
@@ -695,4 +691,48 @@ class AppLocalizationsPt extends AppLocalizations {
   String clearOldVersionsError(String error) {
     return 'Não foi possível limpar as versões: $error';
   }
+
+  @override
+  String get webdavServerUrl => 'URL do servidor';
+
+  @override
+  String get webdavUsername => 'Utilizador';
+
+  @override
+  String get webdavPassword => 'Palavra-passe';
+
+  @override
+  String get webdavPasswordKeepHint =>
+      'Deixe vazio para manter a palavra-passe guardada';
+
+  @override
+  String get webdavFolderLabel => 'Pasta de destino';
+
+  @override
+  String get webdavTestConnection => 'Testar ligação';
+
+  @override
+  String get webdavConnectionOk => 'Ligação estabelecida';
+
+  @override
+  String webdavConnectionFailed(String error) {
+    return 'Não foi possível ligar: $error';
+  }
+
+  @override
+  String get webdavConfigurationSaved => 'Configuração guardada';
+
+  @override
+  String get webdavRemoveConfiguration => 'Remover configuração';
+
+  @override
+  String get webdavMissingFields =>
+      'Preencha o URL, o utilizador e a palavra-passe.';
+
+  @override
+  String get save => 'Guardar';
+
+  @override
+  String get webdavServerUrlHint =>
+      'Sem http/https — assume https. Ex.: cloud.example.com/remote.php/dav';
 }

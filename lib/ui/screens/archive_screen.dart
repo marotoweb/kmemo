@@ -129,9 +129,7 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                     ),
                     PopupMenuItem(
                       value: 'delete',
-                      child: Text(
-                        AppLocalizations.of(context)!.deletePermanently2,
-                      ),
+                      child: Text(AppLocalizations.of(context)!.delete),
                     ),
                   ],
                 ),
@@ -219,10 +217,11 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
 
                   return SwipeActionCard(
                     dismissKey: Key(memo.uuid),
-                    // Unarchive is the only swipe action here, so a single
-                    // direction is enough; it still requires a near-complete
-                    // swipe (see SwipeActionCard).
-                    direction: DismissDirection.startToEnd,
+                    // Right unarchives, left moves the note to the trash (the
+                    // same soft delete as the home screen, so it can still be
+                    // restored from there). Both directions require a
+                    // near-complete swipe (see SwipeActionCard).
+                    direction: DismissDirection.horizontal,
                     background: Container(
                       margin: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
                       alignment: Alignment.centerLeft,
@@ -238,10 +237,32 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                         color: isDarkMode ? Colors.white70 : Colors.black87,
                       ),
                     ),
+                    secondaryBackground: Container(
+                      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                      alignment: Alignment.centerRight,
+                      padding: EdgeInsets.only(right: 20),
+                      decoration: BoxDecoration(
+                        color: isDarkMode
+                            ? const Color(0xFF4A1E1E)
+                            : Colors.red.shade200,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.delete_outline,
+                        color: isDarkMode ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
                     onDismissed: (direction) async {
-                      final uuidToUnarchive = memo.uuid;
+                      final uuid = memo.uuid;
+                      final l10n = AppLocalizations.of(context)!;
+                      final isUnarchive =
+                          direction == DismissDirection.startToEnd;
 
-                      await provider.archiveMemoStatus(uuidToUnarchive, false);
+                      if (isUnarchive) {
+                        await provider.archiveMemoStatus(uuid, false);
+                      } else {
+                        await provider.deleteMemo(uuid);
+                      }
 
                       if (!context.mounted) return;
 
@@ -251,17 +272,18 @@ class _ArchiveScreenState extends State<ArchiveScreen> {
                       final snackBarController = scaffoldMessenger.showSnackBar(
                         buildAppSnackBar(
                           context,
-                          message: AppLocalizations.of(
-                            context,
-                          )!.noteRemovedFromArchive,
+                          message: isUnarchive
+                              ? l10n.noteRemovedFromArchive
+                              : l10n.noteSentToTrash,
                           duration: Duration(seconds: 8),
-                          actionLabel: AppLocalizations.of(context)!.undo,
+                          actionLabel: l10n.undo,
                           onAction: () async {
                             scaffoldMessenger.hideCurrentSnackBar();
-                            await provider.archiveMemoStatus(
-                              uuidToUnarchive,
-                              true,
-                            );
+                            if (isUnarchive) {
+                              await provider.archiveMemoStatus(uuid, true);
+                            } else {
+                              await provider.restoreMultiple([uuid]);
+                            }
                           },
                         ),
                       );

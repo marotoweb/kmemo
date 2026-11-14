@@ -511,10 +511,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get emptyNoteRejected => 'Note vide rejetée';
 
   @override
-  String get webdavComingSoon =>
-      'Bientôt disponible — protocole WebDAV pas encore implémenté.';
-
-  @override
   String get languageSetting => 'Langue';
 
   @override
@@ -695,4 +691,48 @@ class AppLocalizationsFr extends AppLocalizations {
   String clearOldVersionsError(String error) {
     return 'Impossible de supprimer les versions : $error';
   }
+
+  @override
+  String get webdavServerUrl => 'URL du serveur';
+
+  @override
+  String get webdavUsername => 'Nom d\'utilisateur';
+
+  @override
+  String get webdavPassword => 'Mot de passe';
+
+  @override
+  String get webdavPasswordKeepHint =>
+      'Laissez vide pour conserver le mot de passe enregistré';
+
+  @override
+  String get webdavFolderLabel => 'Dossier de destination';
+
+  @override
+  String get webdavTestConnection => 'Tester la connexion';
+
+  @override
+  String get webdavConnectionOk => 'Connexion réussie';
+
+  @override
+  String webdavConnectionFailed(String error) {
+    return 'Impossible de se connecter : $error';
+  }
+
+  @override
+  String get webdavConfigurationSaved => 'Configuration enregistrée';
+
+  @override
+  String get webdavRemoveConfiguration => 'Supprimer la configuration';
+
+  @override
+  String get webdavMissingFields =>
+      'Renseignez l\'URL, le nom d\'utilisateur et le mot de passe.';
+
+  @override
+  String get save => 'Enregistrer';
+
+  @override
+  String get webdavServerUrlHint =>
+      'Pas besoin de http/https — https est supposé. Ex. : cloud.example.com/remote.php/dav';
 }

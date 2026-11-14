@@ -5,7 +5,6 @@ import 'package:flutter/widgets.dart';
 import 'package:uuid/uuid.dart';
 import '../database/database.dart';
 import '../models/home_sort.dart';
-import '../services/kdrive_storage.dart';
 import '../services/storage_repository.dart';
 import '../services/encryption_service.dart';
 import '../services/widget_service.dart';
@@ -14,11 +13,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class MemoProvider extends ChangeNotifier {
   final AppDatabase _db;
-  final KDriveStorage? _storage;
+  StorageRepository? _storage;
   List<Memo> _memos = [];
   bool _isLoading = true;
   final _uuid = const Uuid();
   Timer? _syncDebounce;
+  Timer? _widgetDebounce;
+
+  /// Editing a note writes to the database on every keystroke, and each write
+  /// used to rebuild the whole widget payload. The widget is only visible when
+  /// the app is in the background, so the rebuild waits for a short pause
+  /// instead of running once per keystroke.
+  static const Duration _widgetDebounceDelay = Duration(milliseconds: 300);
 
   // Preview cache: blocks grouped by memo uuid, warmed on every memo-list
   // change so cards can render synchronously instead of querying SQLite on
@@ -32,12 +38,31 @@ class MemoProvider extends ChangeNotifier {
   /// Number of notes uploaded or downloaded during the last sync.
   int lastSyncNoteCount = 0;
 
-  MemoProvider(this._db, {KDriveStorage? storage}) : _storage = storage {
+  MemoProvider(this._db, {StorageRepository? storage}) : _storage = storage {
     _loadSortPreferences();
     _listenToMemos();
   }
 
+  @override
+  void dispose() {
+    _syncDebounce?.cancel();
+    _widgetDebounce?.cancel();
+    super.dispose();
+  }
+
   List<Memo> get memos => _memos;
+
+  /// Backend used by the next sync (kDrive or WebDAV).
+  StorageRepository? get storage => _storage;
+
+  /// Switches the sync backend at runtime, after the user configures it.
+  void useStorage(StorageRepository? storage) {
+    _storage = storage;
+    debugPrint(
+      '[MemoProvider] useStorage(): ${storage?.storageName ?? 'none'} '
+      '(configured=${storage?.isConfigured})',
+    );
+  }
 
   HomeSortMode get sortMode => _sortMode;
   bool get sortAscending => _sortAscending;
@@ -341,7 +366,24 @@ class MemoProvider extends ChangeNotifier {
     return updatedBlocksList;
   }
 
-  Future<void> _updateWidgetData() async {
+  /// Schedules a widget rebuild 300 ms after the last change (coalesced).
+  void _updateWidgetData() {
+    _widgetDebounce?.cancel();
+    _widgetDebounce = Timer(_widgetDebounceDelay, () {
+      _widgetDebounce = null;
+      _writeWidgetData();
+    });
+  }
+
+  /// Rebuilds the widget payload immediately: used when the app is resumed and
+  /// when editor/theme options change, where the delay would be visible.
+  Future<void> refreshWidget() async {
+    _widgetDebounce?.cancel();
+    _widgetDebounce = null;
+    await _writeWidgetData();
+  }
+
+  Future<void> _writeWidgetData() async {
     // Determine whether the dark theme is active
     bool isDark = false;
     try {
@@ -365,14 +407,10 @@ class MemoProvider extends ChangeNotifier {
     await WidgetService.updateWidgetData(db: _db, isDark: isDark);
   }
 
-  /// Refreshes the home screen widget after editor options change.
-  Future<void> refreshWidget() async {
-    await _updateWidgetData();
-  }
-
   /// Schedules remote sync with debounce (avoids calling the API on every keystroke).
   void _scheduleSync() {
-    if (_storage == null || !_storage.isConfigured) return;
+    final storage = _storage;
+    if (storage == null || !storage.isConfigured) return;
     _syncDebounce?.cancel();
     _syncDebounce = Timer(const Duration(seconds: 3), () async {
       try {
@@ -674,10 +712,11 @@ class MemoProvider extends ChangeNotifier {
               .getSingleOrNull();
       // The kDrive file is deleted only here, when the note is permanently
       // removed from the trash.
+      final storage = _storage;
       if (memo?.remoteFileId != null &&
-          _storage != null &&
-          _storage.isConfigured) {
-        await _storage.deleteMemo(memo!.remoteFileId!);
+          storage != null &&
+          storage.isConfigured) {
+        await storage.deleteMemo(memo!.remoteFileId!);
       }
       await _db.deleteMemoCascading(id);
     }

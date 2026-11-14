@@ -154,7 +154,6 @@
   "widgetUntitled": "Senza titolo",
   "widgetEmptyNote": "Nota vuota",
   "emptyNoteRejected": "Nota vuota rifiutata",
-  "webdavComingSoon": "Prossimamente — protocollo WebDAV non ancora implementato.",
   "languageSetting": "Lingua",
   "system": "Sistema",
   "editor": "EDITOR",
@@ -226,5 +225,25 @@
   "clearOldVersionsMessage": "Ogni modifica conserva il contenuto precedente come versione su kDrive. Le versioni precedenti mantengono il contenuto con cui sono state scritte, incluso il testo in chiaro salvato prima di attivare la crittografia. Questa operazione rimuove la cronologia di tutte le note nella cartella selezionata e mantiene solo la versione attuale. Non può essere annullata in kMemo né nell'app web di kDrive.",
   "clearingVersions": "Eliminazione delle versioni precedenti…",
   "clearOldVersionsDone": "Versioni precedenti rimosse da {count} nota/e.",
-  "clearOldVersionsError": "Impossibile eliminare le versioni: {error}"
+  "clearOldVersionsError": "Impossibile eliminare le versioni: {error}",
+  "webdavServerUrl": "URL del server",
+  "webdavUsername": "Nome utente",
+  "webdavPassword": "Password",
+  "webdavPasswordKeepHint": "Lascia vuoto per mantenere la password salvata",
+  "webdavFolderLabel": "Cartella di destinazione",
+  "webdavTestConnection": "Verifica connessione",
+  "webdavConnectionOk": "Connessione riuscita",
+  "webdavConnectionFailed": "Impossibile connettersi: {error}",
+  "@webdavConnectionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "webdavConfigurationSaved": "Configurazione salvata",
+  "webdavRemoveConfiguration": "Rimuovi configurazione",
+  "webdavMissingFields": "Compila URL, nome utente e password.",
+  "save": "Salva",
+  "webdavServerUrlHint": "Non serve http/https — si assume https. Es.: cloud.example.com/remote.php/dav"
 }

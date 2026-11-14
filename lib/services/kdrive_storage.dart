@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../database/database.dart';
 import 'encryption_service.dart';
+import 'memo_serialization.dart';
 import 'storage_repository.dart';
 
 const String _apiBase = 'https://api.infomaniak.com';
@@ -67,13 +68,22 @@ class KDriveStorage extends StorageRepository {
   String get remoteFolder => _remoteFolder;
 
   /// Indicates whether encryption is active.
+  @override
   bool get encryptionEnabled => _encryptionEnabled;
+
+  @override
+  bool get supportsVersionHistory => true;
 
   /// Last full sync date/time.
   DateTime? get lastSync => _lastSync;
 
+  /// Loads the saved configuration.
+  ///
+  /// [applyEncryption] is false when this is not the active backend: the
+  /// passphrase belongs to whichever backend syncs, so loading it here would
+  /// switch [EncryptionService] behind the active backend's back.
   @override
-  Future<void> init() async {
+  Future<void> init({bool applyEncryption = true}) async {
     final prefs = await SharedPreferences.getInstance();
     _token = await _secureStorage.read(key: _prefsToken);
 
@@ -127,7 +137,7 @@ class KDriveStorage extends StorageRepository {
       'encryptionEnabled=$_encryptionEnabled, lastSync=$_lastSync',
     );
 
-    if (_encryptionEnabled) {
+    if (_encryptionEnabled && applyEncryption) {
       final passphrase = await _secureStorage.read(
         key: _prefsEncryptionPassphrase,
       );
@@ -162,6 +172,7 @@ class KDriveStorage extends StorageRepository {
   }
 
   /// Reads the stored encryption passphrase (if any).
+  @override
   Future<String?> getEncryptionPassphrase() async {
     return await _secureStorage.read(key: _prefsEncryptionPassphrase);
   }
@@ -798,43 +809,13 @@ class KDriveStorage extends StorageRepository {
       return null;
     }
 
-    final payload = {
-      'memo': {
-        'uuid': memo.uuid,
-        'title': memo.title,
-        'createdAt': memo.createdAt.toIso8601String(),
-        'updatedAt': memo.updatedAt.toIso8601String(),
-        'colorIndex': memo.colorIndex,
-        'bgImageIndex': memo.bgImageIndex,
-        'imageAttachments': memo.imageAttachments,
-        'audioAttachments': memo.audioAttachments,
-        'linkAttachments': memo.linkAttachments,
-        'isArchived': memo.isArchived,
-        'isDeleted': memo.isDeleted,
-        'isPinned': memo.isPinned,
-      },
-      'blocks': blocks.map((b) {
-        return {
-          'uuid': b.uuid,
-          'type': b.type.name,
-          'content': b.content,
-          'sortOrder': b.sortOrder,
-          'isDeleted': b.isDeleted,
-        };
-      }).toList(),
-      'syncedAt': DateTime.now().toIso8601String(),
-    };
-
-    final jsonContent = jsonEncode(payload);
-    if (jsonContent.isEmpty || jsonContent == '{}') {
-      debugPrint(
-        '[KDriveStorage] uploadMemo(${memo.uuid}): empty payload, skip upload',
-      );
-      return null;
-    }
-
-    final content = EncryptionService.instance.encrypt(jsonContent);
-    final bytes = utf8.encode(content);
+    // Serialising, encrypting and refusing to write plain text is shared with
+    // the WebDAV backend (lib/services/memo_serialization.dart).
+    final bytes = encodeRemoteMemo(
+      memo,
+      blocks,
+      encryptionRequired: _encryptionEnabled,
+    );
 
     if (bytes.isEmpty) {
       debugPrint(
@@ -1065,77 +1046,16 @@ class KDriveStorage extends StorageRepository {
     return result;
   }
 
+  /// Decrypts and parses a downloaded note (shared with the WebDAV backend).
   RemoteMemo? _parseDownloadedMemo(List<int> bytes) {
-    if (bytes.isEmpty) {
-      debugPrint('[KDriveStorage] _parseDownloadedMemo: empty file content');
-      return null;
-    }
-    final content = utf8.decode(bytes);
-    final decrypted = EncryptionService.instance.tryDecrypt(content);
-    if (decrypted == null) {
+    final result = decodeRemoteMemo(bytes);
+    if (result == null) {
       debugPrint(
-        '[KDriveStorage] _parseDownloadedMemo: decrypt fail (wrong passphrase or corrupted file)',
+        '[KDriveStorage] _parseDownloadedMemo: decrypt/parse fail '
+        '(${bytes.length} bytes)',
       );
-      return null;
     }
-
-    try {
-      final payload = jsonDecode(decrypted) as Map<String, dynamic>;
-
-      final memoMap = payload['memo'] as Map<String, dynamic>;
-      final memo = Memo(
-        uuid: memoMap['uuid'] as String,
-        title: memoMap['title'] as String? ?? '',
-        createdAt: DateTime.parse(memoMap['createdAt'] as String),
-        updatedAt: DateTime.parse(memoMap['updatedAt'] as String),
-        isSynced: memoMap['isSynced'] as bool? ?? false,
-        colorIndex: memoMap['colorIndex'] as int? ?? 0,
-        bgImageIndex: memoMap['bgImageIndex'] as int? ?? -1,
-        isArchived: memoMap['isArchived'] as bool? ?? false,
-        isDeleted: memoMap['isDeleted'] as bool? ?? false,
-        isPinned: memoMap['isPinned'] as bool? ?? false,
-        sortIndex: 0, // manual order is local to the device
-        remoteFileId: memoMap['remoteFileId'] as String?,
-        imageAttachments: memoMap['imageAttachments'] as String? ?? '[]',
-        audioAttachments: memoMap['audioAttachments'] as String? ?? '[]',
-        linkAttachments: memoMap['linkAttachments'] as String? ?? '[]',
-      );
-
-      debugPrint(
-        '[KDriveStorage] _parseDownloadedMemo: uuid=${memo.uuid}, colorIndex=${memo.colorIndex}, bgImageIndex=${memo.bgImageIndex}, imageAttachments=${memo.imageAttachments}',
-      );
-
-      final blocksList = (payload['blocks'] as List<dynamic>?) ?? [];
-      final blocks = blocksList.map((b) {
-        final bm = b as Map<String, dynamic>;
-        return Block(
-          id: 0,
-          uuid: bm['uuid'] as String,
-          memoUuid: memo.uuid,
-          type: _blockTypeFromString(bm['type'] as String? ?? 'text'),
-          content: Map<String, dynamic>.from(bm['content'] as Map? ?? {}),
-          sortOrder: bm['sortOrder'] as int? ?? 0,
-          isDeleted: bm['isDeleted'] as bool? ?? false,
-        );
-      }).toList();
-
-      return RemoteMemo(memo: memo, blocks: blocks);
-    } catch (e) {
-      debugPrint(
-        '[KDriveStorage] _parseDownloadedMemo: error parsing JSON: $e',
-      );
-      return null;
-    }
-  }
-
-  BlockType _blockTypeFromString(String type) {
-    switch (type) {
-      case 'checklist':
-        return BlockType.checklist;
-      case 'text':
-      default:
-        return BlockType.text;
-    }
+    return result;
   }
 
   // ------------------------------------------------------------------------

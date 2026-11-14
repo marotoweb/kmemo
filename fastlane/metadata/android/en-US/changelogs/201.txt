@@ -1,4 +1,0 @@
-New store screenshots:
-- Six screenshots per language (Portuguese and English), with neutral demo notes.
-- Home with pinned and coloured notes, text editor, checklist, note with a background image, settings and the widget.
-- The old images did not fit the 9:16 ratio accepted by F-Droid.
