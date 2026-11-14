@@ -1389,12 +1389,6 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Guardar'**
   String get save;
-
-  /// No description provided for @webdavServerUrlHint.
-  ///
-  /// In pt, this message translates to:
-  /// **'Sem http/https — assume https. Ex.: cloud.example.com/remote.php/dav'**
-  String get webdavServerUrlHint;
 }
 
 class _AppLocalizationsDelegate

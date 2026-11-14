@@ -729,8 +729,4 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get save => 'Save';
-
-  @override
-  String get webdavServerUrlHint =>
-      'No http/https needed — https is assumed. e.g. cloud.example.com/remote.php/dav';
 }

@@ -244,6 +244,5 @@
   "webdavConfigurationSaved": "Configuration enregistrée",
   "webdavRemoveConfiguration": "Supprimer la configuration",
   "webdavMissingFields": "Renseignez l'URL, le nom d'utilisateur et le mot de passe.",
-  "save": "Enregistrer",
-  "webdavServerUrlHint": "Pas besoin de http/https — https est supposé. Ex. : cloud.example.com/remote.php/dav"
+  "save": "Enregistrer"
 }

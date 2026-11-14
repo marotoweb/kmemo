@@ -244,6 +244,5 @@
   "webdavConfigurationSaved": "Configuración guardada",
   "webdavRemoveConfiguration": "Eliminar configuración",
   "webdavMissingFields": "Rellena la URL, el usuario y la contraseña.",
-  "save": "Guardar",
-  "webdavServerUrlHint": "No hace falta http/https — se asume https. Ej.: cloud.example.com/remote.php/dav"
+  "save": "Guardar"
 }

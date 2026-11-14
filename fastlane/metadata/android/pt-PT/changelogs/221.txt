@@ -1,4 +1,4 @@
 Descrição da loja atualizada:
 - O WebDAV passou a constar como alternativa ao kDrive, incluindo servidores próprios.
 - A app indica que as notas nunca são enviadas em texto simples com a encriptação ativa.
-Sem alterações funcionais nesta versão.
+- Definições WebDAV: removida a nota sob o campo do URL do servidor.

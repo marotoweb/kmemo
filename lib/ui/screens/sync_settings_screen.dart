@@ -899,7 +899,6 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         field(
           _webdavUrlController,
           l10n.webdavServerUrl,
-          hint: l10n.webdavServerUrlHint,
           keyboardType: TextInputType.url,
         ),
         field(_webdavUserController, l10n.webdavUsername),

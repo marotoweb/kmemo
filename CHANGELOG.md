@@ -3,7 +3,10 @@
 ## 0.2.1
 
 ### ✨ Improvements
-- **Store description updated:** the F-Droid listing now presents WebDAV as an equal backend to kDrive (any WebDAV server, including self-hosted ones) and states that notes are never uploaded in plain text while encryption is enabled. No functional changes in this release.
+- **Store description updated:** the F-Droid listing now presents WebDAV as an equal backend to kDrive (any WebDAV server, including self-hosted ones) and states that notes are never uploaded in plain text while encryption is enabled.
+
+### 🐛 Fixes
+- **Cleaner WebDAV form:** removed the explanatory hint under the server URL field. The URL keeps working with or without a scheme (HTTPS is assumed, an explicit `http://` is kept for local servers), so the line only added noise.
 
 ## 0.2.0
 
