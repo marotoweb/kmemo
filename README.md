@@ -30,8 +30,8 @@
 - **Pinned notes:** pin notes to keep them at the top of the home list and the widget; pinning is synced across devices.
 - **Custom home order:** in custom-order mode, select a single note and drag it vertically to reorder the list.
 - **Link previews:** URLs in the note body are underlined; tapping a link opens a menu to preview (thumbnail, title, domain), open or edit the URL. Previews are only fetched on user action (no automatic requests), are cached locally, can be removed with an "Undo" option, and are also shown at the bottom of the home card.
-- **Export to kDrive:** from the note options menu, "Copy to kDrive" generates a .docx file with the note title and content and uploads it to the configured kDrive folder.
-- **Share and export (single or multiple notes):** in the editor, "Send" shares the note via Share Plus. On the home screen, with multiple notes selected, the top bar menu allows "Send" (grouped text) and "Copy to kDrive" (a single .docx with all notes). If kDrive is not configured, a warning is shown with a shortcut to the sync Settings.
+- **Export to the configured backend:** from the note options menu, the export entry follows the backend sync is set to ("Copy to kDrive" or "Copy to WebDAV") and generates a .docx file with the note title and content, uploaded to the same remote folder the notes use. With no backend configured it reads "Copy to the cloud" and opens the sync Settings. The exported .docx is **not encrypted**, even when note encryption is enabled: encryption protects the note payload, while the document is a plain file. The confirmation message says so when encryption is on, and the note title is turned into a safe file name (no `/`, `\` or other path characters).
+- **Share and export (single or multiple notes):** in the editor, "Send" shares the note via Share Plus. On the home screen, with multiple notes selected, the top bar menu allows "Send" (grouped text) and the same backend-aware export (a single .docx with all notes). If no remote storage is configured, a warning is shown with a shortcut to the sync Settings.
 - **In-app update check:** Settings → "Check for updates" queries the latest GitHub release and notifies the user if a newer version is available, downloading the APK matching the device architecture.
 
 ---
@@ -60,6 +60,8 @@ The app organizes persistence through two relational tables with automatic casca
 | `createdAt` / `updatedAt` | DateTime | Time tracking |
 | `isSynced` | Boolean | Remote sync state (local only) |
 | `remoteFileId` | String | Optional remote file identifier (local only) |
+| `remoteUpdatedAt` | DateTime | Payload timestamp of the remote copy this device last agreed with (local only) |
+| `remoteRevision` | DateTime | Modified time of the remote file at the last listing (local only) |
 | `colorIndex` | Int | Background color index |
 | `bgImageIndex` | Int | Background image index |
 | `imageAttachments` | String (JSON) | Image attachment paths |
@@ -118,7 +120,7 @@ Since version 0.1.3+, kMemo supports remote note sync through **kDrive**, Infoma
 - **Offline-first:** All notes continue to be stored locally in SQLite, with a risk of losing notes if the app is accidentally uninstalled. Sync is an asynchronous layer that does not block the UI and lets your notes be saved sovereignly on a remote server.
 - **Push:** Created, edited, archived or deleted notes are sent to kDrive.
 - **Pull:** Notes that exist in kDrive but not on the device are downloaded automatically.
-- **Conflicts:** Resolved by "last-write-wins" based on the update date (`updatedAt`).
+- **Conflicts:** Merged note by note. A note edited only on this device is uploaded; a note edited only on the other device is downloaded; a note edited on both sides keeps both versions — the local note stays as it is and the remote version is saved as a separate note titled "(Conflict)" (in your language), which is uploaded like any other note. The check does not rely on which clock is ahead: it compares what changed on each side since the last sync. Sending a note to the trash is not a conflict when the other device restored it, and switching backend re-uploads the whole local library instead of merging with the previous backend's copies.
 - **Optional encryption:** You can enable client-side AES encryption with a passphrase you define. Without that passphrase, encrypted data cannot be recovered.
 - **Destination folder:** Notes are stored inside a specific folder (not at the root), navigable hierarchically. The "Private" folder (id=5) is used as the effective root, since the kDrive API does not allow writing to the root (id=1).
 
@@ -158,7 +160,7 @@ kMemo can also sync to any **WebDAV** server (Nextcloud, ownCloud, Synology, Box
 ### How it works
 
 - Notes are stored as `<uuid>.json`, using exactly the same payload as kDrive, so a note can be moved between the two backends.
-- **Push / pull / conflicts** behave like kDrive: offline-first, last-write-wins on `updatedAt`.
+- **Push / pull / conflicts** behave like kDrive: offline-first, merged note by note, with a separate "(Conflict)" copy when both sides edited the same note.
 - **No version history:** an upload overwrites the file. The "Clear old versions" action is therefore kDrive-only.
 - **Only one backend may be configured at a time.** Saving the WebDAV configuration removes the kDrive token, drive, folder and passphrase, and saving kDrive removes the WebDAV server and credentials. The notes of the backend being activated are re-uploaded, so the new destination receives the whole library.
 
@@ -211,6 +213,60 @@ kMemo **is not affiliated with, endorsed by or sponsored by Infomaniak**. The **
    ```bash
    flutter run
    ```
+
+### Linux desktop
+
+The notes, the editor, search, archive/trash, link previews, `.docx` export and
+both sync backends also run as a Linux desktop app.
+
+```bash
+sudo apt install libsecret-1-dev libjsoncpp-dev   # keyring bindings
+flutter build linux --release
+./build/linux/x64/release/bundle/kmemo
+```
+
+#### AppImage
+
+Every release also publishes a portable AppImage (no installation, no root):
+
+```bash
+chmod +x kMemo-vX.Y.Z-x86_64.AppImage
+./kMemo-vX.Y.Z-x86_64.AppImage
+```
+
+To build it yourself:
+
+```bash
+linux/package-appimage.sh          # builds the Flutter bundle too
+linux/package-appimage.sh --no-build
+```
+
+The script assembles an AppDir (bundle under `usr/bin`, `.desktop`, icon,
+`AppRun`) and runs `appimagetool`, which it downloads once to
+`~/.cache/kmemo/`. The result is `build/appimage/kMemo-<version>-x86_64.AppImage`
+(about 19 MB).
+
+Notes and settings are stored outside the AppImage, in
+`~/.local/share/com.marotoweb.kmemo/`, so replacing the file with a newer
+version keeps everything.
+
+#### Flatpak
+
+Not packaged yet. AppImage is the supported desktop format for now, because it
+needs no runtime installed on the user's machine and no Flatpak manifest to be
+kept in sync with the SDK.
+
+Two platform notes:
+
+- **Home-screen widget:** Android only. The widget section of the Settings
+  screen is hidden on the desktop.
+- **Secrets:** the kDrive token, the WebDAV password and the encryption
+  passphrase live in the desktop keyring (gnome-keyring or KWallet). A locked
+  or missing keyring does not stop the app — the notes still open — but the
+  sync settings refuse to save the credentials and say so. Sharing has no share
+  sheet on Linux: share_plus opens a `mailto:` compose window, and when no mail
+  handler is registered the note text is copied to the clipboard instead.
+
 ---
 
 ## 🧭 Quick Navigation

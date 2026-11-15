@@ -12,6 +12,8 @@ import '../../providers/theme_provider.dart';
 import '../../services/update_service.dart';
 import '../../services/widget_debug_log.dart';
 import '../widgets/app_snackbar.dart';
+import '../../services/widget_service.dart';
+import '../../services/sync_debug_log.dart';
 import 'sync_settings_screen.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
@@ -173,6 +175,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Copies the sync log (counts and decisions, no content) to the clipboard.
+  Future<void> _copySyncLog() async {
+    final log = await SyncDebugLog.read();
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    if (log.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        buildAppSnackBar(context, message: l10n.syncLogEmpty),
+      );
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: log));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      buildAppSnackBar(context, message: l10n.copiedToClipboard),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
@@ -192,6 +212,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
         // or the system navigation bar.
         padding: EdgeInsets.all(16.0).copyWith(bottom: 100),
         children: [
+          // SECTION: SYNCHRONIZATION
+          // Kept first: configuring the remote storage is the action most
+          // users open this screen for.
+          Text(
+            AppLocalizations.of(context)!.syncSection,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey,
+            ),
+          ),
+          SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? Color(0xFF1E1E1E)
+                  : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+              ),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  title: Text(AppLocalizations.of(context)!.remoteStorage),
+                  subtitle: Text(
+                    AppLocalizations.of(context)!.syncSubtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  trailing: Icon(Icons.chevron_right),
+                  onTap: () async {
+                    final changed = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(builder: (_) => SyncSettingsScreen()),
+                    );
+                    if (changed == true && context.mounted) {
+                      setState(() {});
+                    }
+                  },
+                ),
+                Divider(height: 1),
+                // The sync log has no credential and no note content, so it can
+                // be copied from a release build: it is how a problem with a
+                // note that does not reach the other device gets diagnosed.
+                ListTile(
+                  title: Text(AppLocalizations.of(context)!.syncLog),
+                  subtitle: Text(
+                    AppLocalizations.of(context)!.syncLogSubtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  trailing: Icon(Icons.copy, size: 18, color: Colors.grey),
+                  onTap: _copySyncLog,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 24),
+
           // SECTION: APPEARANCE
           Text(
             AppLocalizations.of(context)!.appearance,
@@ -365,88 +443,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
           SizedBox(height: 24),
 
           // SECTION: WIDGET
-          Text(
-            AppLocalizations.of(context)!.widget,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: isDarkMode
-                  ? Color(0xFF1E1E1E)
-                  : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
+          // The home-screen widget is Android-only: the transparency sliders
+          // change nothing on desktop, so they are not shown there.
+          if (WidgetService.isSupported) ...[
+            Text(
+              AppLocalizations.of(context)!.widget,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
               ),
             ),
-            child: Column(
-              children: [
-                _buildTransparencyTile(
-                  context,
-                  title:
-                      AppLocalizations.of(context)!.widgetBackgroundTransparency,
-                  // The stored value is opacity; the slider shows transparency
-                  // (0% = fully opaque, 100% = fully transparent).
-                  transparency: 1 - themeProvider.widgetBgOpacity,
-                  onChanged: (value) =>
-                      themeProvider.setWidgetBgOpacity(1 - value),
+            SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: isDarkMode
+                    ? Color(0xFF1E1E1E)
+                    : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
                 ),
-                Divider(height: 1),
-                _buildTransparencyTile(
-                  context,
-                  title: AppLocalizations.of(context)!.widgetCardTransparency,
-                  transparency: 1 - themeProvider.widgetCardOpacity,
-                  onChanged: (value) =>
-                      themeProvider.setWidgetCardOpacity(1 - value),
-                ),
+              ),
+              child: Column(
+                children: [
+                  _buildTransparencyTile(
+                    context,
+                    title:
+                        AppLocalizations.of(context)!.widgetBackgroundTransparency,
+                    // The stored value is opacity; the slider shows transparency
+                    // (0% = fully opaque, 100% = fully transparent).
+                    transparency: 1 - themeProvider.widgetBgOpacity,
+                    onChanged: (value) =>
+                        themeProvider.setWidgetBgOpacity(1 - value),
+                  ),
+                  Divider(height: 1),
+                  _buildTransparencyTile(
+                    context,
+                    title: AppLocalizations.of(context)!.widgetCardTransparency,
+                    transparency: 1 - themeProvider.widgetCardOpacity,
+                    onChanged: (value) =>
+                        themeProvider.setWidgetCardOpacity(1 - value),
+                  ),
               ],
             ),
           ),
           SizedBox(height: 24),
-
-          // SECTION: SYNCHRONIZATION
-          Text(
-            AppLocalizations.of(context)!.syncSection,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          SizedBox(height: 8),
-          Container(
-            decoration: BoxDecoration(
-              color: isDarkMode
-                  ? Color(0xFF1E1E1E)
-                  : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
-              ),
-            ),
-            child: ListTile(
-              title: Text(AppLocalizations.of(context)!.remoteStorage),
-              subtitle: Text(
-                AppLocalizations.of(context)!.syncSubtitle,
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              trailing: Icon(Icons.chevron_right),
-              onTap: () async {
-                final changed = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute(builder: (_) => SyncSettingsScreen()),
-                );
-                if (changed == true && context.mounted) {
-                  setState(() {});
-                }
-              },
-            ),
-          ),
-          SizedBox(height: 24),
+          ],
 
           // SECTION: ISSUE REPORTING
           Text(

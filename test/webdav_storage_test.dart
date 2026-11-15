@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:kmemo/database/database.dart';
 import 'package:kmemo/services/encryption_service.dart';
+import 'package:kmemo/services/storage_repository.dart';
 import 'package:kmemo/services/webdav_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,6 +17,8 @@ class _FakeServer {
   final Map<String, List<int>> files = {};
   final Set<String> collections = {};
   final List<String> requests = [];
+  /// When non-zero, every PUT fails with this status (folder/permission tests).
+  int putStatus = 0;
   bool requireAuth = true;
   String user = 'maria';
   String password = 'secret';
@@ -35,6 +38,7 @@ class _FakeServer {
         collections.add(path);
         return http.Response('', 201);
       case 'PUT':
+        if (putStatus != 0) return http.Response('rejected', putStatus);
         files[path] = request.bodyBytes;
         return http.Response('', 201);
       case 'GET':
@@ -128,6 +132,32 @@ Future<WebDAVStorage> _configured(
 }
 
 void main() {
+  group('upload retries', () {
+    test('a 4xx is not retried', () async {
+      // A wrong folder or password answers 405/403: repeating the request
+      // cannot succeed, and it made a misconfigured sync look very slow.
+      final server = _FakeServer()..putStatus = 405;
+      final storage = await _configured(server);
+
+      await expectLater(
+        storage.uploadMemo(_memo(), _blocks()),
+        throwsA(isA<RemoteHttpException>()),
+      );
+      expect(server.requests.where((r) => r.startsWith('PUT')).length, 1);
+    });
+
+    test('transient statuses are worth a retry', () {
+      expect(RemoteHttpException(408, '').isRetryable, isTrue);
+      expect(RemoteHttpException(429, '').isRetryable, isTrue);
+      expect(RemoteHttpException(500, '').isRetryable, isTrue);
+      expect(RemoteHttpException(503, '').isRetryable, isTrue);
+      expect(RemoteHttpException(401, '').isRetryable, isFalse);
+      expect(RemoteHttpException(403, '').isRetryable, isFalse);
+      expect(RemoteHttpException(405, '').isRetryable, isFalse);
+      expect(RemoteHttpException(422, '').isRetryable, isFalse);
+    });
+  });
+
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
@@ -264,6 +294,73 @@ void main() {
 
     expect(server.files, isEmpty);
     expect(server.requests.last, startsWith('DELETE /dav/kmemo/notes/'));
+  });
+
+  group('uploadFile', () {
+    test('PUTs the file into the notes folder', () async {
+      final server = _FakeServer();
+      final storage = await _configured(server);
+
+      final remoteId = await storage.uploadFile(
+        fileName: 'Reuniao.docx',
+        bytes: utf8.encode('docx-bytes'),
+      );
+
+      expect(remoteId, 'kmemo/notes/Reuniao.docx');
+      expect(
+        server.requests,
+        contains('PUT /dav/kmemo/notes/Reuniao.docx'),
+      );
+      expect(
+        utf8.decode(server.files['/dav/kmemo/notes/Reuniao.docx']!),
+        'docx-bytes',
+      );
+    });
+
+    test('is not encrypted even when encryption is enabled', () async {
+      final server = _FakeServer();
+      final storage = await _configured(
+        server,
+        encryption: true,
+        passphrase: 'correct horse battery staple',
+      );
+
+      await storage.uploadFile(
+        fileName: 'export.docx',
+        bytes: utf8.encode('plain document'),
+      );
+
+      // The .docx export is a user-requested document, not the note payload.
+      expect(
+        utf8.decode(server.files['/dav/kmemo/notes/export.docx']!),
+        'plain document',
+      );
+    });
+
+    test('returns null when the backend is not configured', () async {
+      final storage = WebDAVStorage(client: MockClient((_) async {
+        fail('no request expected');
+      }));
+
+      expect(
+        await storage.uploadFile(fileName: 'x.docx', bytes: const [1, 2, 3]),
+        isNull,
+      );
+    });
+
+    test('rejects a file name that would escape the notes folder', () async {
+      final server = _FakeServer();
+      final storage = await _configured(server);
+
+      expect(
+        () => storage.uploadFile(
+          fileName: '../segredo.docx',
+          bytes: const [1, 2, 3],
+        ),
+        throwsArgumentError,
+      );
+      expect(server.files, isEmpty);
+    });
   });
 
   test('upload refuses to write plain text when encryption is on', () async {

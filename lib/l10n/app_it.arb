@@ -50,6 +50,7 @@
   "sync": "Sincronizza",
   "syncTitle": "Sincronizzazione",
   "syncCompletedWithCount": "Sincronizzazione completata: {count} nota/note sincronizzate.",
+  "syncUpToDate": "Tutto aggiornato.",
   "@syncCompletedWithCount": {
     "placeholders": {
       "count": {
@@ -106,8 +107,15 @@
   "dark": "Scuro",
   "auto": "Auto",
   "syncSubtitle": "Sincronizza le tue note con kDrive o WebDAV",
+  "syncUndecryptableNotes": "Alcune note non sono state decifrate ({count}). Controlla la passphrase nelle impostazioni di sincronizzazione.",
+  "secretStoreUnavailable": "Impossibile salvare la password nel portachiavi di sistema. Sblocca gnome-keyring o KWallet e riprova.",
+  "syncBlockedNoPassphrase": "La sincronizzazione è bloccata: la cifratura è attiva ma manca la passphrase. Le nuove note restano solo su questo dispositivo.",
+  "syncLog": "Registro di sincronizzazione",
+  "syncLogSubtitle": "Copia ciò che la sincronizzazione ha deciso (senza il contenuto delle note).",
+  "syncLogEmpty": "Il registro è vuoto. Sincronizza prima.",
   "reportBugSubtitle": "Segnala un bug, suggerisci una funzionalità o lascia un commento",
   "sharedNote": "Nota condivisa",
+  "copiedToClipboard": "Copiato negli appunti",
   "colorsTab": "Colori (16)",
   "imagesTab": "Immagini (16)",
   "noteSentToTrash": "Nota spostata nel cestino",
@@ -172,6 +180,14 @@
   "kdriveNotConfigured": "kDrive non configurato",
   "copiedToKdrive": "Copiato su kDrive",
   "copyToKdriveFailed": "Errore durante la copia su kDrive",
+  "copyToCloud": "Copia sul cloud",
+  "copyToWebdav": "Copia su WebDAV",
+  "copiedToCloud": "Copiato sul cloud",
+  "copiedToWebdav": "Copiato su WebDAV",
+  "copyToCloudFailed": "Errore durante la copia sul cloud",
+  "copyToWebdavFailed": "Errore durante la copia su WebDAV",
+  "cloudNotConfigured": "Nessun archivio remoto configurato",
+  "docxNotEncrypted": "Il file .docx non è cifrato.",
   "checkForUpdates": "Verifica aggiornamenti",
   "upToDateMessage": "Stai usando la versione più recente ({version}).",
   "@upToDateMessage": {

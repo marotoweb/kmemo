@@ -54,6 +54,28 @@ jobs:
             mv "build/app/outputs/flutter-apk/app-${abi}-release.apk" "kMemo-${{ github.ref_name }}-${abi}.apk"
           done
 
+      # The desktop build is best effort: a packaging failure must not block
+      # the Android release, which is what F-Droid and the Play listing use.
+      - name: Install Linux build dependencies
+        continue-on-error: true
+        run: |
+          sudo apt-get update
+          # lld is what Flutter's native-assets build uses as the linker for
+          # sqlite3; without it "flutter build linux" stops with
+          # "Failed to find any of [ld.lld, ld]".
+          sudo apt-get install -y clang lld cmake ninja-build pkg-config \
+            libgtk-3-dev libsecret-1-dev libjsoncpp-dev
+
+      - name: Build Linux AppImage
+        continue-on-error: true
+        run: |
+          # No --no-build: the workflow has no Flutter bundle yet, so the
+          # script runs "flutter build linux --release" itself.
+          bash linux/package-appimage.sh
+          VERSION="$(sed -n 's/^version:[[:space:]]*\([^+ ]*\).*/\1/p' pubspec.yaml | head -1)"
+          mv "build/appimage/kMemo-${VERSION}-x86_64.AppImage" \
+             "kMemo-${{ github.ref_name }}-x86_64.AppImage"
+
       - name: Extract current release notes
         run: |
           TAG="${{ github.ref_name }}"
@@ -68,7 +90,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: kMemo-${{ github.ref_name }}-*.apk
+          files: |
+            kMemo-${{ github.ref_name }}-*.apk
+            kMemo-${{ github.ref_name }}-x86_64.AppImage
           name: "kMemo ${{ github.ref_name }}"
           tag_name: ${{ github.ref_name }}
           body: ${{ env.RELEASE_BODY }}

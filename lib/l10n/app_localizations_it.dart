@@ -162,6 +162,9 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String get syncUpToDate => 'Tutto aggiornato.';
+
+  @override
   String get theme => 'Tema';
 
   @override
@@ -318,11 +321,37 @@ class AppLocalizationsIt extends AppLocalizations {
   String get syncSubtitle => 'Sincronizza le tue note con kDrive o WebDAV';
 
   @override
+  String syncUndecryptableNotes(int count) {
+    return 'Alcune note non sono state decifrate ($count). Controlla la passphrase nelle impostazioni di sincronizzazione.';
+  }
+
+  @override
+  String get secretStoreUnavailable =>
+      'Impossibile salvare la password nel portachiavi di sistema. Sblocca gnome-keyring o KWallet e riprova.';
+
+  @override
+  String get syncBlockedNoPassphrase =>
+      'La sincronizzazione è bloccata: la cifratura è attiva ma manca la passphrase. Le nuove note restano solo su questo dispositivo.';
+
+  @override
+  String get syncLog => 'Registro di sincronizzazione';
+
+  @override
+  String get syncLogSubtitle =>
+      'Copia ciò che la sincronizzazione ha deciso (senza il contenuto delle note).';
+
+  @override
+  String get syncLogEmpty => 'Il registro è vuoto. Sincronizza prima.';
+
+  @override
   String get reportBugSubtitle =>
       'Segnala un bug, suggerisci una funzionalità o lascia un commento';
 
   @override
   String get sharedNote => 'Nota condivisa';
+
+  @override
+  String get copiedToClipboard => 'Copiato negli appunti';
 
   @override
   String get colorsTab => 'Colori (16)';
@@ -565,6 +594,30 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get copyToKdriveFailed => 'Errore durante la copia su kDrive';
+
+  @override
+  String get copyToCloud => 'Copia sul cloud';
+
+  @override
+  String get copyToWebdav => 'Copia su WebDAV';
+
+  @override
+  String get copiedToCloud => 'Copiato sul cloud';
+
+  @override
+  String get copiedToWebdav => 'Copiato su WebDAV';
+
+  @override
+  String get copyToCloudFailed => 'Errore durante la copia sul cloud';
+
+  @override
+  String get copyToWebdavFailed => 'Errore durante la copia su WebDAV';
+
+  @override
+  String get cloudNotConfigured => 'Nessun archivio remoto configurato';
+
+  @override
+  String get docxNotEncrypted => 'Il file .docx non è cifrato.';
 
   @override
   String get checkForUpdates => 'Verifica aggiornamenti';

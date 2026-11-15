@@ -50,6 +50,7 @@
   "sync": "Sync",
   "syncTitle": "Sync",
   "syncCompletedWithCount": "Sync completed: {count} note(s) synced.",
+  "syncUpToDate": "Everything is up to date.",
   "@syncCompletedWithCount": {
     "placeholders": {
       "count": {
@@ -106,8 +107,15 @@
   "dark": "Dark",
   "auto": "Auto",
   "syncSubtitle": "Sync your notes with kDrive or WebDAV",
+  "syncUndecryptableNotes": "Some notes could not be decrypted ({count}). Check the passphrase in the sync settings.",
+  "secretStoreUnavailable": "Could not save the password in the system keyring. Unlock gnome-keyring or KWallet and try again.",
+  "syncBlockedNoPassphrase": "Sync is blocked: encryption is on but the passphrase is missing. New notes stay on this device only.",
+  "syncLog": "Sync log",
+  "syncLogSubtitle": "Copies what the sync decided (no note content).",
+  "syncLogEmpty": "The log is empty. Sync first.",
   "reportBugSubtitle": "Report a bug, suggest a feature, or leave a comment",
   "sharedNote": "Shared note",
+  "copiedToClipboard": "Copied to the clipboard",
   "colorsTab": "Colors (16)",
   "imagesTab": "Images (16)",
   "noteSentToTrash": "Note moved to trash",
@@ -172,6 +180,14 @@
   "kdriveNotConfigured": "kDrive not configured",
   "copiedToKdrive": "Copied to kDrive",
   "copyToKdriveFailed": "Failed to copy to kDrive",
+  "copyToCloud": "Copy to the cloud",
+  "copyToWebdav": "Copy to WebDAV",
+  "copiedToCloud": "Copied to the cloud",
+  "copiedToWebdav": "Copied to WebDAV",
+  "copyToCloudFailed": "Failed to copy to the cloud",
+  "copyToWebdavFailed": "Failed to copy to WebDAV",
+  "cloudNotConfigured": "No remote storage is configured",
+  "docxNotEncrypted": "The .docx file is not encrypted.",
   "checkForUpdates": "Check for updates",
   "upToDateMessage": "You're running the latest version ({version}).",
   "@upToDateMessage": {

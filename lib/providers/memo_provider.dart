@@ -6,8 +6,10 @@ import 'package:uuid/uuid.dart';
 import '../database/database.dart';
 import '../models/home_sort.dart';
 import '../services/storage_repository.dart';
+import '../services/sync_merge.dart';
 import '../services/encryption_service.dart';
 import '../services/widget_service.dart';
+import '../services/sync_debug_log.dart';
 import 'package:drift/drift.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -19,6 +21,22 @@ class MemoProvider extends ChangeNotifier {
   final _uuid = const Uuid();
   Timer? _syncDebounce;
   Timer? _widgetDebounce;
+
+  /// Cycle in progress, if any. Concurrent calls join it instead of planning
+  /// a second time from the same state (see [performSync]).
+  Future<int>? _activeSync;
+
+  /// Set when the last attempt was refused because encryption is on but the
+  /// passphrase is not loaded. The automatic sync swallows the error, so
+  /// without this the notes would stay local with no visible sign.
+  bool _syncBlockedNoPassphrase = false;
+  bool get syncBlockedNoPassphrase => _syncBlockedNoPassphrase;
+
+  /// Logs to the console in debug builds and to `sync.log` in every build.
+  void _syncLog(String message) {
+    debugPrint(message);
+    SyncDebugLog.log(message);
+  }
 
   /// Editing a note writes to the database on every keystroke, and each write
   /// used to rebuild the whole widget payload. The widget is only visible when
@@ -37,6 +55,15 @@ class MemoProvider extends ChangeNotifier {
 
   /// Number of notes uploaded or downloaded during the last sync.
   int lastSyncNoteCount = 0;
+
+  /// Remote notes the last sync could not read (missing passphrase, wrong
+  /// passphrase or a corrupted file).
+  ///
+  /// A background sync cannot ask for the passphrase, so without this the note
+  /// would stay out of sync without the user ever knowing. The home screen
+  /// shows a warning while this is greater than zero.
+  int _undecryptableNotes = 0;
+  int get undecryptableNotes => _undecryptableNotes;
 
   MemoProvider(this._db, {StorageRepository? storage}) : _storage = storage {
     _loadSortPreferences();
@@ -247,7 +274,7 @@ class MemoProvider extends ChangeNotifier {
   List<Block>? cachedBlocksFor(String memoUuid) => _blocksByMemo[memoUuid];
 
   Future<Memo> createNewMemo() async {
-    final now = DateTime.now();
+    final now = DateTime.now().toUtc();
     final memo = Memo(
       uuid: _uuid.v4(),
       title: '',
@@ -300,19 +327,32 @@ class MemoProvider extends ChangeNotifier {
     await _db.transaction(() async {
       // The editor can hold a snapshot taken before the first upload finished
       // (a note created and edited while it was still syncing). Never drop the
-      // remoteFileId already stored locally: without it the remote .json can
-      // no longer be overwritten by id or deleted when the note is purged.
+      // remote bookkeeping already stored locally: without the id the remote
+      // .json can no longer be overwritten by id or deleted when the note is
+      // purged, and without the timestamps the next sync would mistake the
+      // remote copy for an unknown one.
       var remoteFileId = memo.remoteFileId;
-      if (remoteFileId == null || remoteFileId.isEmpty) {
+      var remoteUpdatedAt = memo.remoteUpdatedAt;
+      var remoteRevision = memo.remoteRevision;
+      if (remoteFileId == null ||
+          remoteFileId.isEmpty ||
+          remoteUpdatedAt == null ||
+          remoteRevision == null) {
         final stored = await (_db.select(
           _db.memos,
         )..where((t) => t.uuid.equals(memo.uuid))).getSingleOrNull();
-        remoteFileId = stored?.remoteFileId;
+        if (remoteFileId == null || remoteFileId.isEmpty) {
+          remoteFileId = stored?.remoteFileId;
+        }
+        remoteUpdatedAt ??= stored?.remoteUpdatedAt;
+        remoteRevision ??= stored?.remoteRevision;
       }
       final updatedMemo = memo.copyWith(
-        updatedAt: DateTime.now(),
+        updatedAt: DateTime.now().toUtc(),
         isSynced: false,
         remoteFileId: Value(remoteFileId),
+        remoteUpdatedAt: Value(remoteUpdatedAt),
+        remoteRevision: Value(remoteRevision),
       );
 
       await _db
@@ -429,7 +469,57 @@ class MemoProvider extends ChangeNotifier {
   /// decrypted; should return the passphrase to try or null to ignore.
   /// [confirmDeleteRemote] is called after two failures; returns true to
   /// delete the remote file.
+  ///
+  /// A call that arrives while a cycle is running joins it instead of starting
+  /// a second one: two cycles plan from the same state, so both see the same
+  /// remote edit and each creates its own conflict copy (editing a note while
+  /// a slow sync was running produced several copies of the same version).
+  /// A manual call (`force`) is never dropped: it waits for the running cycle
+  /// and then runs on its own.
   Future<int> performSync({
+    bool force = false,
+    void Function(int done, int total)? onProgress,
+    Future<String?> Function(String remoteFileId)? requestPassphrase,
+    Future<bool> Function(String remoteFileId)? confirmDeleteRemote,
+  }) {
+    final running = _activeSync;
+    if (running != null) {
+      // A manual "sync now" asks for a full pass and cannot be swallowed by a
+      // cycle that is already planning from an older state, so it waits for
+      // it and then runs on its own. An automatic call just joins: a second
+      // plan from the same state is exactly what created duplicate copies.
+      if (!force) {
+        debugPrint(
+          '[MemoProvider] performSync(): joining the cycle in progress',
+        );
+        return running;
+      }
+      debugPrint(
+        '[MemoProvider] performSync(): queued after the cycle in progress',
+      );
+      return running.then(
+        (_) => performSync(
+          force: true,
+          onProgress: onProgress,
+          requestPassphrase: requestPassphrase,
+          confirmDeleteRemote: confirmDeleteRemote,
+        ),
+      );
+    }
+    late final Future<int> cycle;
+    cycle = _performSyncOnce(
+      force: force,
+      onProgress: onProgress,
+      requestPassphrase: requestPassphrase,
+      confirmDeleteRemote: confirmDeleteRemote,
+    ).whenComplete(() {
+      if (identical(_activeSync, cycle)) _activeSync = null;
+    });
+    _activeSync = cycle;
+    return cycle;
+  }
+
+  Future<int> _performSyncOnce({
     bool force = false,
     void Function(int done, int total)? onProgress,
     Future<String?> Function(String remoteFileId)? requestPassphrase,
@@ -445,10 +535,22 @@ class MemoProvider extends ChangeNotifier {
     // plain text. This used to be checked only before the pull, so a sync in
     // that state uploaded plain-text copies while blocking the download.
     if (storage.encryptionEnabled && !EncryptionService.instance.isEnabled) {
+      _syncLog(
+        '[MemoProvider] sync refused: encryption is on but no passphrase is '
+        'loaded',
+      );
+      if (!_syncBlockedNoPassphrase) {
+        _syncBlockedNoPassphrase = true;
+        notifyListeners();
+      }
       throw StateError(
         'Encryption enabled but passphrase not configured. '
         'Enter the passphrase in sync settings before syncing.',
       );
+    }
+    if (_syncBlockedNoPassphrase) {
+      _syncBlockedNoPassphrase = false;
+      notifyListeners();
     }
 
     // Rate-limit guard (ignored if force=true)
@@ -465,12 +567,30 @@ class MemoProvider extends ChangeNotifier {
               ),
             ]))
             .get();
-    final localMemos = List<Memo>.from(_memos);
+    // Permanent deletions are remembered in their own table, because the memo
+    // row is gone. If a row still exists for a tombstoned uuid (a restored
+    // database, a backup copied back), it is dropped here instead of being
+    // uploaded again: the user deleted it on purpose.
+    final tombstones = await _db.getTombstones();
+    final tombstonedUuids = tombstones.map((t) => t.uuid).toSet();
+    for (final memo in _memos) {
+      if (tombstonedUuids.contains(memo.uuid)) {
+        await _db.deleteMemoCascading(memo.uuid);
+      }
+    }
+    final localMemos = _memos
+        .where((m) => !tombstonedUuids.contains(m.uuid))
+        .toList();
     int decryptionFailures = 0;
-    int syncedCount = 0;
+    // Counts the notes this cycle touched, not the operations: a first sync
+    // that downloads 56 notes and re-encodes them used to report 112, which
+    // reads as if the library had doubled.
+    final touched = <String>{};
 
-    debugPrint(
-      '[MemoProvider] performSync(): ${localMemos.length} total notes, encryption=${storage.encryptionEnabled}',
+    _syncLog(
+      '[MemoProvider] sync start: ${localMemos.length} notes, '
+      'encryption=${storage.encryptionEnabled}, '
+      'passphrase=${EncryptionService.instance.isEnabled ? 'loaded' : 'missing'}',
     );
     for (var memo in localMemos) {
       debugPrint(
@@ -479,157 +599,563 @@ class MemoProvider extends ChangeNotifier {
     }
 
     // ---------------------------------------------------------------
-    // Progress: total = notes to upload + remote notes to download.
-    // Listing the remote folder first lets the UI show a determinate bar
-    // even when every note is re-uploaded (e.g. after toggling encryption).
+    // PLAN: list the remote folder and decide, per note, what changed.
+    //
+    // The remote storage is a plain folder of JSON files, so the merge rule
+    // lives on the client (see sync_merge.dart). A note is dirty when it was
+    // edited locally since the last upload; the remote is dirty when its
+    // payload timestamp differs from the one recorded at the last sync. The
+    // remote file's modified time avoids downloading a note that did not
+    // change.
     // ---------------------------------------------------------------
-    final unsynced = localMemos.where((m) => !m.isSynced).toList();
-    List<RemoteMemoInfo> pendingRemote = [];
+    final remoteByName = <String, RemoteMemoInfo>{};
+    var listingOk = false;
     try {
       final remoteMemos = await storage.listRemoteMemos();
-      final localUuids = localMemos.map((m) => m.uuid).toSet();
-      pendingRemote = remoteMemos
-          .where((r) => !localUuids.contains(r.name.replaceAll('.json', '')))
-          .toList();
+      for (final remote in remoteMemos) {
+        remoteByName[remote.name.replaceAll('.json', '')] = remote;
+      }
+      listingOk = true;
     } catch (e) {
-      debugPrint('[MemoProvider] error listing remotes: $e');
+      _syncLog('[MemoProvider] error listing remotes: $e');
     }
-    final total = unsynced.length + pendingRemote.length;
-    int processed = 0;
-    onProgress?.call(processed, total);
+
+    final localUuids = localMemos.map((m) => m.uuid).toSet();
+    final remoteOnly = listingOk
+        ? remoteByName.values
+              .where(
+                (r) =>
+                    !localUuids.contains(r.name.replaceAll('.json', '')) &&
+                    !tombstonedUuids.contains(r.name.replaceAll('.json', '')),
+              )
+              .toList()
+        : <RemoteMemoInfo>[];
+
+    // A permanent deletion is published as a tombstone in the note's own file.
+    // It is written again when something put a note back at that path (an old
+    // client re-uploading the version it still held), so the deletion wins
+    // instead of the note coming back on every sync.
+    final toPublish = <SyncTombstone>[];
+    if (listingOk) {
+      for (final tombstone in tombstones) {
+        final remote = remoteByName[tombstone.uuid];
+        if (remote == null) continue;
+        if (!tombstone.isUploaded ||
+            !sameRemoteInstant(tombstone.remoteRevision, remote.updatedAt)) {
+          toPublish.add(tombstone);
+        }
+      }
+    }
+
+    final toUpload = <Memo>[];
+    final toInspect = <Memo>[];
+    for (final memo in localMemos) {
+      final remote = remoteByName[memo.uuid];
+      if (remote == null) {
+        // No remote copy: the note was never uploaded, or another device
+        // removed it. Uploading keeps the user's note in the backup.
+        if (listingOk || !memo.isSynced) toUpload.add(memo);
+        continue;
+      }
+      if (memo.remoteUpdatedAt == null) {
+        // Unknown remote state (a newly selected backend, or a database that
+        // predates the bookkeeping): the local library wins and replaces the
+        // stale remote copy. No conflict copy is created, because the remote
+        // side cannot be shown to be newer.
+        toUpload.add(memo);
+        continue;
+      }
+      if (memo.remoteRevision != null &&
+          sameRemoteInstant(memo.remoteRevision, remote.updatedAt)) {
+        // The remote file did not change since the last sync.
+        if (!memo.isSynced) toUpload.add(memo);
+        continue;
+      }
+      // The remote file changed, or its revision is still unknown (a note
+      // migrated from an older database): the payload must be read to tell a
+      // real edit from a re-upload of the same content.
+      toInspect.add(memo);
+    }
+
+    final total =
+        toUpload.length +
+        toInspect.length +
+        remoteOnly.length +
+        toPublish.length;
+    var processed = 0;
+    void reportProgress() {
+      onProgress?.call(processed > total ? total : processed, total);
+    }
+
+    reportProgress();
 
     // ---------------------------------------------------------------
-    // PUSH: send unsynced local notes and associate remoteFileId
+    // DOWNLOAD / INSPECT: bring remote edits in and detect conflicts.
+    // Downloads run before uploads so a conflict copy is uploaded in the
+    // same cycle.
     // ---------------------------------------------------------------
-    debugPrint(
-      '[MemoProvider] performSync(): ${unsynced.length} unsynced notes for upload',
+    final session = _PassphraseSession(await storage.getEncryptionPassphrase());
+    final justUploaded = <String>{};
+    final publishedTombstones = <String>{};
+    var nextSortIndex = nextTopSortIndex();
+
+    for (final tombstone in toPublish) {
+      processed++;
+      reportProgress();
+      try {
+        final remoteId = await storage.uploadTombstone(
+          tombstone.uuid,
+          tombstone.deletedAt,
+          remoteFileId: tombstone.remoteFileId,
+        );
+        await (_db.update(
+          _db.syncTombstones,
+        )..where((t) => t.uuid.equals(tombstone.uuid))).write(
+          SyncTombstonesCompanion(
+            isUploaded: const Value(true),
+            remoteFileId: Value(remoteId ?? tombstone.remoteFileId),
+            remoteRevision: const Value(null),
+          ),
+        );
+        publishedTombstones.add(tombstone.uuid);
+        touched.add(tombstone.uuid);
+        _syncLog('[MemoProvider] Tombstone published: ${tombstone.uuid}');
+      } catch (e) {
+        _syncLog('[MemoProvider] Tombstone failed for ${tombstone.uuid}: $e');
+      }
+    }
+
+    for (final memo in toInspect) {
+      final remote = remoteByName[memo.uuid]!;
+      processed++;
+      reportProgress();
+      try {
+        final payload = await _downloadRemoteNote(
+          storage,
+          remote,
+          session: session,
+          requestPassphrase: requestPassphrase,
+          confirmDeleteRemote: confirmDeleteRemote,
+          onDecryptionFailure: () {
+            decryptionFailures++;
+            debugPrint(
+              '[MemoProvider] Pull: failed to decrypt ${memo.uuid} '
+              '(${remote.remoteFileId})',
+            );
+          },
+        );
+        if (payload == null) {
+          // Never upload over a remote copy that could not be read: it may
+          // hold an edit this device cannot see.
+          continue;
+        }
+
+        if (payload.tombstone) {
+          // Permanently deleted on another device: the note goes away here too,
+          // and the tombstone is kept so that file is never downloaded again.
+          await _db.recordTombstone(
+            uuid: memo.uuid,
+            deletedAt: payload.deletedAt ?? payload.memo.updatedAt,
+            remoteFileId: remote.remoteFileId,
+            remoteRevision: remote.updatedAt,
+            isUploaded: true,
+          );
+          await _db.deleteMemoCascading(memo.uuid);
+          touched.add(memo.uuid);
+          _syncLog('[MemoProvider] Deleted on another device: ${memo.uuid}');
+          continue;
+        }
+
+        final remoteDirty = !sameRemoteInstant(
+          payload.memo.updatedAt,
+          memo.remoteUpdatedAt,
+        );
+        final decision = decideSyncAction(
+          localDirty: !memo.isSynced,
+          remoteExists: true,
+          remoteDirty: remoteDirty,
+          localDeleted: memo.isDeleted,
+          remoteDeleted: payload.memo.isDeleted,
+        );
+
+        switch (decision) {
+          case SyncAction.none:
+            await _setRemoteRevision(memo.uuid, remote.updatedAt);
+            break;
+          case SyncAction.upload:
+            toUpload.add(memo);
+            break;
+          case SyncAction.download:
+            final reupload = await _applyRemoteNote(
+              storage,
+              payload,
+              remote: remote,
+              sortIndex: memo.sortIndex,
+            );
+            if (reupload != null) toUpload.add(reupload);
+            touched.add(memo.uuid);
+            _syncLog(
+              '[MemoProvider] Pull OK: ${memo.uuid} updated from '
+              '${storage.storageName}',
+            );
+            break;
+          case SyncAction.conflict:
+            final copy = await _saveConflictCopy(
+              payload,
+              sortIndex: nextSortIndex--,
+            );
+            // The remote version is now stored as a separate note, so this
+            // device has handled it: recording it prevents a second copy of
+            // the same version if the upload below fails and a later cycle
+            // inspects that payload again.
+            await _setRemoteUpdatedAt(memo.uuid, payload.memo.updatedAt);
+            // The local note stays canonical and is uploaded; the remote
+            // version survives as a separate note.
+            toUpload.add(memo);
+            toUpload.add(copy);
+            touched.add(memo.uuid);
+            _syncLog(
+              '[MemoProvider] Conflict on ${memo.uuid}: local kept, remote '
+              'version saved as ${copy.uuid}',
+            );
+            break;
+        }
+      } catch (e) {
+        debugPrint('[MemoProvider] error inspecting memo ${memo.uuid}: $e');
+      }
+    }
+
+    // Remote notes this device has never seen.
+    for (final remote in remoteOnly) {
+      final memoUuid = remote.name.replaceAll('.json', '');
+      processed++;
+      reportProgress();
+      try {
+        final payload = await _downloadRemoteNote(
+          storage,
+          remote,
+          session: session,
+          requestPassphrase: requestPassphrase,
+          confirmDeleteRemote: confirmDeleteRemote,
+          onDecryptionFailure: () {
+            decryptionFailures++;
+            debugPrint(
+              '[MemoProvider] Pull: failed to decrypt $memoUuid '
+              '(${remote.remoteFileId})',
+            );
+          },
+        );
+        if (payload == null) continue;
+
+        if (payload.tombstone) {
+          // A note this device never had was deleted for good elsewhere. The
+          // tombstone is stored so the file is not downloaded if it reappears.
+          await _db.recordTombstone(
+            uuid: memoUuid,
+            deletedAt: payload.deletedAt ?? payload.memo.updatedAt,
+            remoteFileId: remote.remoteFileId,
+            remoteRevision: remote.updatedAt,
+            isUploaded: true,
+          );
+          _syncLog('[MemoProvider] Tombstone noted: $memoUuid');
+          continue;
+        }
+
+        final reupload = await _applyRemoteNote(
+          storage,
+          payload,
+          remote: remote,
+          sortIndex: nextSortIndex--,
+        );
+        if (reupload != null) toUpload.add(reupload);
+        touched.add(memoUuid);
+        _syncLog(
+          '[MemoProvider] Pull OK: $memoUuid downloaded from '
+          '${storage.storageName}',
+        );
+      } catch (e) {
+        _syncLog('[MemoProvider] error downloading memo $memoUuid: $e');
+      }
+    }
+
+    // ---------------------------------------------------------------
+    // PUSH: upload local changes and the conflict copies.
+    // ---------------------------------------------------------------
+    _syncLog(
+      '[MemoProvider] plan: ${toUpload.length} upload, '
+      '${toInspect.length} inspect, ${remoteOnly.length} remote-only, '
+      '${toPublish.length} tombstones',
     );
-    for (var memo in unsynced) {
+    for (final memo in toUpload) {
+      processed++;
+      reportProgress();
       try {
         debugPrint(
-          '[MemoProvider] Push: ${memo.uuid} (isSynced=${memo.isSynced}, remoteFileId=${memo.remoteFileId}, colorIndex=${memo.colorIndex}, encryption=${storage.encryptionEnabled})',
+          '[MemoProvider] Push: ${memo.uuid} (isSynced=${memo.isSynced}, '
+          'remoteFileId=${memo.remoteFileId}, '
+          'encryption=${storage.encryptionEnabled})',
         );
         final blocks = await _db.getBlocksForMemo(memo.uuid);
         final remoteId = await storage.uploadMemo(memo, blocks);
-        final updated = memo.copyWith(
-          isSynced: true,
-          remoteFileId: Value(remoteId ?? memo.remoteFileId),
+
+        // Record the payload that was just written even if the note changed
+        // during the upload, so the next sync does not mistake our own upload
+        // for a remote edit.
+        await (_db.update(
+          _db.memos,
+        )..where((t) => t.uuid.equals(memo.uuid))).write(
+          MemosCompanion(
+            remoteFileId: Value(remoteId ?? memo.remoteFileId),
+            remoteUpdatedAt: Value(memo.updatedAt),
+            remoteRevision: const Value(null),
+          ),
         );
-        await _db.saveMemoWithBlocks(updated, blocks);
-        syncedCount++;
-        if (remoteId != null) {
-          debugPrint(
-            '[MemoProvider] Push OK: ${memo.uuid} → kDrive id $remoteId',
-          );
-        }
+        // Clear the dirty flag only when the note did not change while it was
+        // uploading; otherwise the newer edit would never be uploaded.
+        await (_db.update(_db.memos)..where(
+              (t) =>
+                  t.uuid.equals(memo.uuid) &
+                  t.updatedAt.equals(memo.updatedAt) &
+                  t.isSynced.equals(false),
+            ))
+            .write(const MemosCompanion(isSynced: Value(true)));
+        justUploaded.add(memo.uuid);
+        touched.add(memo.uuid);
       } catch (e) {
-        debugPrint('[MemoProvider] Push failed for ${memo.uuid}: $e');
+        _syncLog('[MemoProvider] Push failed for ${memo.uuid}: $e');
       }
-      processed++;
-      onProgress?.call(processed, total);
     }
 
-    // ---------------------------------------------------------------
-    // PULL: download remote notes not present locally
-    // ---------------------------------------------------------------
-    try {
-      debugPrint(
-        '[MemoProvider] performSync(): ${pendingRemote.length} remote notes to pull',
-      );
-
-      // The passphrase that successfully decrypted a note is reused for the
-      // remaining notes, so the user is not asked once per encrypted note.
-      String? userPassphrase;
-      final generalPass = await storage.getEncryptionPassphrase();
-
-      // New notes are placed at the top of the non-pinned section.
-      var nextSortIndex = nextTopSortIndex();
-      for (var remote in pendingRemote) {
-        final memoUuid = remote.name.replaceAll('.json', '');
-        processed++;
-        onProgress?.call(processed, total);
-
-        try {
-          RemoteMemo? remoteMemo = await storage.downloadMemo(
-            remote.remoteFileId,
-          );
-
-          // If decryption failed, try the passphrase that already worked for
-          // a previous note before asking the user again.
-          if (remoteMemo == null && requestPassphrase != null) {
-            // Save general encryption state to restore later
-            final wasEnabled = EncryptionService.instance.isEnabled;
-
-            // 1. Reuse the passphrase validated for a previous note.
-            if (userPassphrase != null && userPassphrase.isNotEmpty) {
-              EncryptionService.instance.enable(userPassphrase);
-              remoteMemo = await storage.downloadMemo(remote.remoteFileId);
-            }
-
-            // 2. Ask the user (up to two attempts) only if still undecrypted.
-            int attempts = 0;
-            while (remoteMemo == null && attempts < 2) {
-              attempts++;
-              final pass = await requestPassphrase(remote.remoteFileId);
-              if (pass == null || pass.isEmpty) break; // ignore
-              EncryptionService.instance.enable(pass);
-              remoteMemo = await storage.downloadMemo(remote.remoteFileId);
-              if (remoteMemo != null) {
-                userPassphrase = pass;
-              }
-            }
-
-            // Restore general encryption state
-            if (wasEnabled) {
-              if (generalPass != null && generalPass.isNotEmpty) {
-                EncryptionService.instance.enable(generalPass);
-              }
-            } else {
-              EncryptionService.instance.disable();
-            }
-          }
-
-          if (remoteMemo == null) {
-            // Two failures: ask whether to ignore or delete remote
-            if (confirmDeleteRemote != null) {
-              final delete = await confirmDeleteRemote(remote.remoteFileId);
-              if (delete) {
-                await storage.deleteMemo(remote.remoteFileId);
-                debugPrint(
-                  '[MemoProvider] Pull: remote note $memoUuid deleted',
-                );
-              }
-            }
-            decryptionFailures++;
-            debugPrint(
-              '[MemoProvider] Pull: failed to decrypt $memoUuid (${remote.remoteFileId})',
+    // The upload changed the remote file's modified time, which the server
+    // reports only in a listing. One extra listing records it, so the next
+    // sync does not re-download our own upload.
+    if (justUploaded.isNotEmpty || publishedTombstones.isNotEmpty) {
+      try {
+        final after = await storage.listRemoteMemos();
+        final byUuid = {
+          for (final remote in after)
+            remote.name.replaceAll('.json', ''): remote,
+        };
+        await _db.batch((batch) {
+          for (final uuid in justUploaded) {
+            final remote = byUuid[uuid];
+            if (remote == null) continue;
+            batch.update(
+              _db.memos,
+              MemosCompanion(remoteRevision: Value(remote.updatedAt)),
+              where: (t) => t.uuid.equals(uuid),
             );
-            continue;
           }
-
-          // Re-save according to general encryption configuration:
-          // mark as not synced to re-upload with current configuration
-          final patched = remoteMemo.memo.copyWith(
-            isSynced: false,
-            sortIndex: nextSortIndex--,
-          );
-          await _db.saveMemoWithBlocks(patched, remoteMemo.blocks);
-          syncedCount++;
-          debugPrint(
-            '[MemoProvider] Pull OK: $memoUuid downloaded from kDrive (colorIndex=${patched.colorIndex}, bgImageIndex=${patched.bgImageIndex})',
-          );
-        } catch (e) {
-          debugPrint('[MemoProvider] error downloading memo $memoUuid: $e');
-        }
+          for (final uuid in publishedTombstones) {
+            final remote = byUuid[uuid];
+            if (remote == null) continue;
+            batch.update(
+              _db.syncTombstones,
+              SyncTombstonesCompanion(remoteRevision: Value(remote.updatedAt)),
+              where: (t) => t.uuid.equals(uuid),
+            );
+          }
+        });
+      } catch (e) {
+        _syncLog('[MemoProvider] error refreshing remote revisions: $e');
       }
-    } catch (e) {
-      debugPrint('[MemoProvider] error pulling remotes: $e');
+    }
+
+    // Remember the failures so the home screen can warn the user: an automatic
+    // sync cannot ask for the passphrase, and until it is fixed those notes
+    // stay out of sync without any visible sign.
+    if (_undecryptableNotes != decryptionFailures) {
+      _undecryptableNotes = decryptionFailures;
+      notifyListeners();
     }
 
     onProgress?.call(total, total);
     storage.markSyncedNow();
-    lastSyncNoteCount = syncedCount;
+    lastSyncNoteCount = touched.length;
+    _syncLog(
+      '[MemoProvider] sync done: ${touched.length} notes touched, '
+      '$decryptionFailures unreadable',
+    );
     return decryptionFailures;
+  }
+
+  /// Downloads [remote], asking for a passphrase when the note cannot be read.
+  ///
+  /// Returns null when the note could not be decrypted, after offering to
+  /// delete the remote file. [onDecryptionFailure] is called once per failure.
+  Future<RemoteMemo?> _downloadRemoteNote(
+    StorageRepository storage,
+    RemoteMemoInfo remote, {
+    required _PassphraseSession session,
+    required Future<String?> Function(String remoteFileId)? requestPassphrase,
+    required Future<bool> Function(String remoteFileId)? confirmDeleteRemote,
+    required void Function() onDecryptionFailure,
+  }) async {
+    RemoteMemo? remoteMemo = await storage.downloadMemo(remote.remoteFileId);
+
+    // If decryption failed, try the passphrase that already worked for a
+    // previous note before asking the user again.
+    if (remoteMemo == null && requestPassphrase != null) {
+      final wasEnabled = EncryptionService.instance.isEnabled;
+
+      if (session.userPassphrase != null &&
+          session.userPassphrase!.isNotEmpty) {
+        EncryptionService.instance.enable(session.userPassphrase!);
+        remoteMemo = await storage.downloadMemo(remote.remoteFileId);
+      }
+
+      var attempts = 0;
+      while (remoteMemo == null && attempts < 2) {
+        attempts++;
+        final pass = await requestPassphrase(remote.remoteFileId);
+        if (pass == null || pass.isEmpty) break; // ignore
+        EncryptionService.instance.enable(pass);
+        remoteMemo = await storage.downloadMemo(remote.remoteFileId);
+        if (remoteMemo != null && pass != session.userPassphrase) {
+          session.userPassphrase = pass;
+          await _adoptRemoteEncryption(storage, pass);
+        }
+      }
+
+      // Restore the state the cycle had before the prompt, but keep the
+      // passphrase that just decrypted a note when this backend writes
+      // encrypted notes: dropping it (the old behaviour) made the push below
+      // impossible, so the note stayed on this device forever.
+      if (storage.encryptionEnabled && session.userPassphrase != null) {
+        EncryptionService.instance.enable(session.userPassphrase!);
+      } else if (wasEnabled) {
+        final generalPass = session.generalPass;
+        if (generalPass != null && generalPass.isNotEmpty) {
+          EncryptionService.instance.enable(generalPass);
+        }
+      } else {
+        EncryptionService.instance.disable();
+      }
+    }
+
+    if (remoteMemo == null) {
+      onDecryptionFailure();
+      if (confirmDeleteRemote != null) {
+        final delete = await confirmDeleteRemote(remote.remoteFileId);
+        if (delete) {
+          await storage.deleteMemo(remote.remoteFileId);
+          debugPrint('[MemoProvider] Pull: remote note ${remote.name} deleted');
+        }
+      }
+    }
+    return remoteMemo;
+  }
+
+  /// Saves a downloaded note locally, replacing the local content.
+  ///
+  /// Returns the note when it must be uploaded again, because the remote copy
+  /// was written with a different encryption setting; returns null otherwise.
+  /// Without this check a plain download would create a new version of the
+  /// same note on every sync.
+  Future<Memo?> _applyRemoteNote(
+    StorageRepository storage,
+    RemoteMemo payload, {
+    required RemoteMemoInfo remote,
+    required int sortIndex,
+  }) async {
+    // Only a plain remote copy is rewritten, when encryption is on now (the
+    // user enabled it after the notes were uploaded). The opposite case — an
+    // encrypted remote copy while this device has encryption off — is not a
+    // re-encode: it is an encrypted folder that this device just met, and
+    // rewriting it would publish every note in plain text. _adoptRemoteEncryption
+    // turns encryption on instead, so that case no longer reaches this line.
+    final needsReencode = storage.encryptionEnabled && !payload.wasEncrypted;
+    final patched = payload.memo.copyWith(
+      isSynced: !needsReencode,
+      sortIndex: sortIndex,
+      remoteFileId: Value(remote.remoteFileId),
+      remoteUpdatedAt: Value(payload.memo.updatedAt),
+      remoteRevision: Value(remote.updatedAt),
+    );
+    await _db.saveMemoWithBlocks(patched, payload.blocks, replaceBlocks: true);
+    return needsReencode ? patched : null;
+  }
+
+  /// Turns encryption on because the remote folder holds encrypted notes.
+  ///
+  /// Rewriting those notes with the encryption off would publish the user's
+  /// notes in plain text; the passphrase that just decrypted one of them is the
+  /// folder's, so it becomes this backend's passphrase and the remote files are
+  /// left as they are.
+  Future<void> _adoptRemoteEncryption(
+    StorageRepository storage,
+    String passphrase,
+  ) async {
+    if (storage.encryptionEnabled) return;
+    final stored = await storage.adoptEncryption(passphrase);
+    _syncLog(
+      '[MemoProvider] encryption adopted: the remote notes are encrypted '
+      '(passphrase ${stored ? 'stored' : 'NOT stored'})',
+    );
+  }
+
+  /// Stores the remote version of a conflicting note as a separate note.
+  ///
+  /// The local note stays canonical (same uuid, same remote file); the copy
+  /// gets a new uuid, no remote id and no sync bookkeeping, so it is uploaded
+  /// as a new note and can never delete the original remote file.
+  Future<Memo> _saveConflictCopy(
+    RemoteMemo payload, {
+    required int sortIndex,
+  }) async {
+    final now = DateTime.now().toUtc();
+    final suffix = await _localizedConflictSuffix();
+    final title = payload.memo.title.trim();
+    final copy = payload.memo.copyWith(
+      uuid: _uuid.v4(),
+      title: title.isEmpty ? suffix : '$title $suffix',
+      createdAt: now,
+      updatedAt: now,
+      isSynced: false,
+      // The copy is a new note: it must not inherit the remote file of the
+      // original (deleting the copy would delete the original's remote file),
+      // the sync bookkeeping, or the pinned state (it lands at the top of the
+      // non-pinned section instead of reordering the pinned ones).
+      isPinned: false,
+      sortIndex: sortIndex,
+      remoteFileId: const Value(null),
+      remoteUpdatedAt: const Value(null),
+      remoteRevision: const Value(null),
+    );
+    final blocks = payload.blocks
+        .map(
+          (b) => Block(
+            id: 0,
+            uuid: _uuid.v4(),
+            memoUuid: copy.uuid,
+            type: b.type,
+            content: b.content,
+            sortOrder: b.sortOrder,
+            isDeleted: b.isDeleted,
+          ),
+        )
+        .toList();
+    await _db.saveMemoWithBlocks(copy, blocks);
+    return copy;
+  }
+
+  /// Records the remote file's modified time for [uuid], so the next sync can
+  /// skip a note that did not change without downloading it.
+  Future<void> _setRemoteRevision(String uuid, DateTime revision) async {
+    await (_db.update(_db.memos)..where((t) => t.uuid.equals(uuid))).write(
+      MemosCompanion(remoteRevision: Value(revision)),
+    );
+  }
+
+  /// Records the remote payload timestamp this device last handled for [uuid].
+  ///
+  /// Set right after a conflict copy is stored: the remote version has been
+  /// accounted for, so a later cycle that inspects the same payload must not
+  /// save another copy of it.
+  Future<void> _setRemoteUpdatedAt(String uuid, DateTime value) async {
+    await (_db.update(_db.memos)..where((t) => t.uuid.equals(uuid))).write(
+      MemosCompanion(remoteUpdatedAt: Value(value)),
+    );
   }
 
   Future<void> archiveMultiple(List<String> uuids) async {
@@ -699,6 +1225,7 @@ class MemoProvider extends ChangeNotifier {
 
   // Permanently delete from database
   Future<void> deleteMultiplePermanent(List<String> uuids) async {
+    final deletedAt = DateTime.now().toUtc();
     for (final id in uuids) {
       final cached = _memos.cast<Memo?>().firstWhere(
         (m) => m?.uuid == id,
@@ -708,15 +1235,19 @@ class MemoProvider extends ChangeNotifier {
       // still be permanently removed instead of throwing.
       final memo =
           cached ??
-          await (_db.select(_db.memos)..where((t) => t.uuid.equals(id)))
-              .getSingleOrNull();
-      // The kDrive file is deleted only here, when the note is permanently
-      // removed from the trash.
-      final storage = _storage;
-      if (memo?.remoteFileId != null &&
-          storage != null &&
-          storage.isConfigured) {
-        await storage.deleteMemo(memo!.remoteFileId!);
+          await (_db.select(
+            _db.memos,
+          )..where((t) => t.uuid.equals(id))).getSingleOrNull();
+      // Removing the remote file would be invisible to every other device,
+      // which would then see "no remote copy" and upload the note back. The
+      // deletion is published as a tombstone under the same file name instead
+      // (see SyncTombstones), so every device can delete the note too.
+      if (memo?.remoteFileId != null) {
+        await _db.recordTombstone(
+          uuid: id,
+          deletedAt: deletedAt,
+          remoteFileId: memo!.remoteFileId,
+        );
       }
       await _db.deleteMemoCascading(id);
     }
@@ -744,12 +1275,20 @@ class MemoProvider extends ChangeNotifier {
     _scheduleSync();
   }
 
-  /// Disables sync: marks all notes as not synced
-  /// in all states (Drift, memory).
+  /// Disables sync: marks all notes as not synced in all states (Drift,
+  /// memory) and forgets the remote bookkeeping.
+  ///
+  /// Called when sync is turned off and when the user switches to a different
+  /// backend. The new backend has no copies yet (or may have stale ones), so
+  /// every note must be uploaded again. `remoteUpdatedAt` and `remoteRevision`
+  /// describe the previous backend and must never be compared with the new
+  /// one: clearing them makes the next sync treat the remote state as unknown
+  /// and let the local library win.
   Future<void> disableSync() async {
     await _db.transaction(() async {
       await _db.customStatement(
-        'UPDATE memos SET is_synced = 0, remote_file_id = NULL',
+        'UPDATE memos SET is_synced = 0, remote_file_id = NULL, '
+        'remote_updated_at = NULL, remote_revision = NULL',
       );
     });
     // Reload memo list from DB to ensure we have the latest data
@@ -769,12 +1308,21 @@ class MemoProvider extends ChangeNotifier {
       }
     }
 
+    // The colour is part of the remote payload: mark the note as not synced and
+    // refresh `updatedAt`, which is how the other device learns the payload
+    // changed (see setPinnedMultiple).
+    final now = DateTime.now().toUtc();
     for (var memo in targets) {
       final blocks = await _db.getBlocksForMemo(memo.uuid);
       // Selecting a color also clears any selected background image, matching
       // the editor: the color becomes visible and the image is removed.
       await _db.saveMemoWithBlocks(
-        memo.copyWith(colorIndex: colorIndex, bgImageIndex: -1),
+        memo.copyWith(
+          colorIndex: colorIndex,
+          bgImageIndex: -1,
+          updatedAt: now,
+          isSynced: false,
+        ),
         blocks,
       );
     }
@@ -798,10 +1346,15 @@ class MemoProvider extends ChangeNotifier {
       }
     }
 
+    final now = DateTime.now().toUtc();
     for (var memo in targets) {
       final blocks = await _db.getBlocksForMemo(memo.uuid);
       await _db.saveMemoWithBlocks(
-        memo.copyWith(bgImageIndex: bgImageIndex),
+        memo.copyWith(
+          bgImageIndex: bgImageIndex,
+          updatedAt: now,
+          isSynced: false,
+        ),
         blocks,
       );
     }
@@ -811,7 +1364,7 @@ class MemoProvider extends ChangeNotifier {
   /// Pins or unpins several notes. Pinning is synced across devices, so the
   /// note is marked as not synced and its [Memo.updatedAt] is refreshed.
   Future<void> setPinnedMultiple(List<String> uuids, bool pinned) async {
-    final now = DateTime.now();
+    final now = DateTime.now().toUtc();
     for (final id in uuids) {
       var match = _memos.cast<Memo?>().firstWhere(
         (m) => m?.uuid == id,
@@ -832,27 +1385,50 @@ class MemoProvider extends ChangeNotifier {
     _scheduleSync();
   }
 
-  Future<String> _localizedCopySuffix() async {
-    // Suffix used when duplicating a note, localized by saved language preference.
-    const suffixes = <String, String>{
-      'pt': '(Cópia)',
-      'en': '(Copy)',
-      'fr': '(Copie)',
-      'de': '(Kopie)',
-      'it': '(Copia)',
-      'es': '(Copia)',
-    };
+  /// Suffix used when duplicating a note or when saving a conflict copy,
+  /// localized by the saved language preference (the provider has no context).
+  static const Map<String, String> _copySuffixes = {
+    'pt': '(Cópia)',
+    'en': '(Copy)',
+    'fr': '(Copie)',
+    'de': '(Kopie)',
+    'it': '(Copia)',
+    'es': '(Copia)',
+  };
+
+  static const Map<String, String> _conflictSuffixes = {
+    'pt': '(Conflito)',
+    'en': '(Conflict)',
+    'fr': '(Conflit)',
+    'de': '(Konflikt)',
+    'it': '(Conflitto)',
+    'es': '(Conflicto)',
+  };
+
+  Future<String> _localizedSuffix(Map<String, String> suffixes) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final code = prefs.getString('language_code') ?? 'en';
-      return suffixes[code] ?? '(Copy)';
+      final code = prefs.getString('language_code');
+      if (code != null && code.isNotEmpty) {
+        return suffixes[code] ?? suffixes['en']!;
+      }
     } catch (_) {
-      return '(Copy)';
+      // Fall through to the system language.
     }
+    // No language was chosen, so the app follows the system language: the
+    // suffix must follow it too. It used to fall back to English, which gave a
+    // Portuguese screen notes titled "(Conflict)".
+    final system = WidgetsBinding.instance.platformDispatcher.locale;
+    return suffixes[system.languageCode] ?? suffixes['en']!;
   }
 
+  Future<String> _localizedCopySuffix() => _localizedSuffix(_copySuffixes);
+
+  Future<String> _localizedConflictSuffix() =>
+      _localizedSuffix(_conflictSuffixes);
+
   Future<void> duplicateMultiple(List<String> uuids) async {
-    final now = DateTime.now();
+    final now = DateTime.now().toUtc();
     final copySuffix = await _localizedCopySuffix();
     final List<Memo> targets = [];
     var nextSortIndex = nextTopSortIndex();
@@ -880,6 +1456,12 @@ class MemoProvider extends ChangeNotifier {
         isDeleted: false,
         isPinned: false,
         sortIndex: nextSortIndex--,
+        // The copy is a new note: it must not inherit the remote file of the
+        // original (deleting the copy would delete the original's remote
+        // file) nor the sync bookkeeping.
+        remoteFileId: const Value(null),
+        remoteUpdatedAt: const Value(null),
+        remoteRevision: const Value(null),
       );
 
       final duplicatedBlocks = blocks
@@ -900,4 +1482,13 @@ class MemoProvider extends ChangeNotifier {
     }
     _scheduleSync();
   }
+}
+
+/// Passphrase that worked during one sync, reused for the remaining notes so
+/// the user is not asked once per encrypted note.
+class _PassphraseSession {
+  final String? generalPass;
+  String? userPassphrase;
+
+  _PassphraseSession(this.generalPass);
 }

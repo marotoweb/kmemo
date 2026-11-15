@@ -45,8 +45,21 @@ void main() async {
   final isWebDav = backend == kSyncBackendWebDav;
   // Both backends load their configuration (so the settings screens can show
   // it), but only the active one pushes the passphrase into EncryptionService.
-  await kdriveStorage.init(applyEncryption: !isWebDav);
-  await webdavStorage.init(applyEncryption: isWebDav);
+  //
+  // A failure here must not stop the app: the notes are local and readable
+  // without sync. On Linux the keychain (libsecret) is the usual culprit — a
+  // locked or missing keyring daemon throws PlatformException — and the sync
+  // settings then explain that the credentials cannot be stored.
+  try {
+    await kdriveStorage.init(applyEncryption: !isWebDav);
+  } catch (e) {
+    debugPrint('[main] kDrive init failed: $e');
+  }
+  try {
+    await webdavStorage.init(applyEncryption: isWebDav);
+  } catch (e) {
+    debugPrint('[main] WebDAV init failed: $e');
+  }
   final storage = isWebDav ? webdavStorage : kdriveStorage;
   debugPrint('[main] sync backend: ${storage.storageName}');
 

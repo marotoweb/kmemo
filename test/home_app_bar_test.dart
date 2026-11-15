@@ -8,8 +8,72 @@ import 'package:kmemo/main.dart';
 import 'package:kmemo/providers/memo_provider.dart';
 import 'package:kmemo/providers/theme_provider.dart';
 import 'package:kmemo/services/kdrive_storage.dart';
+import 'package:drift/native.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Builds the app with an unconfigured backend, so the pull answers instead of
+/// reaching the network.
+Future<MemoProvider> _pumpHome(WidgetTester tester, {required bool withNote}) async {
+  final database = AppDatabase.forTesting(NativeDatabase.memory());
+  final storage = KDriveStorage();
+  final provider = MemoProvider(database, storage: storage);
+
+  // The note is inserted before the widget is built: the home stream then
+  // renders it on the first frame, without waiting for an extra event.
+  if (withNote) {
+    await tester.runAsync(() => provider.createNewMemo());
+  }
+
+  await tester.pumpWidget(
+    MultiProvider(
+      providers: [
+        Provider<AppDatabase>.value(value: database),
+        ChangeNotifierProvider<MemoProvider>.value(value: provider),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        Provider<KDriveStorage>.value(value: storage),
+      ],
+      child: const KMemoApp(),
+    ),
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 100));
+  return provider;
+}
+
+Future<void> _pullDown(WidgetTester tester) async {
+  await tester.drag(find.byType(RefreshIndicator), const Offset(0, 320));
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 1));
+  await tester.pumpAndSettle();
+}
 
 void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  testWidgets('pulling the list down asks for a backend when there is one', (
+    WidgetTester tester,
+  ) async {
+    await _pumpHome(tester, withNote: true);
+    expect(find.byType(ReorderableListView), findsOneWidget);
+
+    await _pullDown(tester);
+
+    // Without a configured backend the pull still answers, instead of doing
+    // nothing and leaving the user to guess why nothing happened.
+    expect(find.text('No remote storage is configured'), findsOneWidget);
+  });
+
+  testWidgets('an empty list can be pulled too', (WidgetTester tester) async {
+    await _pumpHome(tester, withNote: false);
+    expect(find.byType(ReorderableListView), findsNothing);
+
+    await _pullDown(tester);
+
+    // The empty state has no scroll view of its own: without the full-height
+    // one the gesture does nothing exactly when the user wants to fetch notes.
+    expect(find.text('No remote storage is configured'), findsOneWidget);
+  });
+
   testWidgets('sort icon keeps its position when the search opens', (
     WidgetTester tester,
   ) async {

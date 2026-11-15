@@ -69,16 +69,24 @@ void main() {
     expect(stored.isSynced, isFalse);
     expect(stored.remoteFileId, 'remote-1');
 
-    // Permanent deletion removes both the local row and the kDrive file.
+    // Permanent deletion removes the local row and publishes a tombstone. The
+    // remote file must survive: deleting it was invisible to the other devices,
+    // which then saw "no remote copy" and uploaded the note back.
     await tester.runAsync(() async {
       await provider.deleteMultiplePermanent([uuid]);
     });
 
-    expect(storage.deleteCalls, 1);
+    expect(storage.deleteCalls, 0);
     stored = await tester.runAsync(
       () => (db.select(db.memos)..where((t) => t.uuid.equals(uuid)))
           .getSingleOrNull(),
     );
     expect(stored, isNull);
+
+    final tombstones = await tester.runAsync(() => db.getTombstones());
+    expect(tombstones!.length, 1);
+    expect(tombstones.first.uuid, uuid);
+    expect(tombstones.first.remoteFileId, 'remote-1');
+    expect(tombstones.first.isUploaded, isFalse);
   });
 }

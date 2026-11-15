@@ -187,7 +187,7 @@ abstract class AppLocalizations {
   /// No description provided for @copyToKdrive.
   ///
   /// In pt, this message translates to:
-  /// **'Copiar para kDrive'**
+  /// **'Copiar para o kDrive'**
   String get copyToKdrive;
 
   /// No description provided for @create.
@@ -405,6 +405,12 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Sincronização concluída: {count} nota(s) sincronizada(s).'**
   String syncCompletedWithCount(int count);
+
+  /// No description provided for @syncUpToDate.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tudo em dia.'**
+  String get syncUpToDate;
 
   /// No description provided for @theme.
   ///
@@ -700,6 +706,42 @@ abstract class AppLocalizations {
   /// **'Sincronize as suas notas com kDrive ou WebDAV'**
   String get syncSubtitle;
 
+  /// No description provided for @syncUndecryptableNotes.
+  ///
+  /// In pt, this message translates to:
+  /// **'Há notas que não foi possível decifrar ({count}). Verifica a passphrase nas definições de sincronização.'**
+  String syncUndecryptableNotes(int count);
+
+  /// No description provided for @secretStoreUnavailable.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível guardar a palavra-passe no gestor de segredos do sistema. Desbloqueia o gnome-keyring ou o KWallet e tenta outra vez.'**
+  String get secretStoreUnavailable;
+
+  /// No description provided for @syncBlockedNoPassphrase.
+  ///
+  /// In pt, this message translates to:
+  /// **'A sincronização está bloqueada: a cifra está ativa mas falta a passphrase. As notas novas ficam só neste dispositivo.'**
+  String get syncBlockedNoPassphrase;
+
+  /// No description provided for @syncLog.
+  ///
+  /// In pt, this message translates to:
+  /// **'Registo de sincronização'**
+  String get syncLog;
+
+  /// No description provided for @syncLogSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copia o que o sync decidiu (sem conteúdo das notas).'**
+  String get syncLogSubtitle;
+
+  /// No description provided for @syncLogEmpty.
+  ///
+  /// In pt, this message translates to:
+  /// **'O registo ainda está vazio. Faz uma sincronização primeiro.'**
+  String get syncLogEmpty;
+
   /// No description provided for @reportBugSubtitle.
   ///
   /// In pt, this message translates to:
@@ -711,6 +753,12 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Nota partilhada'**
   String get sharedNote;
+
+  /// No description provided for @copiedToClipboard.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiado para a área de transferência'**
+  String get copiedToClipboard;
 
   /// No description provided for @colorsTab.
   ///
@@ -1087,14 +1135,62 @@ abstract class AppLocalizations {
   /// No description provided for @copiedToKdrive.
   ///
   /// In pt, this message translates to:
-  /// **'Copiado para kDrive'**
+  /// **'Copiado para o kDrive'**
   String get copiedToKdrive;
 
   /// No description provided for @copyToKdriveFailed.
   ///
   /// In pt, this message translates to:
-  /// **'Falha ao copiar para kDrive'**
+  /// **'Falha ao copiar para o kDrive'**
   String get copyToKdriveFailed;
+
+  /// No description provided for @copyToCloud.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiar para a nuvem'**
+  String get copyToCloud;
+
+  /// No description provided for @copyToWebdav.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiar para o WebDAV'**
+  String get copyToWebdav;
+
+  /// No description provided for @copiedToCloud.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiado para a nuvem'**
+  String get copiedToCloud;
+
+  /// No description provided for @copiedToWebdav.
+  ///
+  /// In pt, this message translates to:
+  /// **'Copiado para o WebDAV'**
+  String get copiedToWebdav;
+
+  /// No description provided for @copyToCloudFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Falha ao copiar para a nuvem'**
+  String get copyToCloudFailed;
+
+  /// No description provided for @copyToWebdavFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Falha ao copiar para o WebDAV'**
+  String get copyToWebdavFailed;
+
+  /// No description provided for @cloudNotConfigured.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nenhum armazenamento remoto está configurado'**
+  String get cloudNotConfigured;
+
+  /// No description provided for @docxNotEncrypted.
+  ///
+  /// In pt, this message translates to:
+  /// **'O ficheiro .docx não é cifrado.'**
+  String get docxNotEncrypted;
 
   /// No description provided for @checkForUpdates.
   ///

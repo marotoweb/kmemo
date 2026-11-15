@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../../database/database.dart';
@@ -19,13 +18,14 @@ import '../widgets/memo_card.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/swipe_action_card.dart';
 import '../../services/docx_export_service.dart';
-import '../../services/kdrive_storage.dart';
+import '../share_actions.dart';
 import '../../services/widget_service.dart';
 import 'memo_detail_screen.dart';
 import 'archive_screen.dart';
 import 'trash_screen.dart';
 import 'settings_screen.dart';
 import 'sync_settings_screen.dart';
+import '../cloud_export.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -98,16 +98,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         Provider.of<MemoProvider>(context, listen: false).refreshWidget();
       }
-      // Prioritize shared text over pending widget note to avoid overlapping navigation.
-      final prefs = await SharedPreferences.getInstance();
-      final sharedText = prefs.getString('kmemo.shared_text');
-      if (sharedText != null && sharedText.isNotEmpty) {
-        await _checkSharedText();
-      } else {
-        await _checkWidgetLaunch();
+      // Shared text and the widget launch intent come from the Android
+      // activity. On desktop there is no channel to talk to, so nothing is
+      // checked there.
+      if (WidgetService.isSupported) {
+        // Prioritize shared text over pending widget note to avoid
+        // overlapping navigation.
+        final prefs = await SharedPreferences.getInstance();
+        final sharedText = prefs.getString('kmemo.shared_text');
+        if (sharedText != null && sharedText.isNotEmpty) {
+          await _checkSharedText();
+        } else {
+          await _checkWidgetLaunch();
+        }
       }
     });
-    _setupWidgetChannel();
+    if (WidgetService.isSupported) _setupWidgetChannel();
   }
 
   void _setupWidgetChannel() {
@@ -326,7 +332,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         if (!mounted) return;
 
         final provider = context.read<MemoProvider>();
-        final now = DateTime.now();
+        final now = DateTime.now().toUtc();
 
         // Sanitize the shared text: remove control characters, normalize
         // whitespace and limit length to avoid malformed notes.
@@ -415,8 +421,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
       // the app returned to foreground (e.g. when clicking the widget while already open)
-      _checkWidgetLaunch();
-      _checkSharedText();
+      if (WidgetService.isSupported) {
+        _checkWidgetLaunch();
+        _checkSharedText();
+      }
       // Apply any widget reload that was deferred while the app was in the
       // background (it is deferred to avoid resetting the widget scroll).
       Provider.of<MemoProvider>(context, listen: false).refreshWidget();
@@ -712,33 +720,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     if (!mounted) return;
-    await SharePlus.instance.share(
-      ShareParams(
-        text: buffer.toString().trim(),
-        title: memos.length == 1
-            ? (memos.first.title.trim().isEmpty
-                  ? l10n.note
-                  : memos.first.title.trim())
-            : l10n.sharedNote,
-      ),
+    final shared = await shareTextOrCopy(
+      text: buffer.toString().trim(),
+      title: memos.length == 1
+          ? (memos.first.title.trim().isEmpty
+                ? l10n.note
+                : memos.first.title.trim())
+          : l10n.sharedNote,
     );
+    if (!shared && mounted) {
+      // Desktop has no share sheet: the note text is on the clipboard instead.
+      ScaffoldMessenger.of(context).showSnackBar(
+        buildAppSnackBar(context, message: l10n.copiedToClipboard),
+      );
+    }
   }
 
-  Future<void> _exportSelectedNotesToKDrive() async {
+  Future<void> _exportSelectedNotesToRemoteStorage() async {
     final provider = context.read<MemoProvider>();
-    final storage = context.read<KDriveStorage>();
+    final storage = provider.storage;
     final l10n = AppLocalizations.of(context)!;
+    final labels = CloudExportLabels.of(l10n, storage);
     final memos = _selectedMemos(provider);
     if (memos.isEmpty) return;
 
     final messenger = ScaffoldMessenger.of(context);
 
-    if (!storage.isConfigured) {
+    if (storage == null || !storage.isConfigured) {
       final navigator = Navigator.of(context);
       messenger.showSnackBar(
         buildAppSnackBar(
           context,
-          message: l10n.kdriveNotConfigured,
+          message: labels.notConfigured,
           actionLabel: l10n.settings,
           onAction: () => navigator.push(
             MaterialPageRoute(builder: (_) => SyncSettingsScreen()),
@@ -764,17 +777,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     final docxBytes = DocxExportService.buildDocx(sections: sections);
     final fileName = sections.length == 1
-        ? '${sections.first.title}.docx'
+        ? DocxExportService.safeFileName(sections.first.title)
         : 'kMemo-${sections.length}-notes.docx';
 
     try {
-      await storage.uploadMemoBytes(fileName: fileName, bytes: docxBytes);
+      await storage.uploadFile(fileName: fileName, bytes: docxBytes);
       if (!mounted) return;
       messenger.showSnackBar(
         buildAppSnackBar(
           context,
-          message: l10n.copiedToKdrive,
-          duration: const Duration(seconds: 3),
+          message: labels.successMessage(l10n, storage),
+          duration: const Duration(seconds: 5),
         ),
       );
     } catch (e) {
@@ -782,7 +795,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       messenger.showSnackBar(
         buildAppSnackBar(
           context,
-          message: '${l10n.copyToKdriveFailed}: $e',
+          message: '${labels.failure}: $e',
           duration: const Duration(seconds: 5),
         ),
       );
@@ -958,6 +971,84 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Warns that the last sync could not read some remote notes.
+  ///
+  /// Shown on the home screen because an automatic sync cannot ask for the
+  /// passphrase: without it the notes stay out of sync without any sign.
+  Widget _buildUndecryptableBanner(int count, bool isDarkMode) {
+    final l10n = AppLocalizations.of(context)!;
+    final foreground = isDarkMode
+        ? Colors.amber.shade200
+        : Colors.brown.shade800;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF3B2E1E) : Colors.amber.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lock_outline, size: 18, color: foreground),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.syncUndecryptableNotes(count),
+              style: TextStyle(fontSize: 12, color: foreground),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => SyncSettingsScreen()));
+            },
+            child: Text(l10n.settings, style: TextStyle(color: foreground)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Warns that encryption is on but the passphrase is not loaded.
+  ///
+  /// The automatic sync swallows the refusal (it would log it and stop), so
+  /// without this the user edits notes that never leave the device.
+  Widget _buildSyncBlockedBanner(bool isDarkMode) {
+    final l10n = AppLocalizations.of(context)!;
+    final foreground = isDarkMode
+        ? Colors.amber.shade200
+        : Colors.brown.shade800;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF3B2E1E) : Colors.amber.shade100,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lock_outline, size: 18, color: foreground),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.syncBlockedNoPassphrase,
+              style: TextStyle(fontSize: 12, color: foreground),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => SyncSettingsScreen()));
+            },
+            child: Text(l10n.settings, style: TextStyle(color: foreground)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBody(
     MemoProvider provider,
     List<Memo> items,
@@ -970,10 +1061,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     if (items.isEmpty) {
       final l10n = AppLocalizations.of(context)!;
-      return Center(
-        child: Text(
-          _searchQuery.isNotEmpty ? l10n.noResults : l10n.noActiveNotes,
-          style: TextStyle(color: isDarkMode ? Colors.white38 : Colors.black45),
+      // The pull gesture needs a scrollable, and an empty list has none: a
+      // full-height scroll view keeps "pull to sync" working while there are
+      // no notes, which is exactly when the user wants to fetch them.
+      return RefreshIndicator(
+        onRefresh: () => _syncFromPull(provider),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: Text(
+                  _searchQuery.isNotEmpty ? l10n.noResults : l10n.noActiveNotes,
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white38 : Colors.black45,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       );
     }
@@ -982,70 +1089,152 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     // can be dragged. Dropping in a date sort mode automatically switches to
     // the custom order (see _handleReorder).
     if (_isSearching) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-        child: ListView.builder(
-          padding: const EdgeInsets.only(bottom: 120.0),
-          itemCount: items.length,
-          itemBuilder: (context, index) => _buildMemoItem(
-            provider,
-            items[index],
-            index,
-            isDarkMode,
-            isSelectionMode,
-            reorderableView: false,
+      return RefreshIndicator(
+        onRefresh: () => _syncFromPull(provider),
+        child: _contentWidth(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.only(bottom: 120.0),
+              itemCount: items.length,
+              itemBuilder: (context, index) => _buildMemoItem(
+                provider,
+                items[index],
+                index,
+                isDarkMode,
+                isSelectionMode,
+                reorderableView: false,
+              ),
+            ),
           ),
         ),
       );
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-      child: ReorderableListView.builder(
-        padding: const EdgeInsets.only(bottom: 120.0),
-        buildDefaultDragHandles: false,
-        itemCount: items.length,
-        onReorder: (oldIndex, newIndex) =>
-            _handleReorder(provider, items, oldIndex, newIndex),
-        // A long-press that never moves the card ends with the same drop
-        // index, so treat it as a multi-selection toggle. A real reorder
-        // changes the index and is handled by onReorder.
-        onReorderStart: (index) {
-          _dragStartIndex = index;
-        },
-        onReorderEnd: (index) {
-          final startIndex = _dragStartIndex;
-          _dragStartIndex = null;
-          if (startIndex == null || startIndex != index) return;
-          if (startIndex < items.length) {
-            _toggleSelection(items[startIndex].uuid);
-          }
-        },
-        // The default proxy wraps the dragged item in a rectangular Material,
-        // which shows as a dark box behind the rounded card. Keep the lift
-        // animation but make the proxy transparent so the card shape wins.
-        proxyDecorator: (child, index, animation) {
-          return AnimatedBuilder(
-            animation: animation,
-            builder: (context, child) {
-              final t = Curves.easeInOut.transform(animation.value);
-              return Transform.scale(
-                scale: 1 + 0.02 * t,
-                child: Material(type: MaterialType.transparency, child: child),
-              );
-            },
-            child: child,
-          );
-        },
-        itemBuilder: (context, index) => _buildMemoItem(
-          provider,
-          items[index],
-          index,
-          isDarkMode,
-          isSelectionMode,
-          reorderableView: true,
+    return RefreshIndicator(
+      onRefresh: () => _syncFromPull(provider),
+      child: _contentWidth(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: ReorderableListView.builder(
+            // The list must accept a downward drag even when the notes fit on
+            // screen, otherwise the pull gesture has nothing to move.
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: 120.0),
+            buildDefaultDragHandles: false,
+          itemCount: items.length,
+          onReorder: (oldIndex, newIndex) =>
+              _handleReorder(provider, items, oldIndex, newIndex),
+          // A long-press that never moves the card ends with the same drop
+          // index, so treat it as a multi-selection toggle. A real reorder
+          // changes the index and is handled by onReorder.
+          onReorderStart: (index) {
+            _dragStartIndex = index;
+          },
+          onReorderEnd: (index) {
+            final startIndex = _dragStartIndex;
+            _dragStartIndex = null;
+            if (startIndex == null || startIndex != index) return;
+            if (startIndex < items.length) {
+              _toggleSelection(items[startIndex].uuid);
+            }
+          },
+          // The default proxy wraps the dragged item in a rectangular
+          // Material, which shows as a dark box behind the rounded card. Keep
+          // the lift animation but make the proxy transparent so the card
+          // shape wins.
+          proxyDecorator: (child, index, animation) {
+            return AnimatedBuilder(
+              animation: animation,
+              builder: (context, child) {
+                final t = Curves.easeInOut.transform(animation.value);
+                return Transform.scale(
+                  scale: 1 + 0.02 * t,
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: child,
+                  ),
+                );
+              },
+              child: child,
+            );
+          },
+            itemBuilder: (context, index) => _buildMemoItem(
+              provider,
+              items[index],
+              index,
+              isDarkMode,
+              isSelectionMode,
+              reorderableView: true,
+            ),
+          ),
         ),
       ),
+    );
+  }
+
+  /// Syncs on pull-to-refresh, the gesture the user reaches for to "fetch".
+  ///
+  /// This is the manual path (a full pass, not the debounced automatic one), so
+  /// the same feedback as the settings screen is shown: how many notes were
+  /// touched, an up-to-date message when nothing changed, or the error. Without
+  /// a configured backend the gesture still answers, instead of silently
+  /// doing nothing.
+  Future<void> _syncFromPull(MemoProvider provider) async {
+    final l10n = AppLocalizations.of(context)!;
+    final storage = provider.storage;
+    if (storage == null || !storage.isConfigured) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        buildAppSnackBar(
+          context,
+          message: l10n.cloudNotConfigured,
+          actionLabel: l10n.settings,
+          onAction: () => Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => SyncSettingsScreen())),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final undecryptable = await provider.performSync(force: true);
+      if (!mounted) return;
+      final count = provider.lastSyncNoteCount;
+      final message = undecryptable > 0
+          // The string declares `count` as text, unlike the others.
+          ? l10n.syncPartialFailure('$undecryptable')
+          : (count == 0
+                ? l10n.syncUpToDate
+                : l10n.syncCompletedWithCount(count));
+      ScaffoldMessenger.of(context).showSnackBar(
+        buildAppSnackBar(context, message: message),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        buildAppSnackBar(context, message: l10n.syncErrorWithDetail('$e')),
+      );
+    }
+  }
+
+  /// Caps the width of the note list on wide windows.
+  ///
+  /// A phone-width card stretched across a 1100 px desktop window gives one
+  /// very long line per note, which is hard to read. Phones are narrower than
+  /// [maxWidth], so this changes nothing there.
+  Widget _contentWidth(Widget child) {
+    const maxWidth = 860.0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth <= maxWidth) return child;
+        return Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(width: maxWidth, child: child),
+        );
+      },
     );
   }
 
@@ -1329,8 +1518,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         _clearSelection();
                       } else if (value == 'share') {
                         await _shareSelectedNotes();
-                      } else if (value == 'kdrive') {
-                        await _exportSelectedNotesToKDrive();
+                      } else if (value == 'cloud') {
+                        await _exportSelectedNotesToRemoteStorage();
                       } else {
                         _clearSelection();
                       }
@@ -1353,8 +1542,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         child: Text(AppLocalizations.of(context)!.send),
                       ),
                       PopupMenuItem(
-                        value: 'kdrive',
-                        child: Text(AppLocalizations.of(context)!.copyToKdrive),
+                        value: 'cloud',
+                        child: Text(
+                          CloudExportLabels.of(
+                            AppLocalizations.of(context)!,
+                            context.read<MemoProvider>().storage,
+                          ).action,
+                        ),
                       ),
                     ],
                   ),
@@ -1451,7 +1645,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ],
           ),
         ),
-        body: _buildBody(provider, activeMemos, isDarkMode, isSelectionMode),
+        body: Column(
+          children: [
+            if (provider.syncBlockedNoPassphrase)
+              _buildSyncBlockedBanner(isDarkMode),
+            if (provider.undecryptableNotes > 0)
+              _buildUndecryptableBanner(
+                provider.undecryptableNotes,
+                isDarkMode,
+              ),
+            Expanded(
+              child: _buildBody(
+                provider,
+                activeMemos,
+                isDarkMode,
+                isSelectionMode,
+              ),
+            ),
+          ],
+        ),
         floatingActionButton: isSelectionMode
             ? null
             : FloatingActionButton(

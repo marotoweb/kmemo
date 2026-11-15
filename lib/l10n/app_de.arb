@@ -50,6 +50,7 @@
   "sync": "Synchronisieren",
   "syncTitle": "Synchronisation",
   "syncCompletedWithCount": "Synchronisierung abgeschlossen: {count} Notiz(en) synchronisiert.",
+  "syncUpToDate": "Alles ist auf dem neuesten Stand.",
   "@syncCompletedWithCount": {
     "placeholders": {
       "count": {
@@ -106,8 +107,15 @@
   "dark": "Dunkel",
   "auto": "Auto",
   "syncSubtitle": "Synchronisieren Sie Ihre Notizen mit kDrive oder WebDAV",
+  "syncUndecryptableNotes": "Einige Notizen konnten nicht entschlüsselt werden ({count}). Prüfe die Passphrase in den Synchronisierungseinstellungen.",
+  "secretStoreUnavailable": "Das Passwort konnte nicht im Systemschlüsselbund gespeichert werden. Entsperre gnome-keyring oder KWallet und versuche es erneut.",
+  "syncBlockedNoPassphrase": "Die Synchronisierung ist blockiert: Die Verschlüsselung ist aktiv, aber die Passphrase fehlt. Neue Notizen bleiben nur auf diesem Gerät.",
+  "syncLog": "Synchronisierungsprotokoll",
+  "syncLogSubtitle": "Kopiert, was die Synchronisierung entschieden hat (ohne Notizinhalte).",
+  "syncLogEmpty": "Das Protokoll ist leer. Synchronisiere zuerst.",
   "reportBugSubtitle": "Melden Sie einen Fehler, schlagen Sie eine Funktion vor oder hinterlassen Sie einen Kommentar",
   "sharedNote": "Geteilte Notiz",
+  "copiedToClipboard": "In die Zwischenablage kopiert",
   "colorsTab": "Farben (16)",
   "imagesTab": "Bilder (16)",
   "noteSentToTrash": "Notiz in den Papierkorb verschoben",
@@ -172,6 +180,14 @@
   "kdriveNotConfigured": "kDrive nicht konfiguriert",
   "copiedToKdrive": "In kDrive kopiert",
   "copyToKdriveFailed": "Kopie nach kDrive fehlgeschlagen",
+  "copyToCloud": "In die Cloud kopieren",
+  "copyToWebdav": "Zu WebDAV kopieren",
+  "copiedToCloud": "In die Cloud kopiert",
+  "copiedToWebdav": "In WebDAV kopiert",
+  "copyToCloudFailed": "Kopie in die Cloud fehlgeschlagen",
+  "copyToWebdavFailed": "Kopie nach WebDAV fehlgeschlagen",
+  "cloudNotConfigured": "Kein Remote-Speicher konfiguriert",
+  "docxNotEncrypted": "Die .docx-Datei wird nicht verschlüsselt.",
   "checkForUpdates": "Auf Updates prüfen",
   "upToDateMessage": "Sie verwenden die neueste Version ({version}).",
   "@upToDateMessage": {

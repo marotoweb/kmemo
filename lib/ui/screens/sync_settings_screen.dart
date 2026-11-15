@@ -6,6 +6,7 @@ import '../../database/database.dart';
 import '../../providers/memo_provider.dart';
 import '../../services/encryption_service.dart';
 import '../../services/kdrive_storage.dart';
+import '../../services/secret_store.dart';
 import '../../services/storage_repository.dart';
 import '../../services/webdav_storage.dart';
 import '../widgets/app_snackbar.dart';
@@ -74,8 +75,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     _webdav = Provider.of<WebDAVStorage>(context, listen: false);
     _loadWebdavValues();
     final active = Provider.of<MemoProvider>(context, listen: false).storage;
-    _selectedProtocol =
-        active?.storageName == 'WebDAV' ? kSyncBackendWebDav : kSyncBackendKDrive;
+    _selectedProtocol = active?.backendId ?? kSyncBackendKDrive;
     debugPrint(
       '[SyncSettings] initState(): storage.isConfigured=${_storage.isConfigured}, '
       'driveId=${_storage.driveId}, remoteFolder=${_storage.remoteFolder}, '
@@ -268,6 +268,13 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
             setState(() => _isSyncing = false);
           }
         }
+      }
+    } on SecretStoreUnavailable {
+      // The keychain refused the token or the passphrase: say so instead of
+      // showing a generic save error, and keep the session working.
+      debugPrint('[SyncSettings] _saveCurrentConfig(): keyring unavailable');
+      if (mounted) {
+        _showError(AppLocalizations.of(context)!.secretStoreUnavailable);
       }
     } catch (e) {
       debugPrint('[SyncSettings] _saveCurrentConfig(): error: $e');
@@ -548,10 +555,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   /// instead of staying empty.
   Future<void> _switchBackend(StorageRepository storage) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      kSyncBackendKey,
-      storage.storageName == 'WebDAV' ? kSyncBackendWebDav : kSyncBackendKDrive,
-    );
+    await prefs.setString(kSyncBackendKey, storage.backendId);
     if (!mounted) return;
     final provider = Provider.of<MemoProvider>(context, listen: false);
     if (provider.storage != storage) {
@@ -713,6 +717,14 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       );
       if (sync) await _syncWebdavNow();
       return true;
+    } on SecretStoreUnavailable {
+      // Same as kDrive: the password/passphrase could not reach the keyring.
+      debugPrint('[SyncSettings] WebDAV configure(): keyring unavailable');
+      if (mounted) {
+        setState(() => _webdavBusy = false);
+        _showError(l10n.secretStoreUnavailable);
+      }
+      return false;
     } catch (e) {
       if (mounted) {
         setState(() => _webdavBusy = false);

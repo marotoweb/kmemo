@@ -1,6 +1,7 @@
 // lib/services/widget_service.dart
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:kmemo/database/database.dart';
@@ -85,10 +86,16 @@ class WidgetService {
 
   /// Syncs active notes with the JSON file shared with the native Android side
   /// [isDark] controls whether light or dark color palette is used for note cards
+  /// The widget is a native Android list: the JSON payload is only read by
+  /// `KMemoWidgetService.kt`. Writing it on desktop would change nothing and
+  /// `HomeWidget.updateWidget` would throw a MissingPluginException.
+  static bool get isSupported => !kIsWeb && Platform.isAndroid;
+
   static Future<void> updateWidgetData({
     required AppDatabase db,
     bool isDark = false,
   }) async {
+    if (!isSupported) return;
     _pendingDb = db;
     _pendingDark = isDark;
     if (_updating) {

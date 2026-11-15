@@ -13,7 +13,7 @@
   "passphrasesDoNotMatch": "As passphrases não coincidem",
   "cancel": "Cancelar",
   "confirm": "Confirmar",
-  "copyToKdrive": "Copiar para kDrive",
+  "copyToKdrive": "Copiar para o kDrive",
   "create": "Criar",
   "createNewFolder": "Criar nova pasta",
   "settings": "Definições",
@@ -50,6 +50,7 @@
   "sync": "Sincronizar",
   "syncTitle": "Sincronização",
   "syncCompletedWithCount": "Sincronização concluída: {count} nota(s) sincronizada(s).",
+  "syncUpToDate": "Tudo em dia.",
   "@syncCompletedWithCount": {
     "placeholders": {
       "count": {
@@ -106,8 +107,22 @@
   "dark": "Escuro",
   "auto": "Auto",
   "syncSubtitle": "Sincronize as suas notas com kDrive ou WebDAV",
+  "syncUndecryptableNotes": "Há notas que não foi possível decifrar ({count}). Verifica a passphrase nas definições de sincronização.",
+  "secretStoreUnavailable": "Não foi possível guardar a palavra-passe no gestor de segredos do sistema. Desbloqueia o gnome-keyring ou o KWallet e tenta outra vez.",
+  "syncBlockedNoPassphrase": "A sincronização está bloqueada: a cifra está ativa mas falta a passphrase. As notas novas ficam só neste dispositivo.",
+  "syncLog": "Registo de sincronização",
+  "syncLogSubtitle": "Copia o que o sync decidiu (sem conteúdo das notas).",
+  "syncLogEmpty": "O registo ainda está vazio. Faz uma sincronização primeiro.",
+  "@syncUndecryptableNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "reportBugSubtitle": "Reporte um bug, sugira uma funcionalidade, ou deixe um comentário",
   "sharedNote": "Nota partilhada",
+  "copiedToClipboard": "Copiado para a área de transferência",
   "colorsTab": "Cores (16)",
   "imagesTab": "Imagens (16)",
   "noteSentToTrash": "Nota enviada para a lixeira",
@@ -337,8 +352,16 @@
   "openLinkShort": "Abrir",
   "editLink": "Editar",
   "kdriveNotConfigured": "kDrive não está configurado",
-  "copiedToKdrive": "Copiado para kDrive",
-  "copyToKdriveFailed": "Falha ao copiar para kDrive",
+  "copiedToKdrive": "Copiado para o kDrive",
+  "copyToKdriveFailed": "Falha ao copiar para o kDrive",
+  "copyToCloud": "Copiar para a nuvem",
+  "copyToWebdav": "Copiar para o WebDAV",
+  "copiedToCloud": "Copiado para a nuvem",
+  "copiedToWebdav": "Copiado para o WebDAV",
+  "copyToCloudFailed": "Falha ao copiar para a nuvem",
+  "copyToWebdavFailed": "Falha ao copiar para o WebDAV",
+  "cloudNotConfigured": "Nenhum armazenamento remoto está configurado",
+  "docxNotEncrypted": "O ficheiro .docx não é cifrado.",
   "checkForUpdates": "Verificar atualizações",
   "upToDateMessage": "Está a usar a versão mais recente ({version}).",
   "@upToDateMessage": {

@@ -12,6 +12,7 @@ import 'package:xml/xml.dart';
 import '../database/database.dart';
 import 'encryption_service.dart';
 import 'memo_serialization.dart';
+import 'secret_store.dart';
 import 'storage_repository.dart';
 
 const String _prefsUrl = 'webdav_url';
@@ -51,10 +52,10 @@ String normalizeWebdavUrl(String input) {
 class WebDAVStorage extends StorageRepository {
   WebDAVStorage({http.Client? client, FlutterSecureStorage? secureStorage})
     : _client = client ?? http.Client(),
-      _secureStorage = secureStorage ?? const FlutterSecureStorage();
+      _secureStorage = SecretStore(secureStorage);
 
   final http.Client _client;
-  final FlutterSecureStorage _secureStorage;
+  final SecretStore _secureStorage;
 
   String? _baseUrl;
   String? _username;
@@ -70,6 +71,9 @@ class WebDAVStorage extends StorageRepository {
 
   @override
   String get storageName => 'WebDAV';
+
+  @override
+  String get backendId => kSyncBackendWebDav;
 
   @override
   bool get encryptionEnabled => _encryptionEnabled;
@@ -167,7 +171,11 @@ class WebDAVStorage extends StorageRepository {
 
     if (password != null && password.isNotEmpty) {
       _password = password;
-      await _secureStorage.write(key: _prefsPassword, value: password);
+      // Report a keychain failure instead of saving a password that would
+      // disappear on the next start.
+      if (!await _secureStorage.write(key: _prefsPassword, value: password)) {
+        throw const SecretStoreUnavailable();
+      }
     }
 
     final previousEncryption = _encryptionEnabled;
@@ -175,10 +183,12 @@ class WebDAVStorage extends StorageRepository {
     if (encryptionEnabled) {
       final pass = passphrase?.trim() ?? '';
       if (pass.isNotEmpty) {
-        await _secureStorage.write(
+        if (!await _secureStorage.write(
           key: _prefsEncryptionPassphrase,
           value: pass,
-        );
+        )) {
+          throw const SecretStoreUnavailable();
+        }
         EncryptionService.instance.enable(pass);
       } else {
         final stored = await _secureStorage.read(
@@ -233,6 +243,17 @@ class WebDAVStorage extends StorageRepository {
   }
 
   @override
+  Future<bool> adoptEncryption(String passphrase) async {
+    final pass = passphrase.trim();
+    if (pass.isEmpty) return false;
+    _encryptionEnabled = true;
+    EncryptionService.instance.enable(pass);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefsEncryptionEnabled, true);
+    return _secureStorage.write(key: _prefsEncryptionPassphrase, value: pass);
+  }
+
+  @override
   void markSyncedNow() {
     _lastSync = DateTime.now();
     SharedPreferences.getInstance().then(
@@ -259,6 +280,12 @@ class WebDAVStorage extends StorageRepository {
 
   Uri _remoteUri(String relativePath) =>
       Uri.parse('$_baseWithSlash${relativePath.replaceAll(RegExp(r'^/+'), '')}');
+
+  /// Whether another attempt can succeed. Network errors and 5xx are
+  /// transient; a 4xx (wrong password, wrong folder) is not, and retrying it
+  /// made a misconfigured sync look extremely slow.
+  bool _canRetry(Object error) =>
+      error is! RemoteHttpException || error.isRetryable;
 
   Map<String, String> _authHeaders() {
     final credentials = base64Encode(utf8.encode('$_username:$_password'));
@@ -392,6 +419,105 @@ class WebDAVStorage extends StorageRepository {
         ? '${memo.uuid}.json'
         : '$_folderPath/${memo.uuid}.json';
 
+    await _putBytes(relativePath, bytes, label: memo.uuid);
+    debugPrint(
+      '[WebDAVStorage] uploadMemo(${memo.uuid}): size=${bytes.length}, '
+      'encrypted=${EncryptionService.instance.isEnabled}',
+    );
+    return relativePath;
+  }
+
+  /// Overwrites the note's file with its tombstone.
+  ///
+  /// A PUT replaces the previous payload, which is what makes the permanent
+  /// deletion visible to the other devices: deleting the file would look like
+  /// "this note was never uploaded here".
+  @override
+  Future<String?> uploadTombstone(
+    String uuid,
+    DateTime deletedAt, {
+    String? remoteFileId,
+  }) async {
+    if (!isConfigured) return null;
+    final bytes = encodeTombstone(
+      uuid,
+      deletedAt,
+      encryptionRequired: _encryptionEnabled,
+    );
+    final relativePath = _folderPath.isEmpty
+        ? '$uuid.json'
+        : '$_folderPath/$uuid.json';
+    await _putBytes(relativePath, bytes, label: 'tombstone $uuid');
+    debugPrint('[WebDAVStorage] uploadTombstone($uuid): written');
+    return relativePath;
+  }
+
+  /// PUTs [bytes] to [relativePath], retrying only what a retry can fix.
+  Future<void> _putBytes(
+    String relativePath,
+    List<int> bytes, {
+    required String label,
+  }) async {
+    var attempt = 0;
+    var backoff = const Duration(seconds: 2);
+    while (true) {
+      attempt++;
+      try {
+        await _ensureFolders();
+        final response = await _client.put(
+          _remoteUri(relativePath),
+          headers: {
+            ..._authHeaders(),
+            'Content-Type': 'application/octet-stream',
+          },
+          body: bytes,
+        );
+        if (response.statusCode == 200 ||
+            response.statusCode == 201 ||
+            response.statusCode == 204) {
+          return;
+        }
+        throw RemoteHttpException(response.statusCode, response.body);
+      } catch (e) {
+        debugPrint(
+          '[WebDAVStorage] upload($label): attempt $attempt failed: $e',
+        );
+        if (!_canRetry(e) || attempt >= 3) rethrow;
+        await Future.delayed(backoff);
+        backoff *= 2;
+      }
+    }
+  }
+
+  /// Uploads an arbitrary file (for example the .docx built by the export
+  /// action) to the notes folder.
+  ///
+  /// Unlike [uploadMemo] this bypasses the note payload, so the file is not
+  /// encrypted even when encryption is enabled.
+  @override
+  Future<String?> uploadFile({
+    required String fileName,
+    required List<int> bytes,
+  }) async {
+    if (!isConfigured) {
+      debugPrint('[WebDAVStorage] uploadFile($fileName): NOT CONFIGURED');
+      return null;
+    }
+
+    // The file name is appended to a URL path, so a separator would silently
+    // create a subfolder or escape the notes folder.
+    if (fileName.contains('/') || fileName.contains(r'\')) {
+      throw ArgumentError.value(
+        fileName,
+        'fileName',
+        'must not contain a path separator',
+      );
+    }
+
+    final relativePath = _folderPath.isEmpty
+        ? fileName
+        : '$_folderPath/$fileName';
+
     var attempt = 0;
     var backoff = const Duration(seconds: 2);
     while (true) {
@@ -410,19 +536,17 @@ class WebDAVStorage extends StorageRepository {
             response.statusCode == 201 ||
             response.statusCode == 204) {
           debugPrint(
-            '[WebDAVStorage] uploadMemo(${memo.uuid}): ${response.statusCode}, '
-            'size=${bytes.length}, encrypted=${EncryptionService.instance.isEnabled}',
+            '[WebDAVStorage] uploadFile($fileName): ${response.statusCode}, '
+            'size=${bytes.length}',
           );
           return relativePath;
         }
-        throw Exception(
-          'PUT ${response.statusCode}: ${response.body}',
-        );
+        throw RemoteHttpException(response.statusCode, response.body);
       } catch (e) {
         debugPrint(
-          '[WebDAVStorage] uploadMemo(${memo.uuid}): attempt $attempt failed: $e',
+          '[WebDAVStorage] uploadFile($fileName): attempt $attempt failed: $e',
         );
-        if (attempt >= 3) rethrow;
+        if (!_canRetry(e) || attempt >= 3) rethrow;
         await Future.delayed(backoff);
         backoff *= 2;
       }
@@ -488,9 +612,11 @@ class WebDAVStorage extends StorageRepository {
           : modifiedElements.first.innerText.trim();
       DateTime updatedAt;
       try {
-        updatedAt = modified.isEmpty ? DateTime.now() : HttpDate.parse(modified);
+        updatedAt = modified.isEmpty
+            ? DateTime.now().toUtc()
+            : HttpDate.parse(modified).toUtc();
       } catch (_) {
-        updatedAt = DateTime.now();
+        updatedAt = DateTime.now().toUtc();
       }
 
       final remoteId = _folderPath.isEmpty ? name : '$_folderPath/$name';

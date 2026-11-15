@@ -162,6 +162,9 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get syncUpToDate => 'Everything is up to date.';
+
+  @override
   String get theme => 'Theme';
 
   @override
@@ -318,11 +321,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get syncSubtitle => 'Sync your notes with kDrive or WebDAV';
 
   @override
+  String syncUndecryptableNotes(int count) {
+    return 'Some notes could not be decrypted ($count). Check the passphrase in the sync settings.';
+  }
+
+  @override
+  String get secretStoreUnavailable =>
+      'Could not save the password in the system keyring. Unlock gnome-keyring or KWallet and try again.';
+
+  @override
+  String get syncBlockedNoPassphrase =>
+      'Sync is blocked: encryption is on but the passphrase is missing. New notes stay on this device only.';
+
+  @override
+  String get syncLog => 'Sync log';
+
+  @override
+  String get syncLogSubtitle =>
+      'Copies what the sync decided (no note content).';
+
+  @override
+  String get syncLogEmpty => 'The log is empty. Sync first.';
+
+  @override
   String get reportBugSubtitle =>
       'Report a bug, suggest a feature, or leave a comment';
 
   @override
   String get sharedNote => 'Shared note';
+
+  @override
+  String get copiedToClipboard => 'Copied to the clipboard';
 
   @override
   String get colorsTab => 'Colors (16)';
@@ -564,6 +593,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get copyToKdriveFailed => 'Failed to copy to kDrive';
+
+  @override
+  String get copyToCloud => 'Copy to the cloud';
+
+  @override
+  String get copyToWebdav => 'Copy to WebDAV';
+
+  @override
+  String get copiedToCloud => 'Copied to the cloud';
+
+  @override
+  String get copiedToWebdav => 'Copied to WebDAV';
+
+  @override
+  String get copyToCloudFailed => 'Failed to copy to the cloud';
+
+  @override
+  String get copyToWebdavFailed => 'Failed to copy to WebDAV';
+
+  @override
+  String get cloudNotConfigured => 'No remote storage is configured';
+
+  @override
+  String get docxNotEncrypted => 'The .docx file is not encrypted.';
 
   @override
   String get checkForUpdates => 'Check for updates';

@@ -50,6 +50,7 @@
   "sync": "Synchroniser",
   "syncTitle": "Synchronisation",
   "syncCompletedWithCount": "Synchronisation terminée : {count} note(s) synchronisée(s).",
+  "syncUpToDate": "Tout est à jour.",
   "@syncCompletedWithCount": {
     "placeholders": {
       "count": {
@@ -106,8 +107,15 @@
   "dark": "Sombre",
   "auto": "Auto",
   "syncSubtitle": "Synchronisez vos notes avec kDrive ou WebDAV",
+  "syncUndecryptableNotes": "Certaines notes n'ont pas pu être déchiffrées ({count}). Vérifie la phrase secrète dans les réglages de synchronisation.",
+  "secretStoreUnavailable": "Impossible d'enregistrer le mot de passe dans le trousseau du système. Déverrouille gnome-keyring ou KWallet et réessaie.",
+  "syncBlockedNoPassphrase": "La synchronisation est bloquée : le chiffrement est actif mais la phrase secrète manque. Les nouvelles notes restent sur cet appareil.",
+  "syncLog": "Journal de synchronisation",
+  "syncLogSubtitle": "Copie ce que la synchronisation a décidé (sans le contenu des notes).",
+  "syncLogEmpty": "Le journal est vide. Lance une synchronisation d'abord.",
   "reportBugSubtitle": "Signalez un bug, suggérez une fonctionnalité ou laissez un commentaire",
   "sharedNote": "Note partagée",
+  "copiedToClipboard": "Copié dans le presse-papiers",
   "colorsTab": "Couleurs (16)",
   "imagesTab": "Images (16)",
   "noteSentToTrash": "Note envoyée à la corbeille",
@@ -172,6 +180,14 @@
   "kdriveNotConfigured": "kDrive non configuré",
   "copiedToKdrive": "Copié sur kDrive",
   "copyToKdriveFailed": "Échec de la copie sur kDrive",
+  "copyToCloud": "Copier vers le cloud",
+  "copyToWebdav": "Copier vers WebDAV",
+  "copiedToCloud": "Copié sur le cloud",
+  "copiedToWebdav": "Copié sur WebDAV",
+  "copyToCloudFailed": "Échec de la copie sur le cloud",
+  "copyToWebdavFailed": "Échec de la copie sur WebDAV",
+  "cloudNotConfigured": "Aucun stockage distant n'est configuré",
+  "docxNotEncrypted": "Le fichier .docx n'est pas chiffré.",
   "checkForUpdates": "Vérifier les mises à jour",
   "upToDateMessage": "Vous utilisez la dernière version ({version}).",
   "@upToDateMessage": {

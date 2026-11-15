@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../database/database.dart';
 import 'encryption_service.dart';
 import 'memo_serialization.dart';
+import 'secret_store.dart';
 import 'storage_repository.dart';
 
 const String _apiBase = 'https://api.infomaniak.com';
@@ -32,10 +33,10 @@ const Duration _minSyncInterval = Duration(seconds: 5);
 class KDriveStorage extends StorageRepository {
   KDriveStorage({http.Client? client, FlutterSecureStorage? secureStorage})
     : _client = client ?? http.Client(),
-      _secureStorage = secureStorage ?? const FlutterSecureStorage();
+      _secureStorage = SecretStore(secureStorage);
 
   final http.Client _client;
-  final FlutterSecureStorage _secureStorage;
+  final SecretStore _secureStorage;
 
   String? _token;
   int? _driveId;
@@ -51,6 +52,9 @@ class KDriveStorage extends StorageRepository {
 
   @override
   String get storageName => 'kDrive';
+
+  @override
+  String get backendId => kSyncBackendKDrive;
 
   /// Selected drive id (null if not configured).
   int? get driveId => _driveId;
@@ -177,6 +181,17 @@ class KDriveStorage extends StorageRepository {
     return await _secureStorage.read(key: _prefsEncryptionPassphrase);
   }
 
+  @override
+  Future<bool> adoptEncryption(String passphrase) async {
+    final pass = passphrase.trim();
+    if (pass.isEmpty) return false;
+    _encryptionEnabled = true;
+    EncryptionService.instance.enable(pass);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefsEncryptionEnabled, true);
+    return _secureStorage.write(key: _prefsEncryptionPassphrase, value: pass);
+  }
+
   /// Sets only the driveId (without token) to allow listing root folders.
   /// Used when the user selects a drive but has not entered the token yet.
   Future<void> setDriveId(int driveId) async {
@@ -231,7 +246,11 @@ class KDriveStorage extends StorageRepository {
       '[KDriveStorage] configure() BEFORE SAVE: _remoteFolder=$_remoteFolder, _folderId=$_folderId, _folderName=$_folderName',
     );
 
-    await _secureStorage.write(key: _prefsToken, value: token);
+    // A keychain that cannot store the token must be reported: the
+    // configuration would work this session and be gone after a restart.
+    if (!await _secureStorage.write(key: _prefsToken, value: token)) {
+      throw const SecretStoreUnavailable();
+    }
     await prefs.setString(_prefsDriveId, driveId.toString());
     await prefs.setString(_prefsFolderId, _folderId ?? '');
     await prefs.setString(_prefsFolderName, _folderName ?? '');
@@ -257,10 +276,12 @@ class KDriveStorage extends StorageRepository {
       await _secureStorage.delete(key: _prefsEncryptionPassphrase);
     } else if ((encryptionPassphrase ?? '').trim().isNotEmpty) {
       EncryptionService.instance.enable(encryptionPassphrase!.trim());
-      await _secureStorage.write(
+      if (!await _secureStorage.write(
         key: _prefsEncryptionPassphrase,
         value: encryptionPassphrase.trim(),
-      );
+      )) {
+        throw const SecretStoreUnavailable();
+      }
     } else {
       // The passphrase field is intentionally left empty when the user only
       // changes the token or the folder. Keep the saved passphrase instead of
@@ -562,8 +583,9 @@ class KDriveStorage extends StorageRepository {
         }
       }
 
-      throw Exception(
-        'Request failed $method ${uri.path}: ${response.statusCode} $responseBody',
+      throw RemoteHttpException(
+        response.statusCode,
+        '$method ${uri.path}: $responseBody',
       );
     }
 
@@ -660,12 +682,13 @@ class KDriveStorage extends StorageRepository {
   // ------------------------------------------------------------------------
 
   /// Uploads an arbitrary file (e.g. a .docx export) to the configured kDrive folder.
-  Future<String?> uploadMemoBytes({
+  @override
+  Future<String?> uploadFile({
     required String fileName,
     required List<int> bytes,
   }) async {
     if (_token == null || _driveId == null) {
-      debugPrint('[KDriveStorage] uploadMemoBytes: NOT CONFIGURED');
+      debugPrint('[KDriveStorage] uploadFile: NOT CONFIGURED');
       return null;
     }
 
@@ -698,7 +721,7 @@ class KDriveStorage extends StorageRepository {
         final uri = Uri.parse(
           '$apiBase/3/drive/$driveIdValue/upload',
         ).replace(queryParameters: paramsBase);
-        debugPrint('[KDriveStorage] uploadMemoBytes: POST without directory_id to $uri');
+        debugPrint('[KDriveStorage] uploadFile: POST without directory_id to $uri');
         var response = await _client.post(
           uri,
           headers: {
@@ -708,11 +731,11 @@ class KDriveStorage extends StorageRepository {
           body: bytes,
         );
         debugPrint(
-          '[KDriveStorage] uploadMemoBytes: status=${response.statusCode} body=${response.body}',
+          '[KDriveStorage] uploadFile: status=${response.statusCode} body=${response.body}',
         );
         if (response.statusCode == 200 || response.statusCode == 201) {
           final remoteId = _extractFileIdFromUploadResponse(response.body);
-          debugPrint('[KDriveStorage] uploadMemoBytes: remoteId=$remoteId');
+          debugPrint('[KDriveStorage] uploadFile: remoteId=$remoteId');
           return remoteId;
         }
         lastError =
@@ -724,7 +747,7 @@ class KDriveStorage extends StorageRepository {
       final uri = Uri.parse(
         '$apiBase/3/drive/$driveIdValue/upload',
       ).replace(queryParameters: params);
-      debugPrint('[KDriveStorage] uploadMemoBytes: POST directory_id=$dirId to $uri');
+      debugPrint('[KDriveStorage] uploadFile: POST directory_id=$dirId to $uri');
       var response = await _client.post(
         uri,
         headers: {
@@ -734,18 +757,18 @@ class KDriveStorage extends StorageRepository {
         body: bytes,
       );
       debugPrint(
-        '[KDriveStorage] uploadMemoBytes: status=${response.statusCode} body=${response.body}',
+        '[KDriveStorage] uploadFile: status=${response.statusCode} body=${response.body}',
       );
       if (response.statusCode == 200 || response.statusCode == 201) {
         final remoteId = _extractFileIdFromUploadResponse(response.body);
-        debugPrint('[KDriveStorage] uploadMemoBytes: remoteId=$remoteId');
+        debugPrint('[KDriveStorage] uploadFile: remoteId=$remoteId');
         return remoteId;
       }
       lastError =
           'Failed to upload file (directory_id=$dirId): ${response.statusCode} ${response.body}';
     }
 
-    debugPrint('[KDriveStorage] uploadMemoBytes: all attempts failed: $lastError');
+    debugPrint('[KDriveStorage] uploadFile: all attempts failed: $lastError');
     throw Exception(lastError ?? 'Unknown upload error');
   }
 
@@ -781,6 +804,9 @@ class KDriveStorage extends StorageRepository {
         debugPrint(
           '[KDriveStorage] uploadMemo(${memo.uuid}): attempt $attempt failed: $e',
         );
+        // A 4xx (bad request, revoked token, missing folder) cannot succeed
+        // on a retry: fail at once instead of waiting for the backoff.
+        if (e is RemoteHttpException && !e.isRetryable) rethrow;
         if (attempt < maxRetries) {
           debugPrint(
             '[KDriveStorage] uploadMemo(${memo.uuid}): waiting ${backoff.inSeconds}s before trying again',
@@ -832,14 +858,44 @@ class KDriveStorage extends StorageRepository {
       '[KDriveStorage] uploadMemo(${memo.uuid}): colorIndex=${memo.colorIndex}, bgImageIndex=${memo.bgImageIndex}, imageAttachments=${memo.imageAttachments}',
     );
 
-    // The kDrive upload endpoint has no "update by file id": an existing note
-    // is overwritten by uploading the same file name into the same folder,
-    // which `conflict=version` turns into a new version of that file. Passing
-    // `file_id` together with `file_name`/`conflict` is rejected with HTTP 422,
-    // so there is a single upload path for new and existing notes.
+    return _uploadBytes('${memo.uuid}.json', bytes, label: memo.uuid);
+  }
+
+  /// Overwrites the note's file with its tombstone.
+  ///
+  /// The upload keeps `conflict=version`, so the note's content survives as a
+  /// version of the same file: a permanent deletion is published, not erased,
+  /// and can still be recovered from the drive's version history.
+  @override
+  Future<String?> uploadTombstone(
+    String uuid,
+    DateTime deletedAt, {
+    String? remoteFileId,
+  }) async {
+    if (!isConfigured) return null;
+    final bytes = encodeTombstone(
+      uuid,
+      deletedAt,
+      encryptionRequired: _encryptionEnabled,
+    );
+    return _uploadBytes('$uuid.json', bytes, label: 'tombstone $uuid');
+  }
+
+  /// Uploads [bytes] as [fileName] in the notes folder.
+  ///
+  /// The kDrive upload endpoint has no "update by file id": an existing file is
+  /// overwritten by uploading the same name into the same folder, which
+  /// `conflict=version` turns into a new version of that file. Passing
+  /// `file_id` together with `file_name`/`conflict` is rejected with HTTP 422,
+  /// so there is a single upload path for new and existing files.
+  Future<String?> _uploadBytes(
+    String fileName,
+    List<int> bytes, {
+    required String label,
+  }) async {
     final paramsBase = <String, String>{
       'total_size': bytes.length.toString(),
-      'file_name': '${memo.uuid}.json',
+      'file_name': fileName,
       'conflict': 'version',
     };
 
@@ -864,7 +920,7 @@ class KDriveStorage extends StorageRepository {
           '$_apiBase/3/drive/$_driveIdValue/upload',
         ).replace(queryParameters: paramsBase);
         debugPrint(
-          '[KDriveStorage] uploadMemo(${memo.uuid}): POST without directory_id to $uri',
+          '[KDriveStorage] upload($label): POST without directory_id to $uri',
         );
         var response = await _client.post(
           uri,
@@ -875,17 +931,17 @@ class KDriveStorage extends StorageRepository {
           body: bytes,
         );
         debugPrint(
-          '[KDriveStorage] uploadMemo(${memo.uuid}): status=${response.statusCode} body=${response.body}',
+          '[KDriveStorage] upload($label): status=${response.statusCode} body=${response.body}',
         );
         if (response.statusCode == 200 || response.statusCode == 201) {
           final remoteId = _extractFileIdFromUploadResponse(response.body);
           debugPrint(
-            '[KDriveStorage] uploadMemo(${memo.uuid}): remoteId=$remoteId',
+            '[KDriveStorage] upload($label): remoteId=$remoteId',
           );
           return remoteId;
         }
         lastError =
-            'Failed to upload note (without directory_id): ${response.statusCode} ${response.body}';
+            'Failed to upload (without directory_id): ${response.statusCode} ${response.body}';
         continue;
       }
 
@@ -894,7 +950,7 @@ class KDriveStorage extends StorageRepository {
         '$_apiBase/3/drive/$_driveIdValue/upload',
       ).replace(queryParameters: params);
       debugPrint(
-        '[KDriveStorage] uploadMemo(${memo.uuid}): POST directory_id=$dirId to $uri',
+        '[KDriveStorage] upload($label): POST directory_id=$dirId to $uri',
       );
       var response = await _client.post(
         uri,
@@ -905,20 +961,20 @@ class KDriveStorage extends StorageRepository {
         body: bytes,
       );
       debugPrint(
-        '[KDriveStorage] uploadMemo(${memo.uuid}): status=${response.statusCode} body=${response.body}',
+        '[KDriveStorage] upload($label): status=${response.statusCode} body=${response.body}',
       );
       if (response.statusCode == 200 || response.statusCode == 201) {
         final remoteId = _extractFileIdFromUploadResponse(response.body);
         debugPrint(
-          '[KDriveStorage] uploadMemo(${memo.uuid}): remoteId=$remoteId',
+          '[KDriveStorage] upload($label): remoteId=$remoteId',
         );
         return remoteId;
       }
       lastError =
-          'Failed to upload note: ${response.statusCode} ${response.body}';
+          'Failed to upload $fileName: ${response.statusCode} ${response.body}';
     }
 
-    throw Exception(lastError ?? 'Failed to upload note');
+    throw Exception(lastError ?? 'Failed to upload $fileName');
   }
 
   String? _extractFileIdFromUploadResponse(String body) {
@@ -994,7 +1050,10 @@ class KDriveStorage extends StorageRepository {
         RemoteMemoInfo(
           remoteFileId: id,
           name: name,
-          updatedAt: DateTime.fromMillisecondsSinceEpoch(updatedAtMs),
+          updatedAt: DateTime.fromMillisecondsSinceEpoch(
+            updatedAtMs,
+            isUtc: true,
+          ),
         ),
       );
     }

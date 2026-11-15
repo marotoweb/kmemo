@@ -75,6 +75,30 @@ class $MemosTable extends Memos with TableInfo<$MemosTable, Memo> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _remoteUpdatedAtMeta = const VerificationMeta(
+    'remoteUpdatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> remoteUpdatedAt =
+      GeneratedColumn<DateTime>(
+        'remote_updated_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _remoteRevisionMeta = const VerificationMeta(
+    'remoteRevision',
+  );
+  @override
+  late final GeneratedColumn<DateTime> remoteRevision =
+      GeneratedColumn<DateTime>(
+        'remote_revision',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _colorIndexMeta = const VerificationMeta(
     'colorIndex',
   );
@@ -200,6 +224,8 @@ class $MemosTable extends Memos with TableInfo<$MemosTable, Memo> {
     updatedAt,
     isSynced,
     remoteFileId,
+    remoteUpdatedAt,
+    remoteRevision,
     colorIndex,
     bgImageIndex,
     imageAttachments,
@@ -264,6 +290,24 @@ class $MemosTable extends Memos with TableInfo<$MemosTable, Memo> {
         remoteFileId.isAcceptableOrUnknown(
           data['remote_file_id']!,
           _remoteFileIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('remote_updated_at')) {
+      context.handle(
+        _remoteUpdatedAtMeta,
+        remoteUpdatedAt.isAcceptableOrUnknown(
+          data['remote_updated_at']!,
+          _remoteUpdatedAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('remote_revision')) {
+      context.handle(
+        _remoteRevisionMeta,
+        remoteRevision.isAcceptableOrUnknown(
+          data['remote_revision']!,
+          _remoteRevisionMeta,
         ),
       );
     }
@@ -366,6 +410,14 @@ class $MemosTable extends Memos with TableInfo<$MemosTable, Memo> {
         DriftSqlType.string,
         data['${effectivePrefix}remote_file_id'],
       ),
+      remoteUpdatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}remote_updated_at'],
+      ),
+      remoteRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}remote_revision'],
+      ),
       colorIndex: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}color_index'],
@@ -418,6 +470,8 @@ class Memo extends DataClass implements Insertable<Memo> {
   final DateTime updatedAt;
   final bool isSynced;
   final String? remoteFileId;
+  final DateTime? remoteUpdatedAt;
+  final DateTime? remoteRevision;
   final int colorIndex;
   final int bgImageIndex;
   final String imageAttachments;
@@ -434,6 +488,8 @@ class Memo extends DataClass implements Insertable<Memo> {
     required this.updatedAt,
     required this.isSynced,
     this.remoteFileId,
+    this.remoteUpdatedAt,
+    this.remoteRevision,
     required this.colorIndex,
     required this.bgImageIndex,
     required this.imageAttachments,
@@ -454,6 +510,12 @@ class Memo extends DataClass implements Insertable<Memo> {
     map['is_synced'] = Variable<bool>(isSynced);
     if (!nullToAbsent || remoteFileId != null) {
       map['remote_file_id'] = Variable<String>(remoteFileId);
+    }
+    if (!nullToAbsent || remoteUpdatedAt != null) {
+      map['remote_updated_at'] = Variable<DateTime>(remoteUpdatedAt);
+    }
+    if (!nullToAbsent || remoteRevision != null) {
+      map['remote_revision'] = Variable<DateTime>(remoteRevision);
     }
     map['color_index'] = Variable<int>(colorIndex);
     map['bg_image_index'] = Variable<int>(bgImageIndex);
@@ -477,6 +539,12 @@ class Memo extends DataClass implements Insertable<Memo> {
       remoteFileId: remoteFileId == null && nullToAbsent
           ? const Value.absent()
           : Value(remoteFileId),
+      remoteUpdatedAt: remoteUpdatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteUpdatedAt),
+      remoteRevision: remoteRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteRevision),
       colorIndex: Value(colorIndex),
       bgImageIndex: Value(bgImageIndex),
       imageAttachments: Value(imageAttachments),
@@ -501,6 +569,8 @@ class Memo extends DataClass implements Insertable<Memo> {
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       isSynced: serializer.fromJson<bool>(json['isSynced']),
       remoteFileId: serializer.fromJson<String?>(json['remoteFileId']),
+      remoteUpdatedAt: serializer.fromJson<DateTime?>(json['remoteUpdatedAt']),
+      remoteRevision: serializer.fromJson<DateTime?>(json['remoteRevision']),
       colorIndex: serializer.fromJson<int>(json['colorIndex']),
       bgImageIndex: serializer.fromJson<int>(json['bgImageIndex']),
       imageAttachments: serializer.fromJson<String>(json['imageAttachments']),
@@ -522,6 +592,8 @@ class Memo extends DataClass implements Insertable<Memo> {
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'isSynced': serializer.toJson<bool>(isSynced),
       'remoteFileId': serializer.toJson<String?>(remoteFileId),
+      'remoteUpdatedAt': serializer.toJson<DateTime?>(remoteUpdatedAt),
+      'remoteRevision': serializer.toJson<DateTime?>(remoteRevision),
       'colorIndex': serializer.toJson<int>(colorIndex),
       'bgImageIndex': serializer.toJson<int>(bgImageIndex),
       'imageAttachments': serializer.toJson<String>(imageAttachments),
@@ -541,6 +613,8 @@ class Memo extends DataClass implements Insertable<Memo> {
     DateTime? updatedAt,
     bool? isSynced,
     Value<String?> remoteFileId = const Value.absent(),
+    Value<DateTime?> remoteUpdatedAt = const Value.absent(),
+    Value<DateTime?> remoteRevision = const Value.absent(),
     int? colorIndex,
     int? bgImageIndex,
     String? imageAttachments,
@@ -557,6 +631,12 @@ class Memo extends DataClass implements Insertable<Memo> {
     updatedAt: updatedAt ?? this.updatedAt,
     isSynced: isSynced ?? this.isSynced,
     remoteFileId: remoteFileId.present ? remoteFileId.value : this.remoteFileId,
+    remoteUpdatedAt: remoteUpdatedAt.present
+        ? remoteUpdatedAt.value
+        : this.remoteUpdatedAt,
+    remoteRevision: remoteRevision.present
+        ? remoteRevision.value
+        : this.remoteRevision,
     colorIndex: colorIndex ?? this.colorIndex,
     bgImageIndex: bgImageIndex ?? this.bgImageIndex,
     imageAttachments: imageAttachments ?? this.imageAttachments,
@@ -577,6 +657,12 @@ class Memo extends DataClass implements Insertable<Memo> {
       remoteFileId: data.remoteFileId.present
           ? data.remoteFileId.value
           : this.remoteFileId,
+      remoteUpdatedAt: data.remoteUpdatedAt.present
+          ? data.remoteUpdatedAt.value
+          : this.remoteUpdatedAt,
+      remoteRevision: data.remoteRevision.present
+          ? data.remoteRevision.value
+          : this.remoteRevision,
       colorIndex: data.colorIndex.present
           ? data.colorIndex.value
           : this.colorIndex,
@@ -610,6 +696,8 @@ class Memo extends DataClass implements Insertable<Memo> {
           ..write('updatedAt: $updatedAt, ')
           ..write('isSynced: $isSynced, ')
           ..write('remoteFileId: $remoteFileId, ')
+          ..write('remoteUpdatedAt: $remoteUpdatedAt, ')
+          ..write('remoteRevision: $remoteRevision, ')
           ..write('colorIndex: $colorIndex, ')
           ..write('bgImageIndex: $bgImageIndex, ')
           ..write('imageAttachments: $imageAttachments, ')
@@ -631,6 +719,8 @@ class Memo extends DataClass implements Insertable<Memo> {
     updatedAt,
     isSynced,
     remoteFileId,
+    remoteUpdatedAt,
+    remoteRevision,
     colorIndex,
     bgImageIndex,
     imageAttachments,
@@ -651,6 +741,8 @@ class Memo extends DataClass implements Insertable<Memo> {
           other.updatedAt == this.updatedAt &&
           other.isSynced == this.isSynced &&
           other.remoteFileId == this.remoteFileId &&
+          other.remoteUpdatedAt == this.remoteUpdatedAt &&
+          other.remoteRevision == this.remoteRevision &&
           other.colorIndex == this.colorIndex &&
           other.bgImageIndex == this.bgImageIndex &&
           other.imageAttachments == this.imageAttachments &&
@@ -669,6 +761,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
   final Value<DateTime> updatedAt;
   final Value<bool> isSynced;
   final Value<String?> remoteFileId;
+  final Value<DateTime?> remoteUpdatedAt;
+  final Value<DateTime?> remoteRevision;
   final Value<int> colorIndex;
   final Value<int> bgImageIndex;
   final Value<String> imageAttachments;
@@ -686,6 +780,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     this.updatedAt = const Value.absent(),
     this.isSynced = const Value.absent(),
     this.remoteFileId = const Value.absent(),
+    this.remoteUpdatedAt = const Value.absent(),
+    this.remoteRevision = const Value.absent(),
     this.colorIndex = const Value.absent(),
     this.bgImageIndex = const Value.absent(),
     this.imageAttachments = const Value.absent(),
@@ -704,6 +800,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     required DateTime updatedAt,
     this.isSynced = const Value.absent(),
     this.remoteFileId = const Value.absent(),
+    this.remoteUpdatedAt = const Value.absent(),
+    this.remoteRevision = const Value.absent(),
     this.colorIndex = const Value.absent(),
     this.bgImageIndex = const Value.absent(),
     this.imageAttachments = const Value.absent(),
@@ -724,6 +822,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     Expression<DateTime>? updatedAt,
     Expression<bool>? isSynced,
     Expression<String>? remoteFileId,
+    Expression<DateTime>? remoteUpdatedAt,
+    Expression<DateTime>? remoteRevision,
     Expression<int>? colorIndex,
     Expression<int>? bgImageIndex,
     Expression<String>? imageAttachments,
@@ -742,6 +842,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
       if (updatedAt != null) 'updated_at': updatedAt,
       if (isSynced != null) 'is_synced': isSynced,
       if (remoteFileId != null) 'remote_file_id': remoteFileId,
+      if (remoteUpdatedAt != null) 'remote_updated_at': remoteUpdatedAt,
+      if (remoteRevision != null) 'remote_revision': remoteRevision,
       if (colorIndex != null) 'color_index': colorIndex,
       if (bgImageIndex != null) 'bg_image_index': bgImageIndex,
       if (imageAttachments != null) 'image_attachments': imageAttachments,
@@ -762,6 +864,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     Value<DateTime>? updatedAt,
     Value<bool>? isSynced,
     Value<String?>? remoteFileId,
+    Value<DateTime?>? remoteUpdatedAt,
+    Value<DateTime?>? remoteRevision,
     Value<int>? colorIndex,
     Value<int>? bgImageIndex,
     Value<String>? imageAttachments,
@@ -780,6 +884,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
       updatedAt: updatedAt ?? this.updatedAt,
       isSynced: isSynced ?? this.isSynced,
       remoteFileId: remoteFileId ?? this.remoteFileId,
+      remoteUpdatedAt: remoteUpdatedAt ?? this.remoteUpdatedAt,
+      remoteRevision: remoteRevision ?? this.remoteRevision,
       colorIndex: colorIndex ?? this.colorIndex,
       bgImageIndex: bgImageIndex ?? this.bgImageIndex,
       imageAttachments: imageAttachments ?? this.imageAttachments,
@@ -813,6 +919,12 @@ class MemosCompanion extends UpdateCompanion<Memo> {
     }
     if (remoteFileId.present) {
       map['remote_file_id'] = Variable<String>(remoteFileId.value);
+    }
+    if (remoteUpdatedAt.present) {
+      map['remote_updated_at'] = Variable<DateTime>(remoteUpdatedAt.value);
+    }
+    if (remoteRevision.present) {
+      map['remote_revision'] = Variable<DateTime>(remoteRevision.value);
     }
     if (colorIndex.present) {
       map['color_index'] = Variable<int>(colorIndex.value);
@@ -856,6 +968,8 @@ class MemosCompanion extends UpdateCompanion<Memo> {
           ..write('updatedAt: $updatedAt, ')
           ..write('isSynced: $isSynced, ')
           ..write('remoteFileId: $remoteFileId, ')
+          ..write('remoteUpdatedAt: $remoteUpdatedAt, ')
+          ..write('remoteRevision: $remoteRevision, ')
           ..write('colorIndex: $colorIndex, ')
           ..write('bgImageIndex: $bgImageIndex, ')
           ..write('imageAttachments: $imageAttachments, ')
@@ -1316,16 +1430,415 @@ class BlocksCompanion extends UpdateCompanion<Block> {
   }
 }
 
+class $SyncTombstonesTable extends SyncTombstones
+    with TableInfo<$SyncTombstonesTable, SyncTombstone> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncTombstonesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _uuidMeta = const VerificationMeta('uuid');
+  @override
+  late final GeneratedColumn<String> uuid = GeneratedColumn<String>(
+    'uuid',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _remoteFileIdMeta = const VerificationMeta(
+    'remoteFileId',
+  );
+  @override
+  late final GeneratedColumn<String> remoteFileId = GeneratedColumn<String>(
+    'remote_file_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _remoteRevisionMeta = const VerificationMeta(
+    'remoteRevision',
+  );
+  @override
+  late final GeneratedColumn<DateTime> remoteRevision =
+      GeneratedColumn<DateTime>(
+        'remote_revision',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _isUploadedMeta = const VerificationMeta(
+    'isUploaded',
+  );
+  @override
+  late final GeneratedColumn<bool> isUploaded = GeneratedColumn<bool>(
+    'is_uploaded',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_uploaded" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    uuid,
+    deletedAt,
+    remoteFileId,
+    remoteRevision,
+    isUploaded,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_tombstones';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyncTombstone> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('uuid')) {
+      context.handle(
+        _uuidMeta,
+        uuid.isAcceptableOrUnknown(data['uuid']!, _uuidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_uuidMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_deletedAtMeta);
+    }
+    if (data.containsKey('remote_file_id')) {
+      context.handle(
+        _remoteFileIdMeta,
+        remoteFileId.isAcceptableOrUnknown(
+          data['remote_file_id']!,
+          _remoteFileIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('remote_revision')) {
+      context.handle(
+        _remoteRevisionMeta,
+        remoteRevision.isAcceptableOrUnknown(
+          data['remote_revision']!,
+          _remoteRevisionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('is_uploaded')) {
+      context.handle(
+        _isUploadedMeta,
+        isUploaded.isAcceptableOrUnknown(data['is_uploaded']!, _isUploadedMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {uuid};
+  @override
+  SyncTombstone map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncTombstone(
+      uuid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uuid'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      )!,
+      remoteFileId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_file_id'],
+      ),
+      remoteRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}remote_revision'],
+      ),
+      isUploaded: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_uploaded'],
+      )!,
+    );
+  }
+
+  @override
+  $SyncTombstonesTable createAlias(String alias) {
+    return $SyncTombstonesTable(attachedDatabase, alias);
+  }
+}
+
+class SyncTombstone extends DataClass implements Insertable<SyncTombstone> {
+  final String uuid;
+
+  /// When the note was permanently deleted (UTC).
+  final DateTime deletedAt;
+
+  /// Remote path of the file that must carry the tombstone. Local-only.
+  final String? remoteFileId;
+
+  /// Remote modified time of the tombstone file after it was published. A
+  /// different value means another device wrote to that path again (an old
+  /// client re-uploading the note), so the tombstone is published once more.
+  final DateTime? remoteRevision;
+
+  /// Whether the backend already accepted the tombstone.
+  final bool isUploaded;
+  const SyncTombstone({
+    required this.uuid,
+    required this.deletedAt,
+    this.remoteFileId,
+    this.remoteRevision,
+    required this.isUploaded,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['uuid'] = Variable<String>(uuid);
+    map['deleted_at'] = Variable<DateTime>(deletedAt);
+    if (!nullToAbsent || remoteFileId != null) {
+      map['remote_file_id'] = Variable<String>(remoteFileId);
+    }
+    if (!nullToAbsent || remoteRevision != null) {
+      map['remote_revision'] = Variable<DateTime>(remoteRevision);
+    }
+    map['is_uploaded'] = Variable<bool>(isUploaded);
+    return map;
+  }
+
+  SyncTombstonesCompanion toCompanion(bool nullToAbsent) {
+    return SyncTombstonesCompanion(
+      uuid: Value(uuid),
+      deletedAt: Value(deletedAt),
+      remoteFileId: remoteFileId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteFileId),
+      remoteRevision: remoteRevision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteRevision),
+      isUploaded: Value(isUploaded),
+    );
+  }
+
+  factory SyncTombstone.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncTombstone(
+      uuid: serializer.fromJson<String>(json['uuid']),
+      deletedAt: serializer.fromJson<DateTime>(json['deletedAt']),
+      remoteFileId: serializer.fromJson<String?>(json['remoteFileId']),
+      remoteRevision: serializer.fromJson<DateTime?>(json['remoteRevision']),
+      isUploaded: serializer.fromJson<bool>(json['isUploaded']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'uuid': serializer.toJson<String>(uuid),
+      'deletedAt': serializer.toJson<DateTime>(deletedAt),
+      'remoteFileId': serializer.toJson<String?>(remoteFileId),
+      'remoteRevision': serializer.toJson<DateTime?>(remoteRevision),
+      'isUploaded': serializer.toJson<bool>(isUploaded),
+    };
+  }
+
+  SyncTombstone copyWith({
+    String? uuid,
+    DateTime? deletedAt,
+    Value<String?> remoteFileId = const Value.absent(),
+    Value<DateTime?> remoteRevision = const Value.absent(),
+    bool? isUploaded,
+  }) => SyncTombstone(
+    uuid: uuid ?? this.uuid,
+    deletedAt: deletedAt ?? this.deletedAt,
+    remoteFileId: remoteFileId.present ? remoteFileId.value : this.remoteFileId,
+    remoteRevision: remoteRevision.present
+        ? remoteRevision.value
+        : this.remoteRevision,
+    isUploaded: isUploaded ?? this.isUploaded,
+  );
+  SyncTombstone copyWithCompanion(SyncTombstonesCompanion data) {
+    return SyncTombstone(
+      uuid: data.uuid.present ? data.uuid.value : this.uuid,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      remoteFileId: data.remoteFileId.present
+          ? data.remoteFileId.value
+          : this.remoteFileId,
+      remoteRevision: data.remoteRevision.present
+          ? data.remoteRevision.value
+          : this.remoteRevision,
+      isUploaded: data.isUploaded.present
+          ? data.isUploaded.value
+          : this.isUploaded,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncTombstone(')
+          ..write('uuid: $uuid, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('remoteFileId: $remoteFileId, ')
+          ..write('remoteRevision: $remoteRevision, ')
+          ..write('isUploaded: $isUploaded')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(uuid, deletedAt, remoteFileId, remoteRevision, isUploaded);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncTombstone &&
+          other.uuid == this.uuid &&
+          other.deletedAt == this.deletedAt &&
+          other.remoteFileId == this.remoteFileId &&
+          other.remoteRevision == this.remoteRevision &&
+          other.isUploaded == this.isUploaded);
+}
+
+class SyncTombstonesCompanion extends UpdateCompanion<SyncTombstone> {
+  final Value<String> uuid;
+  final Value<DateTime> deletedAt;
+  final Value<String?> remoteFileId;
+  final Value<DateTime?> remoteRevision;
+  final Value<bool> isUploaded;
+  final Value<int> rowid;
+  const SyncTombstonesCompanion({
+    this.uuid = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.remoteFileId = const Value.absent(),
+    this.remoteRevision = const Value.absent(),
+    this.isUploaded = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncTombstonesCompanion.insert({
+    required String uuid,
+    required DateTime deletedAt,
+    this.remoteFileId = const Value.absent(),
+    this.remoteRevision = const Value.absent(),
+    this.isUploaded = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : uuid = Value(uuid),
+       deletedAt = Value(deletedAt);
+  static Insertable<SyncTombstone> custom({
+    Expression<String>? uuid,
+    Expression<DateTime>? deletedAt,
+    Expression<String>? remoteFileId,
+    Expression<DateTime>? remoteRevision,
+    Expression<bool>? isUploaded,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (uuid != null) 'uuid': uuid,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (remoteFileId != null) 'remote_file_id': remoteFileId,
+      if (remoteRevision != null) 'remote_revision': remoteRevision,
+      if (isUploaded != null) 'is_uploaded': isUploaded,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncTombstonesCompanion copyWith({
+    Value<String>? uuid,
+    Value<DateTime>? deletedAt,
+    Value<String?>? remoteFileId,
+    Value<DateTime?>? remoteRevision,
+    Value<bool>? isUploaded,
+    Value<int>? rowid,
+  }) {
+    return SyncTombstonesCompanion(
+      uuid: uuid ?? this.uuid,
+      deletedAt: deletedAt ?? this.deletedAt,
+      remoteFileId: remoteFileId ?? this.remoteFileId,
+      remoteRevision: remoteRevision ?? this.remoteRevision,
+      isUploaded: isUploaded ?? this.isUploaded,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (uuid.present) {
+      map['uuid'] = Variable<String>(uuid.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (remoteFileId.present) {
+      map['remote_file_id'] = Variable<String>(remoteFileId.value);
+    }
+    if (remoteRevision.present) {
+      map['remote_revision'] = Variable<DateTime>(remoteRevision.value);
+    }
+    if (isUploaded.present) {
+      map['is_uploaded'] = Variable<bool>(isUploaded.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncTombstonesCompanion(')
+          ..write('uuid: $uuid, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('remoteFileId: $remoteFileId, ')
+          ..write('remoteRevision: $remoteRevision, ')
+          ..write('isUploaded: $isUploaded, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $MemosTable memos = $MemosTable(this);
   late final $BlocksTable blocks = $BlocksTable(this);
+  late final $SyncTombstonesTable syncTombstones = $SyncTombstonesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [memos, blocks];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    memos,
+    blocks,
+    syncTombstones,
+  ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
     WritePropagation(
@@ -1346,6 +1859,8 @@ typedef $$MemosTableCreateCompanionBuilder =
       required DateTime updatedAt,
       Value<bool> isSynced,
       Value<String?> remoteFileId,
+      Value<DateTime?> remoteUpdatedAt,
+      Value<DateTime?> remoteRevision,
       Value<int> colorIndex,
       Value<int> bgImageIndex,
       Value<String> imageAttachments,
@@ -1365,6 +1880,8 @@ typedef $$MemosTableUpdateCompanionBuilder =
       Value<DateTime> updatedAt,
       Value<bool> isSynced,
       Value<String?> remoteFileId,
+      Value<DateTime?> remoteUpdatedAt,
+      Value<DateTime?> remoteRevision,
       Value<int> colorIndex,
       Value<int> bgImageIndex,
       Value<String> imageAttachments,
@@ -1436,6 +1953,16 @@ class $$MemosTableFilterComposer extends Composer<_$AppDatabase, $MemosTable> {
 
   ColumnFilters<String> get remoteFileId => $composableBuilder(
     column: $table.remoteFileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get remoteUpdatedAt => $composableBuilder(
+    column: $table.remoteUpdatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get remoteRevision => $composableBuilder(
+    column: $table.remoteRevision,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1549,6 +2076,16 @@ class $$MemosTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get remoteUpdatedAt => $composableBuilder(
+    column: $table.remoteUpdatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get remoteRevision => $composableBuilder(
+    column: $table.remoteRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get colorIndex => $composableBuilder(
     column: $table.colorIndex,
     builder: (column) => ColumnOrderings(column),
@@ -1621,6 +2158,16 @@ class $$MemosTableAnnotationComposer
 
   GeneratedColumn<String> get remoteFileId => $composableBuilder(
     column: $table.remoteFileId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get remoteUpdatedAt => $composableBuilder(
+    column: $table.remoteUpdatedAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get remoteRevision => $composableBuilder(
+    column: $table.remoteRevision,
     builder: (column) => column,
   );
 
@@ -1723,6 +2270,8 @@ class $$MemosTableTableManager
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<bool> isSynced = const Value.absent(),
                 Value<String?> remoteFileId = const Value.absent(),
+                Value<DateTime?> remoteUpdatedAt = const Value.absent(),
+                Value<DateTime?> remoteRevision = const Value.absent(),
                 Value<int> colorIndex = const Value.absent(),
                 Value<int> bgImageIndex = const Value.absent(),
                 Value<String> imageAttachments = const Value.absent(),
@@ -1740,6 +2289,8 @@ class $$MemosTableTableManager
                 updatedAt: updatedAt,
                 isSynced: isSynced,
                 remoteFileId: remoteFileId,
+                remoteUpdatedAt: remoteUpdatedAt,
+                remoteRevision: remoteRevision,
                 colorIndex: colorIndex,
                 bgImageIndex: bgImageIndex,
                 imageAttachments: imageAttachments,
@@ -1759,6 +2310,8 @@ class $$MemosTableTableManager
                 required DateTime updatedAt,
                 Value<bool> isSynced = const Value.absent(),
                 Value<String?> remoteFileId = const Value.absent(),
+                Value<DateTime?> remoteUpdatedAt = const Value.absent(),
+                Value<DateTime?> remoteRevision = const Value.absent(),
                 Value<int> colorIndex = const Value.absent(),
                 Value<int> bgImageIndex = const Value.absent(),
                 Value<String> imageAttachments = const Value.absent(),
@@ -1776,6 +2329,8 @@ class $$MemosTableTableManager
                 updatedAt: updatedAt,
                 isSynced: isSynced,
                 remoteFileId: remoteFileId,
+                remoteUpdatedAt: remoteUpdatedAt,
+                remoteRevision: remoteRevision,
                 colorIndex: colorIndex,
                 bgImageIndex: bgImageIndex,
                 imageAttachments: imageAttachments,
@@ -2187,6 +2742,214 @@ typedef $$BlocksTableProcessedTableManager =
       Block,
       PrefetchHooks Function({bool memoUuid})
     >;
+typedef $$SyncTombstonesTableCreateCompanionBuilder =
+    SyncTombstonesCompanion Function({
+      required String uuid,
+      required DateTime deletedAt,
+      Value<String?> remoteFileId,
+      Value<DateTime?> remoteRevision,
+      Value<bool> isUploaded,
+      Value<int> rowid,
+    });
+typedef $$SyncTombstonesTableUpdateCompanionBuilder =
+    SyncTombstonesCompanion Function({
+      Value<String> uuid,
+      Value<DateTime> deletedAt,
+      Value<String?> remoteFileId,
+      Value<DateTime?> remoteRevision,
+      Value<bool> isUploaded,
+      Value<int> rowid,
+    });
+
+class $$SyncTombstonesTableFilterComposer
+    extends Composer<_$AppDatabase, $SyncTombstonesTable> {
+  $$SyncTombstonesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get remoteFileId => $composableBuilder(
+    column: $table.remoteFileId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get remoteRevision => $composableBuilder(
+    column: $table.remoteRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isUploaded => $composableBuilder(
+    column: $table.isUploaded,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SyncTombstonesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SyncTombstonesTable> {
+  $$SyncTombstonesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get uuid => $composableBuilder(
+    column: $table.uuid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remoteFileId => $composableBuilder(
+    column: $table.remoteFileId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get remoteRevision => $composableBuilder(
+    column: $table.remoteRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isUploaded => $composableBuilder(
+    column: $table.isUploaded,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SyncTombstonesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SyncTombstonesTable> {
+  $$SyncTombstonesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get uuid =>
+      $composableBuilder(column: $table.uuid, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get remoteFileId => $composableBuilder(
+    column: $table.remoteFileId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get remoteRevision => $composableBuilder(
+    column: $table.remoteRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get isUploaded => $composableBuilder(
+    column: $table.isUploaded,
+    builder: (column) => column,
+  );
+}
+
+class $$SyncTombstonesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SyncTombstonesTable,
+          SyncTombstone,
+          $$SyncTombstonesTableFilterComposer,
+          $$SyncTombstonesTableOrderingComposer,
+          $$SyncTombstonesTableAnnotationComposer,
+          $$SyncTombstonesTableCreateCompanionBuilder,
+          $$SyncTombstonesTableUpdateCompanionBuilder,
+          (
+            SyncTombstone,
+            BaseReferences<_$AppDatabase, $SyncTombstonesTable, SyncTombstone>,
+          ),
+          SyncTombstone,
+          PrefetchHooks Function()
+        > {
+  $$SyncTombstonesTableTableManager(
+    _$AppDatabase db,
+    $SyncTombstonesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncTombstonesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncTombstonesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncTombstonesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> uuid = const Value.absent(),
+                Value<DateTime> deletedAt = const Value.absent(),
+                Value<String?> remoteFileId = const Value.absent(),
+                Value<DateTime?> remoteRevision = const Value.absent(),
+                Value<bool> isUploaded = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncTombstonesCompanion(
+                uuid: uuid,
+                deletedAt: deletedAt,
+                remoteFileId: remoteFileId,
+                remoteRevision: remoteRevision,
+                isUploaded: isUploaded,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String uuid,
+                required DateTime deletedAt,
+                Value<String?> remoteFileId = const Value.absent(),
+                Value<DateTime?> remoteRevision = const Value.absent(),
+                Value<bool> isUploaded = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncTombstonesCompanion.insert(
+                uuid: uuid,
+                deletedAt: deletedAt,
+                remoteFileId: remoteFileId,
+                remoteRevision: remoteRevision,
+                isUploaded: isUploaded,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SyncTombstonesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SyncTombstonesTable,
+      SyncTombstone,
+      $$SyncTombstonesTableFilterComposer,
+      $$SyncTombstonesTableOrderingComposer,
+      $$SyncTombstonesTableAnnotationComposer,
+      $$SyncTombstonesTableCreateCompanionBuilder,
+      $$SyncTombstonesTableUpdateCompanionBuilder,
+      (
+        SyncTombstone,
+        BaseReferences<_$AppDatabase, $SyncTombstonesTable, SyncTombstone>,
+      ),
+      SyncTombstone,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2195,4 +2958,6 @@ class $AppDatabaseManager {
       $$MemosTableTableManager(_db, _db.memos);
   $$BlocksTableTableManager get blocks =>
       $$BlocksTableTableManager(_db, _db.blocks);
+  $$SyncTombstonesTableTableManager get syncTombstones =>
+      $$SyncTombstonesTableTableManager(_db, _db.syncTombstones);
 }

@@ -55,6 +55,21 @@ class EncryptionService {
     return '${base64UrlEncode(iv.bytes)}:${base64UrlEncode(encrypted.bytes)}';
   }
 
+  /// Whether [text] has the `iv:ciphertext` shape written by [encrypt].
+  ///
+  /// Lets the sync tell an encrypted remote copy from a plain one without
+  /// needing the passphrase. A JSON payload never has this shape: it starts
+  /// with `{` and contains more than one colon.
+  static bool looksEncrypted(String text) {
+    final parts = text.split(':');
+    if (parts.length != 2) return false;
+    try {
+      return base64Url.decode(parts[0]).length == 16;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Decrypts a string. Returns the original string if encryption is disabled.
   /// Returns null if decryption fails (wrong passphrase or corrupted data).
   String? tryDecrypt(String ciphertext) {

@@ -1,4 +1,0 @@
-Updated store description:
-- WebDAV is now listed as an alternative to kDrive, including self-hosted servers.
-- The app states that notes are never uploaded in plain text while encryption is enabled.
-- WebDAV settings: removed the hint under the server URL field.

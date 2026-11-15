@@ -48,7 +48,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get confirm => 'Confirmar';
 
   @override
-  String get copyToKdrive => 'Copiar para kDrive';
+  String get copyToKdrive => 'Copiar para o kDrive';
 
   @override
   String get create => 'Criar';
@@ -160,6 +160,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String syncCompletedWithCount(int count) {
     return 'Sincronização concluída: $count nota(s) sincronizada(s).';
   }
+
+  @override
+  String get syncUpToDate => 'Tudo em dia.';
 
   @override
   String get theme => 'Tema';
@@ -318,11 +321,38 @@ class AppLocalizationsPt extends AppLocalizations {
   String get syncSubtitle => 'Sincronize as suas notas com kDrive ou WebDAV';
 
   @override
+  String syncUndecryptableNotes(int count) {
+    return 'Há notas que não foi possível decifrar ($count). Verifica a passphrase nas definições de sincronização.';
+  }
+
+  @override
+  String get secretStoreUnavailable =>
+      'Não foi possível guardar a palavra-passe no gestor de segredos do sistema. Desbloqueia o gnome-keyring ou o KWallet e tenta outra vez.';
+
+  @override
+  String get syncBlockedNoPassphrase =>
+      'A sincronização está bloqueada: a cifra está ativa mas falta a passphrase. As notas novas ficam só neste dispositivo.';
+
+  @override
+  String get syncLog => 'Registo de sincronização';
+
+  @override
+  String get syncLogSubtitle =>
+      'Copia o que o sync decidiu (sem conteúdo das notas).';
+
+  @override
+  String get syncLogEmpty =>
+      'O registo ainda está vazio. Faz uma sincronização primeiro.';
+
+  @override
   String get reportBugSubtitle =>
       'Reporte um bug, sugira uma funcionalidade, ou deixe um comentário';
 
   @override
   String get sharedNote => 'Nota partilhada';
+
+  @override
+  String get copiedToClipboard => 'Copiado para a área de transferência';
 
   @override
   String get colorsTab => 'Cores (16)';
@@ -561,10 +591,35 @@ class AppLocalizationsPt extends AppLocalizations {
   String get kdriveNotConfigured => 'kDrive não está configurado';
 
   @override
-  String get copiedToKdrive => 'Copiado para kDrive';
+  String get copiedToKdrive => 'Copiado para o kDrive';
 
   @override
-  String get copyToKdriveFailed => 'Falha ao copiar para kDrive';
+  String get copyToKdriveFailed => 'Falha ao copiar para o kDrive';
+
+  @override
+  String get copyToCloud => 'Copiar para a nuvem';
+
+  @override
+  String get copyToWebdav => 'Copiar para o WebDAV';
+
+  @override
+  String get copiedToCloud => 'Copiado para a nuvem';
+
+  @override
+  String get copiedToWebdav => 'Copiado para o WebDAV';
+
+  @override
+  String get copyToCloudFailed => 'Falha ao copiar para a nuvem';
+
+  @override
+  String get copyToWebdavFailed => 'Falha ao copiar para o WebDAV';
+
+  @override
+  String get cloudNotConfigured =>
+      'Nenhum armazenamento remoto está configurado';
+
+  @override
+  String get docxNotEncrypted => 'O ficheiro .docx não é cifrado.';
 
   @override
   String get checkForUpdates => 'Verificar atualizações';

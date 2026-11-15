@@ -1,0 +1,8 @@
+kMemo now runs on Linux, with a portable AppImage.
+
+• Pull the note list down to sync.
+• Editing one note on two devices keeps both versions instead of losing one.
+• Deleting a note from the trash deletes it on every device, instead of coming back.
+• Colour, background and archive changes now reach the other device.
+• The app opens even when the system keyring is locked.
+• Settings copies a sync log when a note does not arrive.

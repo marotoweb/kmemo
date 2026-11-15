@@ -16,6 +16,25 @@ class DocxSection {
 /// relationships, document, styles and doc properties. All XML is encoded as
 /// UTF-8 bytes so accented characters are preserved.
 class DocxExportService {
+  /// Turns a note title into a file name that is safe for every backend.
+  ///
+  /// Remote folders are addressed by path, so a title containing `/` or `\`
+  /// would silently create a subfolder (or escape the notes folder on a
+  /// WebDAV server). Characters that are invalid in a file name are replaced
+  /// by `-`, runs of separators collapse, and an empty result falls back to
+  /// "kMemo".
+  static String safeFileName(String title, {String extension = '.docx'}) {
+    var name = title
+        .replaceAll(RegExp(r'[/\\:*?"<>|]'), '-')
+        .replaceAll(RegExp(r'[\x00-\x1F\x7F]'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim()
+        .replaceAll(RegExp(r'^[.\s]+|[.\s]+$'), '');
+    if (name.isEmpty) name = 'kMemo';
+    if (name.length > 120) name = name.substring(0, 120).trimRight();
+    return '$name$extension';
+  }
+
   static List<int> buildDocx({required List<DocxSection> sections}) {
     final archive = Archive();
 

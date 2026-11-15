@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 import '../../services/docx_export_service.dart';
 import '../../database/database.dart';
@@ -14,10 +13,11 @@ import '../../models/background_images.dart';
 import '../../models/note_palette.dart';
 import '../../providers/memo_provider.dart';
 import '../../providers/theme_provider.dart';
-import '../../services/kdrive_storage.dart';
 import '../../services/link_preview_service.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
+import '../cloud_export.dart';
 import '../widgets/app_snackbar.dart';
+import '../share_actions.dart';
 import 'sync_settings_screen.dart';
 
 /// Captures editor state to support undo/redo.
@@ -973,8 +973,13 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
             ),
             ListTile(
               leading: Icon(Icons.cloud_upload_outlined),
-              title: Text(AppLocalizations.of(context)!.copyToKdrive),
-              onTap: () => Navigator.pop(ctx, 'copyToKdrive'),
+              title: Text(
+                CloudExportLabels.of(
+                  AppLocalizations.of(context)!,
+                  provider.storage,
+                ).action,
+              ),
+              onTap: () => Navigator.pop(ctx, 'copyToCloud'),
             ),
             ListTile(
               leading: Icon(Icons.access_time_outlined),
@@ -1028,85 +1033,90 @@ ${_titleController.text}
 
 ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listControllers.indexOf(c)] ? '☑' : '☐'} ${c.text}').join('\n') : _textNoteController.text}
 ''';
-      await SharePlus.instance.share(
-        ShareParams(
-          text: textToShare.trim(),
-          title: _titleController.text.isNotEmpty ? _titleController.text : AppLocalizations.of(context)!.note,
-        ),
+      final shared = await shareTextOrCopy(
+        text: textToShare.trim(),
+        title: _titleController.text.isNotEmpty
+            ? _titleController.text
+            : AppLocalizations.of(context)!.note,
       );
+      if (!shared && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          buildAppSnackBar(
+            context,
+            message: AppLocalizations.of(context)!.copiedToClipboard,
+          ),
+        );
+      }
     } else if (action == 'copy') {
       await provider.duplicateMultiple([widget.memo.uuid]);
       // ignore: use_build_context_synchronously
       final navigator = Navigator.of(context);
                  await _persistData();
                  if (mounted) navigator.pop();
-    } else if (action == 'copyToKdrive') {
-      await _copyToKDrive();
+    } else if (action == 'copyToCloud') {
+      await _exportToRemoteStorage();
     }
   }
 
-  /// Generates a .docx file from the note content and uploads it to kDrive.
-  Future<void> _copyToKDrive() async {
-    final storage = context.read<KDriveStorage>();
-    if (!storage.isConfigured) {
-      if (mounted) {
-        final navigator = Navigator.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          buildAppSnackBar(
-            context,
-            message: AppLocalizations.of(context)!.kdriveNotConfigured,
-            actionLabel: AppLocalizations.of(context)!.settings,
-            onAction: () => navigator.push(
-              MaterialPageRoute(builder: (_) => SyncSettingsScreen()),
-            ),
+  /// Generates a .docx file from the note content and uploads it to the remote
+  /// storage that sync is configured with (kDrive or WebDAV).
+  Future<void> _exportToRemoteStorage() async {
+    final provider = context.read<MemoProvider>();
+    final l10n = AppLocalizations.of(context)!;
+    final storage = provider.storage;
+    final labels = CloudExportLabels.of(l10n, storage);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    if (storage == null || !storage.isConfigured) {
+      messenger.showSnackBar(
+        buildAppSnackBar(
+          context,
+          message: labels.notConfigured,
+          actionLabel: l10n.settings,
+          onAction: () => navigator.push(
+            MaterialPageRoute(builder: (_) => SyncSettingsScreen()),
           ),
-        );
-      }
+        ),
+      );
       return;
     }
 
-    final blocks = await context.read<MemoProvider>().loadBlocks(widget.memo.uuid);
+    final blocks = await provider.loadBlocks(widget.memo.uuid);
     if (!mounted) return;
     final textContent = blocks
         .map((b) => b.content['text']?.toString() ?? '')
         .join('\n');
-    final docTitle = _titleController.text.isNotEmpty
-        ? _titleController.text
-        : AppLocalizations.of(context)!.note;
+    final docTitle = _titleController.text.trim().isNotEmpty
+        ? _titleController.text.trim()
+        : l10n.note;
 
     final docxBytes = DocxExportService.buildDocx(
       sections: [DocxSection(title: docTitle, body: textContent)],
     );
     debugPrint('[DocxExport] Generated docx size: ${docxBytes.length} bytes');
-    debugPrint('[DocxExport] Text content length: ${textContent.length} chars');
-    debugPrint('[DocxExport] Title: ${_titleController.text}');
 
-    final fileName = '$docTitle.docx';
+    final fileName = DocxExportService.safeFileName(docTitle);
 
     try {
-      await storage.uploadMemoBytes(
-        fileName: fileName,
-        bytes: docxBytes,
+      await storage.uploadFile(fileName: fileName, bytes: docxBytes);
+      if (!mounted) return;
+      messenger.showSnackBar(
+        buildAppSnackBar(
+          context,
+          message: labels.successMessage(l10n, storage),
+          duration: const Duration(seconds: 5),
+        ),
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          buildAppSnackBar(
-            context,
-            message: AppLocalizations.of(context)!.copiedToKdrive,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          buildAppSnackBar(
-            context,
-            message: '${AppLocalizations.of(context)!.copyToKdriveFailed}: $e',
-            duration: Duration(seconds: 5),
-          ),
-        );
-      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        buildAppSnackBar(
+          context,
+          message: '${labels.failure}: $e',
+          duration: const Duration(seconds: 5),
+        ),
+      );
     }
   }
 
@@ -1154,6 +1164,12 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
         : Colors.white.withValues(alpha: 0.9);
     final autoWrap = context.watch<ThemeProvider>().autoWrap;
     final strikethroughChecked = context.watch<ThemeProvider>().strikethroughChecked;
+
+    // Keep a comfortable line length on wide windows: a note body stretched
+    // across a 1100 px desktop window is hard to read. Phones are narrower
+    // than the target width, so nothing changes there.
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final sideInset = screenWidth > 900 ? (screenWidth - 860) / 2 : 0.0;
 
     return Container(
       decoration: noteBackgroundDecoration,
@@ -1261,7 +1277,10 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
             if (_linksValues.isNotEmpty || _audioAttachments.isNotEmpty)
               _buildMetadataWidgets(),
             Padding(
-              padding: EdgeInsets.only(left: 16.0, right: 4.0),
+              padding: EdgeInsets.only(
+                left: 16.0 + sideInset,
+                right: 4.0 + sideInset,
+              ),
               child: Row(
                 children: [
                   Expanded(
@@ -1301,7 +1320,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
             ),
             Expanded(
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                padding: EdgeInsets.symmetric(horizontal: 16.0 + sideInset),
                 child: _isChecklistMode
                     ? _buildChecklistLayout(textColor, hintColor, isDarkMode, autoWrap, strikethroughChecked)
                     : _buildTextLayout(
