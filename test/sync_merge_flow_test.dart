@@ -536,6 +536,62 @@ void main() {
     expect(rows!.length, 2);
   });
 
+  testWidgets('an edit made while a cycle records the upload makes no copy', (
+    tester,
+  ) async {
+    final h = await _start(tester);
+    late String uuid;
+
+    await tester.runAsync(() async {
+      final memo = await h.provider.createNewMemo();
+      uuid = memo.uuid;
+      await h.provider.performSync(force: true);
+    });
+
+    await tester.runAsync(() async {
+      // The editor loads the note (this snapshot is what a checklist saves on
+      // every tap).
+      final snapshot = (await _stored(h.db, uuid))!;
+
+      // Meanwhile the sync finishes an upload and records the payload it wrote:
+      // a new remote file and its timestamp in the bookkeeping.
+      final uploadedAt = DateTime.utc(2026, 1, 2, 10);
+      h.remote.writeAsOtherDevice(
+        snapshot.copyWith(updatedAt: uploadedAt),
+        _blocks(uuid, 'do servidor'),
+      );
+      await (h.db.update(h.db.memos)..where((t) => t.uuid.equals(uuid))).write(
+        MemosCompanion(remoteUpdatedAt: Value(uploadedAt)),
+      );
+
+      // The editor then saves its older snapshot, as a checklist tap does.
+      await h.provider.saveMemo(
+        snapshot.copyWith(title: 'Lista'),
+        _blocks(uuid, 'editado'),
+      );
+    });
+
+    // The edit must not roll the bookkeeping back. Before the fix the editor
+    // wrote its snapshot's value and the next cycle read the remote payload as
+    // a different version while the note was still dirty, took both sides as
+    // changed and saved a conflict copy of our own upload.
+    final afterEdit = await tester.runAsync(() => _stored(h.db, uuid));
+    // Drift hands the value back as a local DateTime, so compare the instant.
+    expect(
+      afterEdit!.remoteUpdatedAt!.millisecondsSinceEpoch,
+      DateTime.utc(2026, 1, 2, 10).millisecondsSinceEpoch,
+    );
+    expect(afterEdit.isSynced, isFalse);
+
+    await tester.runAsync(() => h.provider.performSync(force: true));
+
+    final stored = await tester.runAsync(() => _stored(h.db, uuid));
+    expect(stored!.title, 'Lista');
+    expect(stored.isSynced, isTrue);
+    final all = await tester.runAsync(() => h.db.select(h.db.memos).get());
+    expect(all!.length, 1, reason: 'no conflict copy of our own upload');
+  });
+
   testWidgets('colour, background and archive changes reach the server', (
     tester,
   ) async {

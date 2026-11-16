@@ -321,43 +321,20 @@ class MemoProvider extends ChangeNotifier {
   }
 
   Future<List<Block>> saveMemo(Memo memo, List<Block> blocks) async {
-    // Local changes mark the note as not synced (needs upload)
+    // Local changes mark the note as not synced (needs upload). The remote
+    // bookkeeping is deliberately not written here: `saveMemoWithBlocks` keeps
+    // the stored values, so an edit can never roll back what a sync cycle
+    // recorded while the editor was open (that produced conflict copies of our
+    // own uploads).
     final List<Block> updatedBlocksList = List.from(blocks);
 
     await _db.transaction(() async {
-      // The editor can hold a snapshot taken before the first upload finished
-      // (a note created and edited while it was still syncing). Never drop the
-      // remote bookkeeping already stored locally: without the id the remote
-      // .json can no longer be overwritten by id or deleted when the note is
-      // purged, and without the timestamps the next sync would mistake the
-      // remote copy for an unknown one.
-      var remoteFileId = memo.remoteFileId;
-      var remoteUpdatedAt = memo.remoteUpdatedAt;
-      var remoteRevision = memo.remoteRevision;
-      if (remoteFileId == null ||
-          remoteFileId.isEmpty ||
-          remoteUpdatedAt == null ||
-          remoteRevision == null) {
-        final stored = await (_db.select(
-          _db.memos,
-        )..where((t) => t.uuid.equals(memo.uuid))).getSingleOrNull();
-        if (remoteFileId == null || remoteFileId.isEmpty) {
-          remoteFileId = stored?.remoteFileId;
-        }
-        remoteUpdatedAt ??= stored?.remoteUpdatedAt;
-        remoteRevision ??= stored?.remoteRevision;
-      }
       final updatedMemo = memo.copyWith(
         updatedAt: DateTime.now().toUtc(),
         isSynced: false,
-        remoteFileId: Value(remoteFileId),
-        remoteUpdatedAt: Value(remoteUpdatedAt),
-        remoteRevision: Value(remoteRevision),
       );
 
-      await _db
-          .into(_db.memos)
-          .insert(updatedMemo, mode: InsertMode.insertOrReplace);
+      await _db.saveMemoRow(updatedMemo);
 
       final existingBlocks = await (_db.select(
         _db.blocks,
@@ -1072,7 +1049,12 @@ class MemoProvider extends ChangeNotifier {
       remoteUpdatedAt: Value(payload.memo.updatedAt),
       remoteRevision: Value(remote.updatedAt),
     );
-    await _db.saveMemoWithBlocks(patched, payload.blocks, replaceBlocks: true);
+    await _db.saveMemoWithBlocks(
+      patched,
+      payload.blocks,
+      replaceBlocks: true,
+      writeSyncBookkeeping: true,
+    );
     return needsReencode ? patched : null;
   }
 

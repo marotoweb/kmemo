@@ -207,13 +207,28 @@ class AppDatabase extends _$AppDatabase {
   /// autoincrement `id`, so inserting them next to the stored rows duplicates
   /// every block (the note text appeared twice after a download). The payload
   /// is the whole note, so the stored block set is replaced instead.
+  /// [writeSyncBookkeeping] must be true only when the caller is the sync
+  /// itself (a download, or a note written from a remote payload). A local edit
+  /// owns the note's content, never the remote bookkeeping: writing the whole
+  /// row rolled `remoteFileId`, `remoteUpdatedAt` and `remoteRevision` back to
+  /// the snapshot the editor had loaded. When a sync cycle finished the upload
+  /// in between, it had just recorded the timestamp of the file it wrote, and
+  /// the editor's write restored an older one. The next cycle then compared the
+  /// remote payload with that older timestamp, saw both sides as changed and
+  /// saved a conflict copy of our own upload. Editing a checklist, which saves
+  /// on every tap, produced several copies in a row.
   Future<void> saveMemoWithBlocks(
     Memo memo,
     List<Block> memoBlocks, {
     bool replaceBlocks = false,
+    bool writeSyncBookkeeping = false,
   }) async {
     await transaction(() async {
-      await into(memos).insert(memo, mode: InsertMode.insertOrReplace);
+      if (writeSyncBookkeeping) {
+        await into(memos).insert(memo, mode: InsertMode.insertOrReplace);
+      } else {
+        await saveMemoRow(memo);
+      }
       if (replaceBlocks) {
         await (delete(blocks)..where((t) => t.memoUuid.equals(memo.uuid))).go();
       }
@@ -235,6 +250,35 @@ class AppDatabase extends _$AppDatabase {
         }
       }
     });
+  }
+
+  /// Writes the columns a local edit owns, leaving the remote bookkeeping
+  /// (`remoteFileId`, `remoteUpdatedAt`, `remoteRevision`) exactly as stored.
+  ///
+  /// A row is updated when it exists; only a note that is not stored yet is
+  /// inserted whole.
+  Future<void> saveMemoRow(Memo memo) async {
+    final updated =
+        await (update(memos)..where((t) => t.uuid.equals(memo.uuid))).write(
+          MemosCompanion(
+            title: Value(memo.title),
+            createdAt: Value(memo.createdAt),
+            updatedAt: Value(memo.updatedAt),
+            isSynced: Value(memo.isSynced),
+            colorIndex: Value(memo.colorIndex),
+            bgImageIndex: Value(memo.bgImageIndex),
+            imageAttachments: Value(memo.imageAttachments),
+            audioAttachments: Value(memo.audioAttachments),
+            linkAttachments: Value(memo.linkAttachments),
+            isArchived: Value(memo.isArchived),
+            isDeleted: Value(memo.isDeleted),
+            isPinned: Value(memo.isPinned),
+            sortIndex: Value(memo.sortIndex),
+          ),
+        );
+    if (updated == 0) {
+      await into(memos).insert(memo, mode: InsertMode.insertOrReplace);
+    }
   }
 
   /// Archives or unarchives a note.

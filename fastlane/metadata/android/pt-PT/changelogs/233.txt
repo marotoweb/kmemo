@@ -1,7 +1,0 @@
-A sincronização entre dispositivos passa a ser segura.
-
-• Puxa a lista de notas para baixo para sincronizar.
-• Editar uma nota em dois dispositivos guarda as duas versões em vez de perder uma.
-• Apagar uma nota da lixeira apaga-a em todos os dispositivos, em vez de voltar.
-• Mudanças de cor, fundo e arquivo chegam agora ao outro dispositivo.
-• As definições copiam um registo do sync quando uma nota não chega.

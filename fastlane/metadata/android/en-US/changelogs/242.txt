@@ -1,0 +1,3 @@
+Sync fixes.
+
+• Editing a checklist no longer creates "(Conflict)" copies of your own note, one per tap while a sync was running.
