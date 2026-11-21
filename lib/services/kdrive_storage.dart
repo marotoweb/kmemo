@@ -1045,15 +1045,17 @@ class KDriveStorage extends StorageRepository {
       if (!name.endsWith('.json')) continue;
       final id = file['id']?.toString() ?? '';
       if (id.isEmpty) continue;
-      final updatedAtMs = file['updated_at'] as int? ?? 0;
+      final revisionSeconds = _fileRevisionSeconds(file);
       result.add(
         RemoteMemoInfo(
           remoteFileId: id,
           name: name,
-          updatedAt: DateTime.fromMillisecondsSinceEpoch(
-            updatedAtMs,
-            isUtc: true,
-          ),
+          updatedAt: revisionSeconds == null
+              ? DateTime.fromMillisecondsSinceEpoch(0, isUtc: true)
+              : DateTime.fromMillisecondsSinceEpoch(
+                  revisionSeconds * 1000,
+                  isUtc: true,
+                ),
         ),
       );
     }
@@ -1061,6 +1063,42 @@ class KDriveStorage extends StorageRepository {
       '[KDriveStorage] listRemoteMemos(): ${result.length} notes found in folder $folderId',
     );
     return result;
+  }
+
+  /// Seconds since the epoch at which the content of [file] last changed.
+  ///
+  /// kDrive reports several timestamps per file, and only `revised_at` changes
+  /// when another device uploads a new version of the note. `updated_at` and
+  /// `last_modified_at` follow the file metadata, so using them as the
+  /// revision made every device keep the value it recorded: an edit uploaded
+  /// by the other device was never inspected and never downloaded.
+  ///
+  /// The API documents all of them as integer seconds. A string or a
+  /// milliseconds value is accepted anyway, so a field that changes format
+  /// cannot break the listing again (it used to throw for a string).
+  static int? _fileRevisionSeconds(Map<String, dynamic> file) {
+    for (final key in const [
+      'revised_at',
+      'updated_at',
+      'last_modified_at',
+      'added_at',
+    ]) {
+      final raw = file[key];
+      int? value;
+      if (raw is num) {
+        value = raw.toInt();
+      } else if (raw is String) {
+        value = int.tryParse(raw);
+        if (value == null) {
+          final iso = DateTime.tryParse(raw);
+          if (iso != null) value = iso.millisecondsSinceEpoch ~/ 1000;
+        }
+      }
+      if (value == null) continue;
+      // Anything past year 5138 is a milliseconds value, not seconds.
+      return value > 100000000000 ? value ~/ 1000 : value;
+    }
+    return null;
   }
 
   @override

@@ -321,6 +321,29 @@ class AppLocalizationsFr extends AppLocalizations {
   String get syncSubtitle => 'Synchronisez vos notes avec kDrive ou WebDAV';
 
   @override
+  String remoteOverwritePending(int count) {
+    return '$count note(s) du dossier de destination n\'ont jamais été lues par cet appareil.';
+  }
+
+  @override
+  String get remoteOverwriteTitle =>
+      'Remplacer les notes du dossier de destination ?';
+
+  @override
+  String remoteOverwriteBody(int count) {
+    return 'Cet appareil n\'a jamais lu $count note(s) du dossier de destination. Les remplacer envoie la version de cet appareil par-dessus ces copies ; sur kDrive, les précédentes restent dans l\'historique du fichier. Si les copies distantes sont chiffrées, kMemo demande d\'abord la phrase secrète et continue d\'envoyer chiffré.';
+  }
+
+  @override
+  String get remoteOverwriteConfirm => 'Remplacer';
+
+  @override
+  String get syncPhaseReading => 'Lecture des notes';
+
+  @override
+  String get syncPhaseUploading => 'Envoi des notes';
+
+  @override
   String syncUndecryptableNotes(int count) {
     return 'Certaines notes n\'ont pas pu être déchiffrées ($count). Vérifie la phrase secrète dans les réglages de synchronisation.';
   }

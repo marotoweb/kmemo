@@ -107,12 +107,32 @@
   "dark": "Escuro",
   "auto": "Auto",
   "syncSubtitle": "Sincronize as suas notas com kDrive ou WebDAV",
+  "remoteOverwritePending": "Há {count} nota(s) na pasta de destino que este dispositivo nunca leu.",
+  "remoteOverwriteTitle": "Substituir as notas da pasta de destino?",
+  "remoteOverwriteBody": "Este dispositivo nunca leu {count} nota(s) na pasta de destino. Substituí-las envia a versão deste dispositivo por cima dessas cópias; no kDrive as versões anteriores ficam no histórico do ficheiro. Se as cópias remotas estiverem encriptadas, o kMemo pede primeiro a passphrase e continua a enviar encriptado.",
+  "remoteOverwriteConfirm": "Substituir",
+  "syncPhaseReading": "A ler as notas",
+  "syncPhaseUploading": "A enviar as notas",
   "syncUndecryptableNotes": "Há notas que não foi possível decifrar ({count}). Verifica a passphrase nas definições de sincronização.",
   "secretStoreUnavailable": "Não foi possível guardar a palavra-passe no gestor de segredos do sistema. Desbloqueia o gnome-keyring ou o KWallet e tenta outra vez.",
   "syncBlockedNoPassphrase": "A sincronização está bloqueada: a cifra está ativa mas falta a passphrase. As notas novas ficam só neste dispositivo.",
   "syncLog": "Registo de sincronização",
   "syncLogSubtitle": "Copia o que o sync decidiu (sem conteúdo das notas).",
   "syncLogEmpty": "O registo ainda está vazio. Faz uma sincronização primeiro.",
+  "@remoteOverwritePending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@remoteOverwriteBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "@syncUndecryptableNotes": {
     "placeholders": {
       "count": {

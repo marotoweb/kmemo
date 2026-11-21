@@ -65,6 +65,18 @@ class MemoProvider extends ChangeNotifier {
   int _undecryptableNotes = 0;
   int get undecryptableNotes => _undecryptableNotes;
 
+  /// Notes whose remote copy exists but was never read by this device (a
+  /// backend or folder switch, or a database restored from a backup).
+  ///
+  /// Overwriting them with the local version is destructive, so the sync waits
+  /// for the user to confirm instead of doing it silently.
+  int _overwritePending = 0;
+  int get overwritePending => _overwritePending;
+
+  /// Phase of the cycle that is running, so the progress card can name it.
+  SyncPhase _syncPhase = SyncPhase.idle;
+  SyncPhase get syncPhase => _syncPhase;
+
   MemoProvider(this._db, {StorageRepository? storage}) : _storage = storage {
     _loadSortPreferences();
     _listenToMemos();
@@ -453,8 +465,12 @@ class MemoProvider extends ChangeNotifier {
   /// a slow sync was running produced several copies of the same version).
   /// A manual call (`force`) is never dropped: it waits for the running cycle
   /// and then runs on its own.
+  ///
+  /// [overwriteRemote] is set only after the user confirms replacing remote
+  /// copies this device has never read (see [overwritePending]).
   Future<int> performSync({
     bool force = false,
+    bool overwriteRemote = false,
     void Function(int done, int total)? onProgress,
     Future<String?> Function(String remoteFileId)? requestPassphrase,
     Future<bool> Function(String remoteFileId)? confirmDeleteRemote,
@@ -477,6 +493,7 @@ class MemoProvider extends ChangeNotifier {
       return running.then(
         (_) => performSync(
           force: true,
+          overwriteRemote: overwriteRemote,
           onProgress: onProgress,
           requestPassphrase: requestPassphrase,
           confirmDeleteRemote: confirmDeleteRemote,
@@ -486,6 +503,7 @@ class MemoProvider extends ChangeNotifier {
     late final Future<int> cycle;
     cycle = _performSyncOnce(
       force: force,
+      overwriteRemote: overwriteRemote,
       onProgress: onProgress,
       requestPassphrase: requestPassphrase,
       confirmDeleteRemote: confirmDeleteRemote,
@@ -498,6 +516,7 @@ class MemoProvider extends ChangeNotifier {
 
   Future<int> _performSyncOnce({
     bool force = false,
+    bool overwriteRemote = false,
     void Function(int done, int total)? onProgress,
     Future<String?> Function(String remoteFileId)? requestPassphrase,
     Future<bool> Function(String remoteFileId)? confirmDeleteRemote,
@@ -626,6 +645,10 @@ class MemoProvider extends ChangeNotifier {
 
     final toUpload = <Memo>[];
     final toInspect = <Memo>[];
+    // Remote copies this device has never read. They are only replaced after
+    // the user confirms, because the upload destroys content it cannot show.
+    final toOverwrite = <Memo>[];
+    final pendingOverwrite = <Memo>[];
     for (final memo in localMemos) {
       final remote = remoteByName[memo.uuid];
       if (remote == null) {
@@ -635,11 +658,18 @@ class MemoProvider extends ChangeNotifier {
         continue;
       }
       if (memo.remoteUpdatedAt == null) {
-        // Unknown remote state (a newly selected backend, or a database that
-        // predates the bookkeeping): the local library wins and replaces the
-        // stale remote copy. No conflict copy is created, because the remote
-        // side cannot be shown to be newer.
-        toUpload.add(memo);
+        // Unknown remote state (a newly selected backend or folder, or a
+        // database restored from a backup). The remote copy holds content
+        // this device has never read, so replacing it would destroy it: the
+        // note waits for the user, and only an explicit confirmation
+        // (`overwriteRemote`) uploads it. Whichever way it goes, the remote
+        // payload is read first, so an encrypted folder still asks for the
+        // passphrase and the replacement is written encrypted.
+        if (overwriteRemote) {
+          toOverwrite.add(memo);
+        } else {
+          pendingOverwrite.add(memo);
+        }
         continue;
       }
       if (memo.remoteRevision != null &&
@@ -654,11 +684,12 @@ class MemoProvider extends ChangeNotifier {
       toInspect.add(memo);
     }
 
-    final total =
+    var total =
         toUpload.length +
         toInspect.length +
         remoteOnly.length +
-        toPublish.length;
+        toPublish.length +
+        toOverwrite.length;
     var processed = 0;
     void reportProgress() {
       onProgress?.call(processed > total ? total : processed, total);
@@ -671,6 +702,7 @@ class MemoProvider extends ChangeNotifier {
     // Downloads run before uploads so a conflict copy is uploaded in the
     // same cycle.
     // ---------------------------------------------------------------
+    _syncPhase = SyncPhase.reading;
     final session = _PassphraseSession(await storage.getEncryptionPassphrase());
     final justUploaded = <String>{};
     final publishedTombstones = <String>{};
@@ -855,13 +887,61 @@ class MemoProvider extends ChangeNotifier {
       }
     }
 
+    // The user confirmed replacing remote copies this device has never read.
+    // Read them first: that is how an encrypted folder is detected and the
+    // passphrase adopted before anything is written, and a copy that cannot be
+    // decrypted is never overwritten.
+    var replaced = 0;
+    for (final memo in toOverwrite) {
+      final remote = remoteByName[memo.uuid]!;
+      processed++;
+      reportProgress();
+      try {
+        final payload = await _downloadRemoteNote(
+          storage,
+          remote,
+          session: session,
+          requestPassphrase: requestPassphrase,
+          confirmDeleteRemote: confirmDeleteRemote,
+          onDecryptionFailure: () {
+            decryptionFailures++;
+            debugPrint(
+              '[MemoProvider] Overwrite: failed to decrypt ${memo.uuid} '
+              '(${remote.remoteFileId})',
+            );
+          },
+        );
+        if (payload == null) {
+          // Unreadable: keep both sides as they are instead of destroying a
+          // copy this device could not even read.
+          continue;
+        }
+        toUpload.add(memo);
+        replaced++;
+        _syncLog(
+          '[MemoProvider] Overwrite confirmed: ${memo.uuid} replaces '
+          '${remote.remoteFileId}',
+        );
+      } catch (e) {
+        _syncLog('[MemoProvider] error reading the remote copy of ${memo.uuid}: $e');
+      }
+    }
+
     // ---------------------------------------------------------------
     // PUSH: upload local changes and the conflict copies.
     // ---------------------------------------------------------------
+    // The push gets its own phase and its own total: reusing the read progress
+    // made the bar jump from 12 / 12 to 12 / 24 and then sit at 100% while the
+    // uploads ran. The reads above can add notes to the push (the confirmed
+    // overwrite, a download that has to be re-encoded, a conflict copy).
+    _syncPhase = SyncPhase.uploading;
+    processed = 0;
+    total = toUpload.length;
+    reportProgress();
     _syncLog(
       '[MemoProvider] plan: ${toUpload.length} upload, '
       '${toInspect.length} inspect, ${remoteOnly.length} remote-only, '
-      '${toPublish.length} tombstones',
+      '${toPublish.length} tombstones, ${toOverwrite.length} overwrite',
     );
     for (final memo in toUpload) {
       processed++;
@@ -945,7 +1025,17 @@ class MemoProvider extends ChangeNotifier {
       _undecryptableNotes = decryptionFailures;
       notifyListeners();
     }
+    // Notes still waiting for a decision: the ones this cycle left alone plus
+    // the ones the user confirmed but could not be read (they stay as they are
+    // and are asked again).
+    final stillPending =
+        pendingOverwrite.length + (toOverwrite.length - replaced);
+    if (_overwritePending != stillPending) {
+      _overwritePending = stillPending;
+      notifyListeners();
+    }
 
+    _syncPhase = SyncPhase.idle;
     onProgress?.call(total, total);
     storage.markSyncedNow();
     lastSyncNoteCount = touched.length;
@@ -1070,6 +1160,10 @@ class MemoProvider extends ChangeNotifier {
   ) async {
     if (storage.encryptionEnabled) return;
     final stored = await storage.adoptEncryption(passphrase);
+    // The folder is encrypted from now on: mark the tombstones for rewriting
+    // too, so one written while the backend had no passphrase is replaced by
+    // an encrypted copy on the next cycle (same rule as the settings change).
+    await _db.customStatement('UPDATE sync_tombstones SET is_uploaded = 0');
     _syncLog(
       '[MemoProvider] encryption adopted: the remote notes are encrypted '
       '(passphrase ${stored ? 'stored' : 'NOT stored'})',
@@ -1271,6 +1365,14 @@ class MemoProvider extends ChangeNotifier {
       await _db.customStatement(
         'UPDATE memos SET is_synced = 0, remote_file_id = NULL, '
         'remote_updated_at = NULL, remote_revision = NULL',
+      );
+      // The tombstones belong to the previous backend/folder as well: clearing
+      // the "published" flag makes the next cycle write them to the new
+      // destination, encrypted when the new backend encrypts. Without this a
+      // tombstone published by a backend configured without a passphrase stays
+      // in plain text inside an encrypted folder.
+      await _db.customStatement(
+        'UPDATE sync_tombstones SET is_uploaded = 0',
       );
     });
     // Reload memo list from DB to ensure we have the latest data
@@ -1474,3 +1576,6 @@ class _PassphraseSession {
 
   _PassphraseSession(this.generalPass);
 }
+
+/// Which part of a cycle is running, for the progress card.
+enum SyncPhase { idle, reading, uploading }

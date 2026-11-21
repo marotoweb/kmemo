@@ -9,6 +9,8 @@ import '../../services/kdrive_storage.dart';
 import '../../services/secret_store.dart';
 import '../../services/storage_repository.dart';
 import '../../services/webdav_storage.dart';
+import '../widgets/sync_prompts.dart';
+import '../widgets/sync_progress_bar.dart';
 import '../widgets/app_snackbar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
@@ -230,6 +232,12 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         await db.customStatement(
           'UPDATE memos SET is_synced = 0, remote_file_id = NULL',
         );
+        // Tombstones are encrypted like the notes: rewrite them so a folder
+        // configured with encryption does not keep one written in plain text
+        // by an earlier configuration.
+        await db.customStatement(
+          'UPDATE sync_tombstones SET is_uploaded = 0',
+        );
         debugPrint(
           '[SyncSettings] _saveCurrentConfig(): all notes marked as not synced and remoteFileId cleared',
         );
@@ -321,6 +329,12 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
       if (!mounted) return;
       final decryptionFailures = await _runSyncWithPrompts(force: true);
       if (mounted) {
+        // The cycle can adopt the encryption of the folder (it asks for the
+        // passphrase when a downloaded note is encrypted), so the switch has
+        // to follow what the backend now holds instead of the value read when
+        // the page opened. Same code path for kDrive and WebDAV.
+        await _loadPersistedValues();
+        if (!mounted) return;
         setState(() => _isSyncing = false);
         if (decryptionFailures > 0) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -440,38 +454,10 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           _syncTotal = total;
         });
       },
-      requestPassphrase: (remoteFileId) async {
-        // Prompt the user for a passphrase for this specific note.
-        // The dialog owns its controller and disposes it when it leaves the
-        // tree, avoiding the "_dependents.isEmpty" assertion that happened
-        // when the controller was disposed right after showDialog returned.
-        return await showDialog<String?>(
-          context: context,
-          builder: (ctx) => const _RequestPassphraseDialog(),
-        );
-      },
-      confirmDeleteRemote: (remoteFileId) async {
-        final delete = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(AppLocalizations.of(context)!.couldNotDecrypt),
-            content: Text(
-              AppLocalizations.of(context)!.afterTwoAttempts,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(AppLocalizations.of(context)!.ignore),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(AppLocalizations.of(context)!.delete),
-              ),
-            ],
-          ),
-        );
-        return delete == true;
-      },
+      // Shared with the home screen, which can also run a cycle (pull to
+      // sync, or the confirmation to replace remote copies).
+      requestPassphrase: (_) async => requestSyncPassphrase(context),
+      confirmDeleteRemote: (_) async => confirmDeleteRemoteNote(context),
     );
   }
 
@@ -1018,39 +1004,19 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.syncTitle), elevation: 0),
       bottomNavigationBar: (_isSyncing || _isClearingVersions)
-          ? SafeArea(
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Card(
-                  margin: EdgeInsets.zero,
-                  child: Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          _isClearingVersions
-                              ? AppLocalizations.of(context)!.clearingVersions
-                              : AppLocalizations.of(context)!.syncingNow,
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 8),
-                        LinearProgressIndicator(
-                          value: _syncTotal > 0
-                              ? _syncDone / _syncTotal
-                              : null,
-                        ),
-                        SizedBox(height: 6),
-                        Text(
-                          '$_syncDone / $_syncTotal',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+          ? SyncProgressBar(
+              title: _isClearingVersions
+                  ? AppLocalizations.of(context)!.clearingVersions
+                  : switch (Provider.of<MemoProvider>(context).syncPhase) {
+                      SyncPhase.reading =>
+                        AppLocalizations.of(context)!.syncPhaseReading,
+                      SyncPhase.uploading =>
+                        AppLocalizations.of(context)!.syncPhaseUploading,
+                      SyncPhase.idle =>
+                        AppLocalizations.of(context)!.syncingNow,
+                    },
+              done: _syncDone,
+              total: _syncTotal,
             )
           : null,
       body: _isLoading
@@ -2196,77 +2162,6 @@ class _PassphraseDialogState extends State<_PassphraseDialog> {
               return;
             }
             Navigator.pop(context, true);
-          },
-          child: Text(AppLocalizations.of(context)!.confirm),
-        ),
-      ],
-    );
-  }
-}
-
-/// Asks the user for the passphrase of a single encrypted remote note.
-///
-/// The dialog owns its [TextEditingController] so it is only disposed after
-/// the route has been removed from the tree.
-class _RequestPassphraseDialog extends StatefulWidget {
-  const _RequestPassphraseDialog();
-
-  @override
-  State<_RequestPassphraseDialog> createState() =>
-      _RequestPassphraseDialogState();
-}
-
-class _RequestPassphraseDialogState extends State<_RequestPassphraseDialog> {
-  final _controller = TextEditingController();
-  bool _showPassphrase = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(AppLocalizations.of(context)!.noteEncryptedInCloud),
-      content: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.90,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              AppLocalizations.of(context)!.thisNoteIsEncryptedInCloud,
-              style: TextStyle(fontSize: 13),
-            ),
-            SizedBox(height: 12),
-            TextField(
-              controller: _controller,
-              decoration: InputDecoration(
-                hintText: AppLocalizations.of(context)!.passphrase,
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _showPassphrase ? Icons.visibility_off : Icons.visibility,
-                  ),
-                  onPressed: () =>
-                      setState(() => _showPassphrase = !_showPassphrase),
-                ),
-              ),
-              obscureText: !_showPassphrase,
-              maxLines: 1,
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, null),
-          child: Text(AppLocalizations.of(context)!.ignore),
-        ),
-        TextButton(
-          onPressed: () {
-            final text = _controller.text.trim();
-            Navigator.pop(context, text.isEmpty ? null : text);
           },
           child: Text(AppLocalizations.of(context)!.confirm),
         ),

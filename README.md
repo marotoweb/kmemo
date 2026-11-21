@@ -1,10 +1,17 @@
 [![GitHub Latest Release](https://img.shields.io/github/v/release/marotoweb/kmemo?style=popout)](https://github.com/marotoweb/kmemo/releases/latest)
 [![GitHub All Releases](https://img.shields.io/github/downloads/marotoweb/kmemo/total)](https://github.com/marotoweb/kmemo/releases)
+<a href="https://www.buymeacoffee.com/marotoweb" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" width="72" height="20"></a>
 
 <h1 align="center">
   <img src="assets/icon/icon.png" width="60" alt="kMemo Icon">
   kMemo
 </h1>
+
+<p align="center">
+  <a href="https://f-droid.org/packages/com.marotoweb.kmemo/">
+    <img src="https://f-droid.org/badge/get-it-on.png" alt="Get it on F-Droid" height="70">
+  </a>
+</p>
 
 **kMemo** is a minimalist, productivity-focused mobile note-taking app, created in Europe and built with Flutter. Its interface moves away from traditional text editors, adopting a structure entirely driven by dynamic blocks, letting you mutate and reorder content fluidly and without visual distractions. **kMemo** was born from the need to keep our notes sovereign without being the product and without depending on big tech.
 
@@ -302,7 +309,7 @@ Two platform notes:
 ## 📥 Download & Distribution
 
 - **GitHub Releases:** the latest signed APK is available on the [Releases page](https://github.com/marotoweb/kmemo/releases/latest).
-- **F-Droid:** a submission is in progress (merge request [!55141](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/55141)). The app was closed once because it did not yet meet F-Droid's requirement of being actively maintained for more than 3 months; it will be resubmitted once that period is reached (expected around February 2027). The build is fully reproducible and all pipeline jobs pass.
+- **F-Droid:** kMemo was accepted into F-Droid. The recipe was merged on 17 November 2026 ([merge request !55141](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/55141)); the listing at [f-droid.org/packages/com.marotoweb.kmemo](https://f-droid.org/packages/com.marotoweb.kmemo/) appears once the first build is published. The build is fully reproducible and all pipeline jobs pass.
 
 ---
 

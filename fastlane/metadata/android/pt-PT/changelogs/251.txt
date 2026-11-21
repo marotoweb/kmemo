@@ -1,0 +1,5 @@
+Correções no sync kDrive e substituição mais segura das notas remotas.
+- Uma edição noutro dispositivo chega a todos: o sync usa a revisão do conteúdo do ficheiro.
+- As notas na pasta de destino que este dispositivo nunca leu deixam de ser substituídas sem confirmar; uma pasta encriptada pede primeiro a passphrase.
+- O switch de encriptação acompanha a pasta; as eliminações definitivas são reescritas encriptadas.
+- O cartão de progresso mostra a fase de leitura e a de envio.
