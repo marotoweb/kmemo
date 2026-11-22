@@ -7,6 +7,11 @@ the `[Android]` and `[All]` entries only, never from `[Desktop]` or `[CI]`.
 
 Sections before 0.3.0 predate the tags and are kept as they were released.
 
+## Unreleased
+
+### 📦 Distribution
+- [CI] **kMemo is on F-Droid:** the recipe was merged into `fdroiddata` on 17 November 2026 ([merge request !55141](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/55141)). The app is listed at [f-droid.org/packages/com.marotoweb.kmemo](https://f-droid.org/packages/com.marotoweb.kmemo/) once the first build is published.
+
 ## 0.3.1
 
 ### 🐛 Fixes
