@@ -1947,6 +1947,14 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
       color: textColor,
     );
     final bodyStrut = StrutStyle.fromTextStyle(bodyStyle, forceStrutHeight: true);
+    // The field lays its text out in a width reduced by the cursor width plus a
+    // 1 px gap (RenderEditable._caretMargin). The visible layer below must
+    // reserve exactly the same space: otherwise a word that fits in those
+    // pixels is wrapped by the field but not by the overlay, and moving the
+    // caret at that point jumps a whole line while the word is still drawn on
+    // the previous one.
+    const double bodyCursorWidth = 2.0;
+    const double bodyCaretGap = 1.0;
     final linkStyle = TextStyle(
       decoration: TextDecoration.underline,
       // Over a background image (or in dark mode) the regular blue is too
@@ -2005,13 +2013,20 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                 child: Stack(
                   children: [
                     IgnorePointer(
-                      child: Text.rich(
-                        key: _bodyTextKey,
-                        TextSpan(
-                          style: bodyStyle,
-                          children: _bodySpans(text, linkStyle),
+                      child: Padding(
+                        // Same space the field keeps for the caret, so both
+                        // layers wrap at the same points.
+                        padding: const EdgeInsets.only(
+                          right: bodyCursorWidth + bodyCaretGap,
                         ),
-                        strutStyle: bodyStrut,
+                        child: Text.rich(
+                          key: _bodyTextKey,
+                          TextSpan(
+                            style: bodyStyle,
+                            children: _bodySpans(text, linkStyle),
+                          ),
+                          strutStyle: bodyStrut,
+                        ),
                       ),
                     ),
                     TextField(
@@ -2024,7 +2039,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                       maxLines: null,
                       keyboardType: TextInputType.multiline,
                       cursorColor: textColor,
-                      cursorWidth: 2.0,
+                      cursorWidth: bodyCursorWidth,
                       strutStyle: bodyStrut,
                       style: bodyStyle.copyWith(color: Colors.transparent),
                       decoration: InputDecoration(
