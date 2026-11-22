@@ -7,7 +7,7 @@ the `[Android]` and `[All]` entries only, never from `[Desktop]` or `[CI]`.
 
 Sections before 0.3.0 predate the tags and are kept as they were released.
 
-## Unreleased
+## 0.3.2
 
 ### 🐛 Fixes
 - [All] **Tombstones follow the encryption setting:** the file that records a permanent deletion is encrypted like a note, but one written while the backend had no passphrase stayed in plain text when encryption was enabled later. Switching backend, or enabling encryption, now marks them for rewriting, so an encrypted folder ends up with no plain-text tombstone.

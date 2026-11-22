@@ -1,0 +1,5 @@
+kDrive sync fixes and safer replacement of remote notes.
+- An edit from another device now reaches every device: the sync uses the file's content revision.
+- Notes in the destination folder that this device never read are no longer replaced without asking; an encrypted folder asks for the passphrase first.
+- The encryption switch follows the folder, and permanent deletions are rewritten encrypted.
+- The progress card shows the read and the write phase.
