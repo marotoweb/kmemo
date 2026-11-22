@@ -991,23 +991,13 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.syncTitle), elevation: 0),
-      bottomNavigationBar: (_isSyncing || _isClearingVersions)
-          ? SyncProgressBar(
-              title: _isClearingVersions
-                  ? AppLocalizations.of(context)!.clearingVersions
-                  : switch (Provider.of<MemoProvider>(context).syncPhase) {
-                      SyncPhase.reading =>
-                        AppLocalizations.of(context)!.syncPhaseReading,
-                      SyncPhase.uploading =>
-                        AppLocalizations.of(context)!.syncPhaseUploading,
-                      SyncPhase.idle =>
-                        AppLocalizations.of(context)!.syncingNow,
-                    },
-              done: _syncDone,
-              total: _syncTotal,
-            )
-          : null,
-      body: _isLoading
+      // The card floats over the list, exactly like on the home screen. In the
+      // Scaffold's bottomNavigationBar slot it sat on an empty strip, so the
+      // translucent card read as a flat rectangle and the list jumped when it
+      // appeared.
+      body: Stack(
+        children: [
+          _isLoading
           ? Center(child: CircularProgressIndicator())
           : ListView(
               padding: EdgeInsets.all(16.0).copyWith(bottom: 100),
@@ -1430,6 +1420,31 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                 ],
               ],
             ),
+          // Same card and position as the home screen: it floats over the
+          // list, so the blur has the page behind it and the list does not
+          // change height while the cycle runs.
+          if (_isSyncing || _isClearingVersions)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SyncProgressBar(
+                title: _isClearingVersions
+                    ? AppLocalizations.of(context)!.clearingVersions
+                    : switch (Provider.of<MemoProvider>(context).syncPhase) {
+                        SyncPhase.reading =>
+                          AppLocalizations.of(context)!.syncPhaseReading,
+                        SyncPhase.uploading =>
+                          AppLocalizations.of(context)!.syncPhaseUploading,
+                        SyncPhase.idle =>
+                          AppLocalizations.of(context)!.syncingNow,
+                      },
+                done: _syncDone,
+                total: _syncTotal,
+              ),
+            ),
+        ],
+      ),
     );
   }
 
