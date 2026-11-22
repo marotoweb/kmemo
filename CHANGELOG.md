@@ -7,7 +7,7 @@ the `[Android]` and `[All]` entries only, never from `[Desktop]` or `[CI]`.
 
 Sections before 0.3.0 predate the tags and are kept as they were released.
 
-## Unreleased
+## 0.3.3
 
 ### ✨ New
 - [All] **The last sync date and time on the home screen:** pulling the list down now shows, while it is held, when the last sync ran. The card goes away when the list is released or while a sync is running, and can be turned off in Settings, next to the sync log.

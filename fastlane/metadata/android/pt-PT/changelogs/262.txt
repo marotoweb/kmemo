@@ -1,0 +1,6 @@
+Pesquisa e sincronização.
+- A pesquisa na nota marca todas as ocorrências enquanto escreve, mantém o cursor no campo e funciona com teclados que precisam de conversão, como o japonês.
+- Puxe a lista para baixo para ver a última sincronização (pode desligar nas definições).
+- O cursor já não salta uma palavra no fim da linha.
+- Nova zona de perigo nas definições: apagar as notas deste dispositivo ou todos os dados da aplicação.
+- O cartão de progresso flutua sobre a página nas definições.
