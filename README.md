@@ -29,7 +29,7 @@
 - **Text sharing:** Receives text shared from other apps (Share Plus) and automatically creates a new note, or shares your notes with external apps.
 - **Empty note rejection:** Notes created but left empty are automatically deleted on exit, avoiding the accumulation of empty notes.
 - **Remote sync (kDrive or WebDAV):** Upload and download notes to kDrive (Infomaniak) or to any WebDAV server, with optional client-side AES encryption.
-- **Pull to sync and last sync:** pulling the note list down runs a manual sync; while the list is held, a card shows the date and time of the last sync. It can be turned off in Settings, next to the sync log.
+- **Sync button and pull to sync:** the cloud button in the top bar runs a manual sync from the home screen on any platform, and pulling the note list down does the same on a touch screen. While the list is held, a card shows the date and time of the last sync; the card can be turned off in Settings, next to the sync log.
 - **Home Screen Widget integration:** Automatic synchronization with a native system widget for quick viewing of the latest notes and quick editing directly from the device desktop.
 - **APP link:** Support for opening notes via APP link *kmemo://*
 - **Editor options:** automatic line wrapping in titles and list items, and optional strikethrough for checked checklist items (configurable in Settings). The home screen widget respects these options in the preview.

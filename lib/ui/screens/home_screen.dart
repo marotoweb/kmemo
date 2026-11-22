@@ -1346,13 +1346,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// Syncs on pull-to-refresh, the gesture the user reaches for to "fetch".
-  ///
-  /// This is the manual path (a full pass, not the debounced automatic one), so
-  /// the same feedback as the settings screen is shown: how many notes were
-  /// touched, an up-to-date message when nothing changed, or the error. Without
-  /// a configured backend the gesture still answers, instead of silently
-  /// doing nothing.
   /// Reads the height of the warning strip so the list can reserve it.
   void _measureBanner() {
     if (!mounted) return;
@@ -1383,9 +1376,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     setState(() => _isSyncing = false);
   }
 
-  Future<void> _syncFromPull(MemoProvider provider) async {
-    // The replacement runs a manual cycle of its own: pulling meanwhile would
-    // queue a second, redundant pass.
+  /// Runs a manual sync from the pull gesture or from the app bar button.
+  ///
+  /// This is the manual path (a full pass, not the debounced automatic one), so
+  /// the same feedback as the settings screen is shown: how many notes were
+  /// touched, an up-to-date message when nothing changed, or the error. Without
+  /// a configured backend both paths still answer, instead of silently doing
+  /// nothing.
+  ///
+  /// [showProgress] adds the floating progress card used by the button. The
+  /// pull gesture passes false: the refresh indicator is already its feedback,
+  /// and a second one underneath it would be redundant.
+  Future<void> _manualSync(
+    MemoProvider provider, {
+    required bool showProgress,
+  }) async {
+    // A cycle is already running: starting another one would queue a second,
+    // redundant pass on top of it.
     if (_isSyncing) return;
     final l10n = AppLocalizations.of(context)!;
     final storage = provider.storage;
@@ -1404,11 +1411,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
 
+    if (showProgress) _startSyncProgress();
     try {
-      // No bottom progress card here: the pull gesture already shows the
-      // refresh indicator, so a second feedback would be redundant.
       final undecryptable = await provider.performSync(
         force: true,
+        onProgress: showProgress ? _updateSyncProgress : null,
         // An encrypted folder has to be readable from here too: asking for
         // the passphrase is how the app adopts the encryption of the folder.
         requestPassphrase: (_) async =>
@@ -1424,16 +1431,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           : (count == 0
                 ? l10n.syncUpToDate
                 : l10n.syncCompletedWithCount(count));
-      ScaffoldMessenger.of(context).showSnackBar(
-        buildAppSnackBar(context, message: message),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(buildAppSnackBar(context, message: message));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         buildAppSnackBar(context, message: l10n.syncErrorWithDetail('$e')),
       );
+    } finally {
+      if (showProgress) _stopSyncProgress();
     }
   }
+
+  /// Syncs on pull-to-refresh, the gesture the user reaches for to "fetch".
+  Future<void> _syncFromPull(MemoProvider provider) =>
+      _manualSync(provider, showProgress: false);
+
+  /// Syncs from the app bar button.
+  ///
+  /// The pull gesture only follows a drag: a touchscreen finger or a trackpad
+  /// two-finger scroll drives it, a mouse cannot drag the list. Without one of
+  /// those there was no manual sync at all. The button is that path, and it
+  /// also works on Android.
+  Future<void> _syncFromButton(MemoProvider provider) =>
+      _manualSync(provider, showProgress: true);
 
   /// Caps the width of the note list on wide windows.
   ///
@@ -1809,6 +1831,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       icon: const Icon(Icons.close),
                       onPressed: _closeSearch,
                     ),
+                  // Manual sync. Pulling the list follows a drag: a finger on
+                  // a touchscreen or a two-finger trackpad scroll drives it, a
+                  // mouse cannot. Without either this is the only manual path,
+                  // and it also works on Android. It sits before the sort
+                  // icon, which must stay the last action in both search
+                  // states.
+                  IconButton(
+                    tooltip: l10n.syncNowButton,
+                    icon: _isSyncing
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.cloud_sync_outlined),
+                    onPressed: _isSyncing
+                        ? null
+                        : () => _syncFromButton(provider),
+                  ),
                   IconButton(
                     tooltip: l10n.sortBy,
                     icon: const Icon(Icons.sort),

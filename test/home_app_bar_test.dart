@@ -95,7 +95,7 @@ void main() {
     );
     await tester.pump();
 
-    // Closed search: only the search and sort actions are visible.
+    // Closed search: the search, sync and sort actions are visible.
     final sortBefore = tester.getCenter(find.byIcon(Icons.sort));
     expect(find.byIcon(Icons.close), findsNothing);
 
