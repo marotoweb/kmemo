@@ -321,6 +321,22 @@ class AppLocalizationsPt extends AppLocalizations {
   String get syncSubtitle => 'Sincronize as suas notas com kDrive ou WebDAV';
 
   @override
+  String remoteOverwritePending(int count) {
+    return 'Há $count nota(s) na pasta de destino que este dispositivo nunca leu.';
+  }
+
+  @override
+  String get remoteOverwriteTitle => 'Substituir as notas da pasta de destino?';
+
+  @override
+  String remoteOverwriteBody(int count) {
+    return 'Este dispositivo nunca leu $count nota(s) na pasta de destino. Substituí-las envia a versão deste dispositivo por cima dessas cópias; no kDrive as versões anteriores ficam no histórico do ficheiro. Se as cópias remotas estiverem encriptadas, o kMemo pede primeiro a passphrase e continua a enviar encriptado.';
+  }
+
+  @override
+  String get remoteOverwriteConfirm => 'Substituir';
+
+  @override
   String syncUndecryptableNotes(int count) {
     return 'Há notas que não foi possível decifrar ($count). Verifica a passphrase nas definições de sincronização.';
   }

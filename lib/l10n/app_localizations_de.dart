@@ -322,6 +322,22 @@ class AppLocalizationsDe extends AppLocalizations {
       'Synchronisieren Sie Ihre Notizen mit kDrive oder WebDAV';
 
   @override
+  String remoteOverwritePending(int count) {
+    return '$count Notiz(en) im Zielordner wurden von diesem Gerät nie gelesen.';
+  }
+
+  @override
+  String get remoteOverwriteTitle => 'Notizen im Zielordner ersetzen?';
+
+  @override
+  String remoteOverwriteBody(int count) {
+    return 'Dieses Gerät hat $count Notiz(en) im Zielordner nie gelesen. Beim Ersetzen wird die Version dieses Geräts über diese Kopien hochgeladen; bei kDrive bleiben die vorherigen im Dateiverlauf. Sind die entfernten Kopien verschlüsselt, fragt kMemo zuerst nach der Passphrase und lädt weiter verschlüsselt hoch.';
+  }
+
+  @override
+  String get remoteOverwriteConfirm => 'Ersetzen';
+
+  @override
   String syncUndecryptableNotes(int count) {
     return 'Einige Notizen konnten nicht entschlüsselt werden ($count). Prüfe die Passphrase in den Synchronisierungseinstellungen.';
   }

@@ -9,6 +9,12 @@ Sections before 0.3.0 predate the tags and are kept as they were released.
 
 ## Unreleased
 
+### 🐛 Fixes
+- [All] **Tombstones follow the encryption setting:** the file that records a permanent deletion is encrypted like a note, but one written while the backend had no passphrase stayed in plain text when encryption was enabled later. Switching backend, or enabling encryption, now marks them for rewriting, so an encrypted folder ends up with no plain-text tombstone.
+- [All] **A folder with notes this device never read is no longer overwritten silently:** switching backend or folder, or restoring a database, leaves every note without its sync bookkeeping, and the sync used to replace the remote copies without reading them. When the folder held encrypted notes and this device had no passphrase, that published the local notes in plain text over the encrypted ones. Those notes are now left alone, the home screen asks for confirmation, and the remote copy is read before it is replaced: an encrypted folder asks for the passphrase and the replacement is written encrypted, and a copy that cannot be decrypted is never overwritten.
+- [All] **The encryption switch follows the folder:** when a sync adopted the encryption of the folder (it asks for the passphrase for a downloaded note), the switch in the sync settings stayed off until the page was reopened. It now follows the backend after a sync, on kDrive and WebDAV.
+- [All] **An edit made on another device now reaches every device (kDrive):** the sync used the file's `updated_at` as the revision. kDrive keeps that timestamp for the file metadata and only moves `revised_at` when the content changes, so every device kept the revision it had recorded, planned nothing to inspect and never downloaded the edit: a note edited on phone B stayed unchanged on phone A while both logs reported "0 upload, 0 inspect". The revision is now `revised_at`, and the notes synced before this update are read once to replace the value stored by the old version.
+
 ### 📦 Distribution
 - [CI] **kMemo is on F-Droid:** the recipe was merged into `fdroiddata` on 17 November 2026 ([merge request !55141](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/55141)). The app is listed at [f-droid.org/packages/com.marotoweb.kmemo](https://f-droid.org/packages/com.marotoweb.kmemo/) once the first build is published.
 

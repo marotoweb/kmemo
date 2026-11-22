@@ -706,6 +706,30 @@ abstract class AppLocalizations {
   /// **'Sincronize as suas notas com kDrive ou WebDAV'**
   String get syncSubtitle;
 
+  /// No description provided for @remoteOverwritePending.
+  ///
+  /// In pt, this message translates to:
+  /// **'Há {count} nota(s) na pasta de destino que este dispositivo nunca leu.'**
+  String remoteOverwritePending(int count);
+
+  /// No description provided for @remoteOverwriteTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Substituir as notas da pasta de destino?'**
+  String get remoteOverwriteTitle;
+
+  /// No description provided for @remoteOverwriteBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Este dispositivo nunca leu {count} nota(s) na pasta de destino. Substituí-las envia a versão deste dispositivo por cima dessas cópias; no kDrive as versões anteriores ficam no histórico do ficheiro. Se as cópias remotas estiverem encriptadas, o kMemo pede primeiro a passphrase e continua a enviar encriptado.'**
+  String remoteOverwriteBody(int count);
+
+  /// No description provided for @remoteOverwriteConfirm.
+  ///
+  /// In pt, this message translates to:
+  /// **'Substituir'**
+  String get remoteOverwriteConfirm;
+
   /// No description provided for @syncUndecryptableNotes.
   ///
   /// In pt, this message translates to:

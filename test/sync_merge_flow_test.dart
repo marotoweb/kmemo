@@ -426,6 +426,9 @@ void main() {
     expect(stored.isSynced, isTrue);
     expect(h.remote.uploads, 0);
     expect(h.remote.downloads, 1);
+    // With no local copy there is nothing to confirm: the note is downloaded,
+    // never counted as a remote copy waiting to be replaced.
+    expect(h.provider.overwritePending, 0);
 
     await tester.runAsync(() => h.provider.performSync(force: true));
     expect(h.remote.uploads, 0);
@@ -889,6 +892,181 @@ void main() {
     expect(stored.isSynced, isTrue);
     expect(h.remote.uploads, 1);
     // The remote file was rewritten encrypted, not left in plain text.
+    final raw = utf8.decode(h.remote.files[uuid]!);
+    expect(EncryptionService.looksEncrypted(raw), isTrue);
+  });
+
+  testWidgets(
+    'a remote copy this device never read is not replaced without asking',
+    (tester) async {
+      final h = await _start(tester);
+      const uuid = 'nota-desconhecida';
+
+      await tester.runAsync(() async {
+        // The note exists here, but the sync bookkeeping is unknown: this is
+        // what a backend switch (disableSync) leaves behind.
+        final local = _memo(uuid, 'Versao local');
+        await h.db.saveMemoWithBlocks(local, _blocks(uuid, 'texto local'));
+        // The destination folder already holds a copy this device never read.
+        h.remote.writeAsOtherDevice(
+          local.copyWith(
+            title: 'Versao remota',
+            updatedAt: DateTime.utc(2026, 1, 2),
+          ),
+          _blocks(uuid, 'conteudo remoto'),
+        );
+
+        await h.provider.performSync(force: true);
+      });
+
+      expect(
+        h.remote.uploads,
+        0,
+        reason: 'replacing the remote copy must wait for the user',
+      );
+      expect(h.remote.downloads, 0);
+      expect(h.provider.overwritePending, 1);
+      final payload = decodeRemoteMemo(h.remote.files[uuid]!)!;
+      expect(payload.memo.title, 'Versao remota');
+    },
+  );
+
+  testWidgets('confirming replaces the remote copy with the local version', (
+    tester,
+  ) async {
+    final h = await _start(tester);
+    const uuid = 'nota-substituida';
+
+    await tester.runAsync(() async {
+      final local = _memo(uuid, 'Versao local');
+      await h.db.saveMemoWithBlocks(local, _blocks(uuid, 'texto local'));
+      h.remote.writeAsOtherDevice(
+        local.copyWith(
+          title: 'Versao remota',
+          updatedAt: DateTime.utc(2026, 1, 2),
+        ),
+        _blocks(uuid, 'conteudo remoto'),
+      );
+
+      await h.provider.performSync(force: true);
+      expect(h.provider.overwritePending, 1);
+      await h.provider.performSync(force: true, overwriteRemote: true);
+    });
+
+    expect(h.remote.uploads, 1);
+    expect(h.provider.overwritePending, 0);
+    final payload = decodeRemoteMemo(h.remote.files[uuid]!)!;
+    expect(payload.memo.title, 'Versao local');
+    expect(payload.wasEncrypted, isFalse);
+  });
+
+  testWidgets('replacing an encrypted copy keeps the folder encrypted', (
+    tester,
+  ) async {
+    final h = await _start(tester);
+    const uuid = 'nota-cifrada';
+    const passphrase = 'segredo-do-servidor';
+
+    await tester.runAsync(() async {
+      EncryptionService.instance.enable(passphrase);
+      final local = _memo(uuid, 'Versao local');
+      await h.db.saveMemoWithBlocks(local, _blocks(uuid, 'texto local'));
+      // The copy in the folder was written encrypted by another configuration.
+      h.remote.enableEncryption();
+      h.remote.writeAsOtherDevice(
+        local.copyWith(
+          title: 'Versao remota',
+          updatedAt: DateTime.utc(2026, 1, 2),
+        ),
+        _blocks(uuid, 'conteudo remoto'),
+      );
+      // This device is configured without encryption and has no passphrase.
+      h.remote.disableEncryptionForWrites();
+      EncryptionService.instance.disable();
+
+      await h.provider.performSync(
+        force: true,
+        overwriteRemote: true,
+        requestPassphrase: (_) async => passphrase,
+      );
+    });
+
+    expect(h.remote.uploads, 1);
+    expect(h.remote.encryptionEnabled, isTrue);
+    expect(h.remote.storedPassphrase, passphrase);
+    final payload = decodeRemoteMemo(h.remote.files[uuid]!)!;
+    expect(payload.wasEncrypted, isTrue, reason: 'no plain text may replace it');
+    expect(payload.memo.title, 'Versao local');
+  });
+
+  testWidgets('a copy that cannot be read is never replaced', (tester) async {
+    final h = await _start(tester);
+    const uuid = 'nota-ilegivel';
+
+    await tester.runAsync(() async {
+      EncryptionService.instance.enable('chave-de-outro-dispositivo');
+      final local = _memo(uuid, 'Versao local');
+      await h.db.saveMemoWithBlocks(local, _blocks(uuid, 'texto local'));
+      h.remote.enableEncryption();
+      h.remote.writeAsOtherDevice(
+        local.copyWith(
+          title: 'Versao remota',
+          updatedAt: DateTime.utc(2026, 1, 2),
+        ),
+        _blocks(uuid, 'conteudo remoto'),
+      );
+      h.remote.disableEncryptionForWrites();
+      EncryptionService.instance.disable();
+
+      // The user does not know the passphrase and cancels the prompt.
+      await h.provider.performSync(
+        force: true,
+        overwriteRemote: true,
+        requestPassphrase: (_) async => null,
+      );
+    });
+
+    expect(h.remote.uploads, 0);
+    expect(h.provider.overwritePending, 1, reason: 'still waiting for a decision');
+    // The encrypted copy is untouched: decoding it here would need the
+    // passphrase this device does not have.
+    final raw = utf8.decode(h.remote.files[uuid]!);
+    expect(EncryptionService.looksEncrypted(raw), isTrue);
+  });
+
+  testWidgets('re-enabling encryption rewrites the tombstones encrypted', (
+    tester,
+  ) async {
+    final h = await _start(tester);
+    const uuid = 'nota-apagada';
+
+    await tester.runAsync(() async {
+      // A tombstone published while the backend had encryption off (the state
+      // a backend configured without the passphrase leaves behind).
+      h.remote.writeTombstone(uuid, DateTime.utc(2026, 1, 1));
+      await h.db.recordTombstone(
+        uuid: uuid,
+        deletedAt: DateTime.utc(2026, 1, 1),
+        remoteFileId: 'kmemo/notes/$uuid.json',
+        // Up to date with the remote file: only the "not published" flag left
+        // by disableSync can make the next cycle write it again.
+        remoteRevision: h.remote.infos[uuid]!.updatedAt,
+        isUploaded: true,
+      );
+      expect(
+        EncryptionService.looksEncrypted(utf8.decode(h.remote.files[uuid]!)),
+        isFalse,
+      );
+
+      // The user enables encryption, enters the passphrase and the setting
+      // change resets the bookkeeping (disableSync does it for both backends).
+      EncryptionService.instance.enable('segredo-do-servidor');
+      h.remote.enableEncryption();
+      await h.provider.disableSync();
+      await h.provider.performSync(force: true);
+    });
+
+    expect(h.remote.tombstonesPublished, 1);
     final raw = utf8.decode(h.remote.files[uuid]!);
     expect(EncryptionService.looksEncrypted(raw), isTrue);
   });

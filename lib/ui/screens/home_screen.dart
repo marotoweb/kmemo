@@ -16,6 +16,8 @@ import '../../models/shared_text.dart';
 import '../../providers/memo_provider.dart';
 import '../widgets/memo_card.dart';
 import '../widgets/app_snackbar.dart';
+import '../widgets/sync_prompts.dart';
+import '../widgets/sync_progress_bar.dart';
 import '../widgets/swipe_action_card.dart';
 import '../../services/docx_export_service.dart';
 import '../share_actions.dart';
@@ -35,12 +37,27 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+/// Fixed distance of the "+" button from the bottom of the list.
+///
+/// The sync progress card takes about 110 dp at the bottom, plus a visible gap
+/// so the button never looks attached to it. The value is fixed (not measured)
+/// on purpose: the button must not move, and the Scaffold lifts its own
+/// floating button when a SnackBar appears, which is why this one is drawn
+/// inside the body instead.
+const double _kFabBottomOffset = 156;
+
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final List<String> _selectedUuids = [];
   static const MethodChannel _widgetChannel = MethodChannel(
     'com.marotoweb.kmemo/widget',
   );
   bool _isOpeningNote = false;
+
+  // Bottom progress card while the confirmed replacement of remote copies
+  // runs, identical to the one in the sync settings page.
+  bool _isSyncing = false;
+  int _syncDone = 0;
+  int _syncTotal = 0;
 
   // AppBar search (pill field replacing the title).
   final TextEditingController _searchController = TextEditingController();
@@ -971,83 +988,173 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// Warning strip above the note list.
+  ///
+  /// The content is clipped to the rounded shape: without the clip the ink of
+  /// the action button paints a rectangle over the corners and the strip looks
+  /// like an opaque block.
+  Widget _buildSyncBanner({
+    required IconData icon,
+    required String message,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final foreground = isDarkMode
+        ? Colors.amber.shade200
+        : Colors.brown.shade800;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+          color: isDarkMode ? const Color(0xFF3B2E1E) : Colors.amber.shade100,
+          child: Row(
+            children: [
+              Icon(icon, size: 18, color: foreground),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(fontSize: 12, color: foreground),
+                ),
+              ),
+              if (actionLabel != null && onAction != null)
+                TextButton(
+                  onPressed: onAction,
+                  child: Text(
+                    actionLabel,
+                    style: TextStyle(color: foreground),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openSyncSettings() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => SyncSettingsScreen()));
+  }
+
+  /// Warns that the destination folder holds copies this device never read.
+  ///
+  /// Replacing them is destructive (it overwrites content this device cannot
+  /// show), so the sync leaves them alone until the user confirms. Reading the
+  /// remote copy first is what makes an encrypted folder ask for the
+  /// passphrase instead of being rewritten in plain text.
+  Widget _buildOverwriteBanner(
+    int count,
+    bool isDarkMode,
+    MemoProvider provider,
+  ) {
+    return _buildSyncBanner(
+      icon: Icons.cloud_sync_outlined,
+      message: AppLocalizations.of(context)!.remoteOverwritePending(count),
+      actionLabel: AppLocalizations.of(context)!.remoteOverwriteConfirm,
+      onAction: () => _confirmOverwriteRemote(provider),
+    );
+  }
+
+  /// Asks before replacing remote copies this device has never read.
+  ///
+  /// The remote payload is read during the cycle that follows: that is how an
+  /// encrypted folder is detected and the passphrase adopted, and a copy that
+  /// cannot be decrypted is never overwritten.
+  Future<void> _confirmOverwriteRemote(MemoProvider provider) async {
+    if (_isSyncing) return;
+    final l10n = AppLocalizations.of(context)!;
+    final count = provider.overwritePending;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.remoteOverwriteTitle),
+        content: Text(l10n.remoteOverwriteBody(count)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.remoteOverwriteConfirm),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    int undecryptable = 0;
+    Object? error;
+    _startSyncProgress();
+    try {
+      undecryptable = await provider.performSync(
+        force: true,
+        overwriteRemote: true,
+        onProgress: _updateSyncProgress,
+        // Read the remote copies before replacing them: if they are encrypted
+        // this asks for the passphrase and adopts it, so the replacement is
+        // uploaded encrypted instead of in plain text.
+        requestPassphrase: (_) async =>
+            mounted ? requestSyncPassphrase(context) : Future<String?>.value(),
+        confirmDeleteRemote: (_) async =>
+            mounted ? confirmDeleteRemoteNote(context) : false,
+      );
+    } catch (e) {
+      error = e;
+    }
+    _stopSyncProgress();
+    if (!mounted) return;
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        buildAppSnackBar(
+          context,
+          message: l10n.syncErrorWithDetail('$error'),
+        ),
+      );
+      return;
+    }
+    final synced = provider.lastSyncNoteCount;
+    final message = undecryptable > 0
+        ? l10n.syncPartialFailure('$undecryptable')
+        : (synced == 0
+              ? l10n.syncUpToDate
+              : l10n.syncCompletedWithCount(synced));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(buildAppSnackBar(context, message: message));
+  }
+
   /// Warns that the last sync could not read some remote notes.
   ///
   /// Shown on the home screen because an automatic sync cannot ask for the
   /// passphrase: without it the notes stay out of sync without any sign.
   Widget _buildUndecryptableBanner(int count, bool isDarkMode) {
-    final l10n = AppLocalizations.of(context)!;
-    final foreground = isDarkMode
-        ? Colors.amber.shade200
-        : Colors.brown.shade800;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-      decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF3B2E1E) : Colors.amber.shade100,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.lock_outline, size: 18, color: foreground),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              l10n.syncUndecryptableNotes(count),
-              style: TextStyle(fontSize: 12, color: foreground),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => SyncSettingsScreen()));
-            },
-            child: Text(l10n.settings, style: TextStyle(color: foreground)),
-          ),
-        ],
-      ),
+    return _buildSyncBanner(
+      icon: Icons.lock_outline,
+      message: AppLocalizations.of(context)!.syncUndecryptableNotes(count),
+      actionLabel: AppLocalizations.of(context)!.settings,
+      onAction: _openSyncSettings,
     );
   }
+
 
   /// Warns that encryption is on but the passphrase is not loaded.
   ///
   /// The automatic sync swallows the refusal (it would log it and stop), so
   /// without this the user edits notes that never leave the device.
   Widget _buildSyncBlockedBanner(bool isDarkMode) {
-    final l10n = AppLocalizations.of(context)!;
-    final foreground = isDarkMode
-        ? Colors.amber.shade200
-        : Colors.brown.shade800;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-      padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-      decoration: BoxDecoration(
-        color: isDarkMode ? const Color(0xFF3B2E1E) : Colors.amber.shade100,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.lock_outline, size: 18, color: foreground),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              l10n.syncBlockedNoPassphrase,
-              style: TextStyle(fontSize: 12, color: foreground),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => SyncSettingsScreen()));
-            },
-            child: Text(l10n.settings, style: TextStyle(color: foreground)),
-          ),
-        ],
-      ),
+    return _buildSyncBanner(
+      icon: Icons.lock_outline,
+      message: AppLocalizations.of(context)!.syncBlockedNoPassphrase,
+      actionLabel: AppLocalizations.of(context)!.settings,
+      onAction: _openSyncSettings,
     );
   }
+
 
   Widget _buildBody(
     MemoProvider provider,
@@ -1096,7 +1203,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
             child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 120.0),
+              padding: const EdgeInsets.only(bottom: 220.0),
               itemCount: items.length,
               itemBuilder: (context, index) => _buildMemoItem(
                 provider,
@@ -1121,7 +1228,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             // The list must accept a downward drag even when the notes fit on
             // screen, otherwise the pull gesture has nothing to move.
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 120.0),
+            padding: const EdgeInsets.only(bottom: 220.0),
             buildDefaultDragHandles: false,
           itemCount: items.length,
           onReorder: (oldIndex, newIndex) =>
@@ -1181,7 +1288,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// touched, an up-to-date message when nothing changed, or the error. Without
   /// a configured backend the gesture still answers, instead of silently
   /// doing nothing.
+  void _startSyncProgress() {
+    setState(() {
+      _isSyncing = true;
+      _syncDone = 0;
+      _syncTotal = 0;
+    });
+  }
+
+  void _updateSyncProgress(int done, int total) {
+    if (!mounted) return;
+    setState(() {
+      _syncDone = done;
+      _syncTotal = total;
+    });
+  }
+
+  void _stopSyncProgress() {
+    if (!mounted) return;
+    setState(() => _isSyncing = false);
+  }
+
   Future<void> _syncFromPull(MemoProvider provider) async {
+    // The replacement runs a manual cycle of its own: pulling meanwhile would
+    // queue a second, redundant pass.
+    if (_isSyncing) return;
     final l10n = AppLocalizations.of(context)!;
     final storage = provider.storage;
     if (storage == null || !storage.isConfigured) {
@@ -1200,7 +1331,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     try {
-      final undecryptable = await provider.performSync(force: true);
+      // No bottom progress card here: the pull gesture already shows the
+      // refresh indicator, so a second feedback would be redundant.
+      final undecryptable = await provider.performSync(
+        force: true,
+        // An encrypted folder has to be readable from here too: asking for
+        // the passphrase is how the app adopts the encryption of the folder.
+        requestPassphrase: (_) async =>
+            mounted ? requestSyncPassphrase(context) : Future<String?>.value(),
+        confirmDeleteRemote: (_) async =>
+            mounted ? confirmDeleteRemoteNote(context) : false,
+      );
       if (!mounted) return;
       final count = provider.lastSyncNoteCount;
       final message = undecryptable > 0
@@ -1645,46 +1786,80 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ],
           ),
         ),
-        body: Column(
+        body: Stack(
           children: [
-            if (provider.syncBlockedNoPassphrase)
-              _buildSyncBlockedBanner(isDarkMode),
-            if (provider.undecryptableNotes > 0)
-              _buildUndecryptableBanner(
-                provider.undecryptableNotes,
-                isDarkMode,
-              ),
-            Expanded(
-              child: _buildBody(
-                provider,
-                activeMemos,
-                isDarkMode,
-                isSelectionMode,
-              ),
+            Column(
+              children: [
+                if (provider.syncBlockedNoPassphrase)
+                  _buildSyncBlockedBanner(isDarkMode),
+                if (provider.undecryptableNotes > 0)
+                  _buildUndecryptableBanner(
+                    provider.undecryptableNotes,
+                    isDarkMode,
+                  ),
+                // Hidden while the replacement runs: the progress card already
+                // says what is happening, and a second "Substituir" would
+                // start another pass on the same notes.
+                if (provider.overwritePending > 0 && !_isSyncing)
+                  _buildOverwriteBanner(
+                    provider.overwritePending,
+                    isDarkMode,
+                    provider,
+                  ),
+                Expanded(
+                  child: _buildBody(
+                    provider,
+                    activeMemos,
+                    isDarkMode,
+                    isSelectionMode,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        floatingActionButton: isSelectionMode
-            ? null
-            : FloatingActionButton(
-                backgroundColor: isDarkMode ? Color(0xFF3B2E1E) : Colors.amber,
-                onPressed: () async {
-                  final newMemo = await provider.createNewMemo();
-                  if (context.mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            MemoDetailScreen(memo: newMemo, isNew: true),
-                      ),
-                    );
-                  }
-                },
-                child: Icon(
-                  Icons.add,
-                  color: isDarkMode ? Colors.white70 : Colors.black87,
+            // The "+" is not a Scaffold floating button on purpose: the
+            // framework lifts that one when a SnackBar appears, and the button
+            // has to stay put. The fixed offset leaves room for the progress
+            // card underneath.
+            if (!isSelectionMode)
+              Positioned(
+                right: 16,
+                bottom: _kFabBottomOffset,
+                child: FloatingActionButton(
+                  backgroundColor:
+                      isDarkMode ? Color(0xFF3B2E1E) : Colors.amber,
+                  onPressed: () async {
+                    final newMemo = await provider.createNewMemo();
+                    if (context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              MemoDetailScreen(memo: newMemo, isNew: true),
+                        ),
+                      );
+                    }
+                  },
+                  child: Icon(
+                    Icons.add,
+                    color: isDarkMode ? Colors.white70 : Colors.black87,
+                  ),
                 ),
               ),
+            // The card floats over the list so the notes underneath stay
+            // visible: it is translucent on purpose.
+            if (_isSyncing)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: SyncProgressBar(
+                  title: AppLocalizations.of(context)!.syncingNow,
+                  done: _syncDone,
+                  total: _syncTotal,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
