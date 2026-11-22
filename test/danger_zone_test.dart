@@ -21,12 +21,18 @@ Future<void> _settleDatabase(WidgetTester tester) async {
   await tester.pump();
 }
 
-Widget _settingsApp(AppDatabase db, MemoProvider provider) {
+Widget _settingsApp(
+  AppDatabase db,
+  MemoProvider provider, {
+  ThemeProvider? themeProvider,
+}) {
   return MultiProvider(
     providers: [
       Provider<AppDatabase>.value(value: db),
       ChangeNotifierProvider<MemoProvider>.value(value: provider),
-      ChangeNotifierProvider(create: (_) => ThemeProvider()),
+      ChangeNotifierProvider<ThemeProvider>.value(
+        value: themeProvider ?? ThemeProvider(),
+      ),
     ],
     child: MaterialApp(
       locale: const Locale('en'),
@@ -183,14 +189,20 @@ void main() {
 
     late AppDatabase db;
     late MemoProvider provider;
+    late ThemeProvider themeProvider;
     await tester.runAsync(() async {
       db = AppDatabase.forTesting(NativeDatabase.memory());
       provider = MemoProvider(db);
+      themeProvider = ThemeProvider();
       await provider.createNewMemo();
     });
     addTearDown(db.close);
+    // Start from a non-default setting so the reset is visible.
+    await themeProvider.setAutoWrap(false);
 
-    await tester.pumpWidget(_settingsApp(db, provider));
+    await tester.pumpWidget(
+      _settingsApp(db, provider, themeProvider: themeProvider),
+    );
     await _settleDatabase(tester);
 
     await tester.scrollUntilVisible(find.text('Delete all app data'), 400);
@@ -209,13 +221,16 @@ void main() {
 
     final remaining = await tester.runAsync(() => db.select(db.memos).get());
     expect(remaining, isEmpty);
-    // The stored settings are gone: the sort mode is not rewritten and the
-    // theme is back to the default.
+    // The settings go back to a fresh install, in memory and on disk: nothing
+    // is written back.
+    expect(themeProvider.autoWrap, isTrue);
+    expect(themeProvider.strikethroughChecked, isTrue);
+    expect(themeProvider.showLinkPreviews, isTrue);
+    expect(themeProvider.widgetBgOpacity, 1.0);
+    expect(themeProvider.widgetCardOpacity, 1.0);
+    expect(themeProvider.themeMode, ThemeMode.system);
+    expect(themeProvider.locale, isNull);
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('home_sort_mode'), isNull);
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-    });
-    expect(prefs.getInt('theme_mode'), 0);
+    expect(prefs.getKeys(), isEmpty);
   });
 }

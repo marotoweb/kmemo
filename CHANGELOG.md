@@ -10,7 +10,7 @@ Sections before 0.3.0 predate the tags and are kept as they were released.
 ## Unreleased
 
 ### ✨ New
-- [All] **Danger zone in the settings:** the end of the settings page now has two destructive actions, marked in red and confirmed with an explanation of what each one does. "Delete all notes" removes every note from this device, including the archive and the trash, without touching the server: notes that were already synced stay there and come back on the next sync. "Delete all app data" clears the notes, the app settings, the sync configuration and the local caches.
+- [All] **Danger zone in the settings:** the end of the settings page now has two destructive actions, marked in red and confirmed with an explanation of what each one does. "Delete all notes" removes every note from this device, including the archive and the trash, without touching the server: notes that were already synced stay there and come back on the next sync. "Delete all app data" clears the notes, the sync configuration and the local caches and puts every setting back to a fresh install.
 
 ### 🐛 Fixes
 - [All] **The note search marks every match while you type:** typing in "Find in note" only moved the caret to the first result, so the body showed nothing and the counter was the only clue. Every occurrence is now tinted as the query is typed, the one the arrows are on in a stronger colour, the caret stays in the search field, and Enter or the arrows move between matches without taking the focus out of the field. A word committed by the keyboard is searched too, so the marks always belong to the word in the field.

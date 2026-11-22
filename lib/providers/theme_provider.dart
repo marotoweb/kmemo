@@ -46,6 +46,22 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Puts every setting back to the value of a fresh install.
+  ///
+  /// The caller clears the stored preferences (the "delete all app data"
+  /// action); this only resets the in-memory state and writes nothing back, so
+  /// the stored state stays empty like on a new install.
+  void resetToDefaults() {
+    _themeMode = ThemeMode.system;
+    _locale = null;
+    _autoWrap = true;
+    _strikethroughChecked = true;
+    _showLinkPreviews = true;
+    _widgetBgOpacity = 1.0;
+    _widgetCardOpacity = 1.0;
+    notifyListeners();
+  }
+
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
     notifyListeners();

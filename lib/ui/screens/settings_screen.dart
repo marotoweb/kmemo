@@ -270,10 +270,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
 
-    // The preferences are what the theme and the language are restored from,
-    // so put both back to their defaults now instead of waiting for a restart.
-    themeProvider.setThemeMode(ThemeMode.system);
-    themeProvider.setLocale(null);
+    // Every setting goes back to what a fresh install has. The reset does not
+    // write the defaults back, so the stored state stays empty and the next
+    // start reads the same defaults.
+    themeProvider.resetToDefaults();
     provider.refreshWidget();
 
     if (!mounted) return;
