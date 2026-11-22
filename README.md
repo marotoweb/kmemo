@@ -1,5 +1,6 @@
 [![GitHub Latest Release](https://img.shields.io/github/v/release/marotoweb/kmemo?style=popout)](https://github.com/marotoweb/kmemo/releases/latest)
 [![GitHub All Releases](https://img.shields.io/github/downloads/marotoweb/kmemo/total)](https://github.com/marotoweb/kmemo/releases)
+<a href="https://www.buymeacoffee.com/marotoweb" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" width="72" height="20"></a>
 
 <h1 align="center">
   <img src="assets/icon/icon.png" width="60" alt="kMemo Icon">
