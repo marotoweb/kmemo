@@ -4,6 +4,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -63,6 +64,86 @@ class _Match {
   _Match(this.regionIndex, this.start, this.end);
 }
 
+// Inline search tints. Every match is tinted; the one the arrows are on uses a
+// stronger colour. Both are painted behind the glyphs, so the text stays
+// readable in light, dark and over a background image.
+const Color _kSearchMatchTint = Color(0x66FFC107); // amber, 40 %
+const Color _kSearchCurrentTint = Color(0xBFFF8F00); // orange, 75 %
+
+/// Text controller that tints ranges of its text.
+///
+/// Only the checklist items use it: their field paints its own opaque text, so
+/// a background style is visible. The running-note body cannot use it, because
+/// its field paints transparent text: the tint would cover the glyphs of the
+/// [Text.rich] layer below. That layer tints its own spans instead.
+class _SearchHighlightController extends TextEditingController {
+  _SearchHighlightController({super.text});
+
+  List<TextRange> _matches = const [];
+  TextRange? _current;
+
+  void setMatches(List<TextRange> matches, TextRange? current) {
+    _matches = matches;
+    _current = current;
+  }
+
+  @override
+  TextSpan buildTextSpan({
+    required BuildContext context,
+    TextStyle? style,
+    required bool withComposing,
+  }) {
+    final text = value.text;
+    if (_matches.isEmpty || text.isEmpty) {
+      return super.buildTextSpan(
+        context: context,
+        style: style,
+        withComposing: withComposing,
+      );
+    }
+    // Keep the composition underline: an IME that is converting a word still
+    // has to show it while the matches are tinted.
+    final composing =
+        withComposing && value.isComposingRangeValid ? value.composing : null;
+    final points = <int>{0, text.length};
+    for (final r in _matches) {
+      points.add(r.start);
+      points.add(r.end);
+    }
+    if (composing != null) {
+      points.add(composing.start);
+      points.add(composing.end);
+    }
+    final sorted = points.where((p) => p >= 0 && p <= text.length).toList()
+      ..sort();
+    final spans = <TextSpan>[];
+    for (var i = 0; i < sorted.length - 1; i++) {
+      final start = sorted[i];
+      final end = sorted[i + 1];
+      if (end <= start) continue;
+      var segmentStyle = style ?? const TextStyle();
+      final current = _current;
+      if (current != null && current.start <= start && end <= current.end) {
+        segmentStyle =
+            segmentStyle.copyWith(backgroundColor: _kSearchCurrentTint);
+      } else if (_matches.any((r) => r.start <= start && end <= r.end)) {
+        segmentStyle = segmentStyle.copyWith(backgroundColor: _kSearchMatchTint);
+      }
+      if (composing != null &&
+          composing.start <= start &&
+          end <= composing.end) {
+        segmentStyle = segmentStyle.copyWith(
+          decoration: TextDecoration.underline,
+        );
+      }
+      spans.add(
+        TextSpan(text: text.substring(start, end), style: segmentStyle),
+      );
+    }
+    return TextSpan(style: style, children: spans);
+  }
+}
+
 class MemoDetailScreen extends StatefulWidget {
   final Memo memo;
   final bool isNew;
@@ -93,8 +174,28 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   // every keystroke jumped to the result, took the focus out of the field and
   // broke the composition (reported for Japanese input).
   Timer? _searchDebounce;
+
+  /// The query the marks on screen belong to.
+  ///
+  /// An IME can commit a finished composition without changing the text, and
+  /// `onChanged` is not called for that, so the marks would keep the previous
+  /// query (with Japanese input the field showed the committed word while the
+  /// previous one was still tinted).
+  String _lastSearchedQuery = '';
   int _searchMatchIndex = -1;
   List<_Match> _searchMatches = [];
+
+  /// The match the arrows are on, or null when there is no query or no match.
+  _Match? get _currentMatch {
+    if (_searchMatchIndex < 0 || _searchMatchIndex >= _searchMatches.length) {
+      return null;
+    }
+    return _searchMatches[_searchMatchIndex];
+  }
+
+  // Scrolls the running-note body so the match in focus is visible.
+  final ScrollController _textScrollController = ScrollController();
+  final GlobalKey _bodyTextKey = GlobalKey();
 
   // Undo/redo history
   final List<_MemoEditorSnapshot> _history = [];
@@ -224,6 +325,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     _textNoteController = TextEditingController();
     _textFocusNode = FocusNode();
     _searchFocusNode = FocusNode();
+    _searchQueryController.addListener(_onSearchValueChanged);
 
     // Fixed id for the text block when the note stays in running text mode
     _textBlockUuid = '${_currentMemo.uuid}_text_fixed';
@@ -248,7 +350,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     _textFocusNode.dispose();
     _searchFocusNode.dispose();
     _searchDebounce?.cancel();
+    _searchQueryController.removeListener(_onSearchValueChanged);
     _searchQueryController.dispose();
+    _textScrollController.dispose();
     _clearListControllers();
     super.dispose();
   }
@@ -298,7 +402,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
           ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
         for (var block in sortedBlocks) {
           _listControllers.add(
-            TextEditingController(
+            _SearchHighlightController(
               text: block.content['text']?.toString() ?? '',
             ),
           );
@@ -374,7 +478,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     required String id,
     bool requestFocus = true,
   }) {
-    final controller = TextEditingController(text: text);
+    final controller = _SearchHighlightController(text: text);
     final focusNode = FocusNode();
     _listControllers.insert(index, controller);
     _listFocusNodes.insert(index, focusNode);
@@ -894,13 +998,76 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     return result;
   }
 
-  void _jumpToMatch(_Match match) {
-    final region = _getSearchRegions()[match.regionIndex];
-    region.controller.selection = TextSelection(
-      baseOffset: match.start,
-      extentOffset: match.end,
+  /// Puts [index] in focus and scrolls it into view.
+  ///
+  /// The caret stays in the search field: moving the focus to the note body on
+  /// every arrow ended the IME composition and made the field unusable while
+  /// typing. The tint marks the match now, not the text selection.
+  void _selectMatch(int index) {
+    if (index < 0 || index >= _searchMatches.length) return;
+    setState(() => _searchMatchIndex = index);
+    _applyChecklistHighlights();
+    _revealMatch(_searchMatches[index]);
+  }
+
+  void _selectNextMatch() {
+    if (_searchMatches.isEmpty) return;
+    _selectMatch((_searchMatchIndex + 1) % _searchMatches.length);
+  }
+
+  /// Tints the matches of the checklist items. The running-note body tints its
+  /// own spans in [_bodySpans].
+  void _applyChecklistHighlights() {
+    for (var i = 0; i < _listControllers.length; i++) {
+      final controller = _listControllers[i];
+      if (controller is! _SearchHighlightController) continue;
+      final ranges = <TextRange>[
+        for (final m in _searchMatches)
+          if (m.regionIndex == i) TextRange(start: m.start, end: m.end),
+      ];
+      final current = _currentMatch;
+      controller.setMatches(
+        _isSearchActive ? ranges : const [],
+        _isSearchActive && current != null && current.regionIndex == i
+            ? TextRange(start: current.start, end: current.end)
+            : null,
+      );
+    }
+  }
+
+  void _revealMatch(_Match match) {
+    if (_isChecklistMode) {
+      // The checklist is a lazy list: bring the item in when the field that
+      // owns the match is already built.
+      if (match.regionIndex >= _listFocusNodes.length) return;
+      final itemContext = _listFocusNodes[match.regionIndex].context;
+      if (itemContext != null) {
+        Scrollable.ensureVisible(
+          itemContext,
+          duration: const Duration(milliseconds: 200),
+          alignment: 0.5,
+        );
+      }
+      return;
+    }
+    final render = _bodyTextKey.currentContext?.findRenderObject();
+    if (render is! RenderParagraph || !_textScrollController.hasClients) return;
+    final boxes = render.getBoxesForSelection(
+      TextSelection(baseOffset: match.start, extentOffset: match.end),
     );
-    region.focusNode?.requestFocus();
+    if (boxes.isEmpty) return;
+    final rect = boxes.first.toRect();
+    final reveal =
+        RenderAbstractViewport.of(render).getOffsetToReveal(render, 0.0);
+    final target = (reveal.offset + rect.top - 120).clamp(
+      0.0,
+      _textScrollController.position.maxScrollExtent,
+    );
+    _textScrollController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+    );
   }
 
   void _activateSearch() {
@@ -910,6 +1077,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       _searchMatches = [];
       _searchMatchIndex = -1;
     });
+    _applyChecklistHighlights();
     // Small delay to let the layout render before requesting focus
     Future.delayed(Duration(milliseconds: 100), () {
       if (mounted) {
@@ -925,6 +1093,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
       _searchMatches = [];
       _searchMatchIndex = -1;
     });
+    _applyChecklistHighlights();
     // Returns focus to the text editor
     if (_isChecklistMode && _listFocusNodes.isNotEmpty) {
       _listFocusNodes.last.requestFocus();
@@ -933,24 +1102,42 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     }
   }
 
-  /// Updates the match list without moving the caret.
+  /// Schedules the search for [query] after a short pause.
+  void _scheduleSearch(String query) {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      _performSearch(query);
+    });
+  }
+
+  /// Catches the end of an IME composition.
   ///
-  /// Jumping to the first match here moved the focus to the note body on every
-  /// keystroke, which ended the IME composition on the first character and
-  /// made the search unusable for languages that need conversion. The jump is
-  /// explicit now: Enter or the arrows.
+  /// Committing a conversion can leave the text unchanged, and `onChanged` is
+  /// not called in that case. Without this the marks stayed on the previous
+  /// query while the field already showed the committed one.
+  void _onSearchValueChanged() {
+    if (!_isSearchActive) return;
+    final value = _searchQueryController.value;
+    if (value.composing.isValid) return;
+    if (value.text == _lastSearchedQuery) return;
+    _scheduleSearch(value.text);
+  }
+
+  /// Recomputes the matches and tints them, leaving the caret in the field.
+  ///
+  /// Searching on every keystroke used to jump to the first result and move the
+  /// focus to the note body, which ended the IME composition and made the field
+  /// unusable for languages that need conversion (Japanese was reported). The
+  /// matches are tinted in place now, and only Enter or the arrows move between
+  /// them.
   void _performSearch(String query) {
+    _lastSearchedQuery = query;
     setState(() {
       _searchMatches = _findMatches(query);
       _searchMatchIndex = _searchMatches.isNotEmpty ? 0 : -1;
     });
-  }
-
-  void _jumpToCurrentMatch() {
-    if (_searchMatchIndex < 0 || _searchMatchIndex >= _searchMatches.length) {
-      return;
-    }
-    _jumpToMatch(_searchMatches[_searchMatchIndex]);
+    _applyChecklistHighlights();
   }
 
   // ---------- Options menu (three dots) ----------
@@ -1492,15 +1679,12 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               ),
               onChanged: (value) {
                 // Leave the composing text alone: an IME that is converting a
-                // word must finish before the matches are recomputed.
+                // word must finish before the matches are recomputed. The end
+                // of the conversion arrives through the controller listener.
                 if (_searchQueryController.value.composing.isValid) return;
-                _searchDebounce?.cancel();
-                _searchDebounce = Timer(const Duration(milliseconds: 250), () {
-                  if (!mounted) return;
-                  _performSearch(value);
-                });
+                _scheduleSearch(value);
               },
-              onSubmitted: (_) => _jumpToCurrentMatch(),
+              onSubmitted: (_) => _selectNextMatch(),
             ),
           ),
           if (_searchMatches.isNotEmpty) ...[
@@ -1517,12 +1701,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
               color: _searchMatchIndex <= 0 ? Colors.grey : textColor,
               onPressed: _searchMatchIndex <= 0
                   ? null
-                  : () {
-                      setState(() {
-                        _searchMatchIndex--;
-                        _jumpToMatch(_searchMatches[_searchMatchIndex]);
-                      });
-                    },
+                  : () => _selectMatch(_searchMatchIndex - 1),
             ),
             IconButton(
               icon: Icon(Icons.arrow_downward, size: 18),
@@ -1531,12 +1710,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                   : textColor,
               onPressed: _searchMatchIndex >= _searchMatches.length - 1
                   ? null
-                  : () {
-                      setState(() {
-                        _searchMatchIndex++;
-                        _jumpToMatch(_searchMatches[_searchMatchIndex]);
-                      });
-                    },
+                  : () => _selectMatch(_searchMatchIndex + 1),
             ),
           ],
           IconButton(
@@ -1611,18 +1785,58 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
     _fetchLinkPreview(url);
   }
 
+  /// Builds the visible body text: links are underlined and, while the inline
+  /// search is open, every match is tinted (the one in focus more strongly).
+  ///
+  /// This is the only layer painted with real colours; the field above it has a
+  /// transparent style, so a background there would hide the glyphs.
   List<InlineSpan> _bodySpans(String text, TextStyle linkStyle) {
-    final spans = <InlineSpan>[];
-    int last = 0;
-    for (final m in LinkPreviewService.matches(text)) {
-      if (m.start > last) {
-        spans.add(TextSpan(text: text.substring(last, m.start)));
-      }
-      spans.add(TextSpan(text: m.group(0), style: linkStyle));
-      last = m.end;
+    final links = <TextRange>[
+      for (final m in LinkPreviewService.matches(text))
+        TextRange(start: m.start, end: m.end),
+    ];
+    final matches = _isSearchActive
+        ? [for (final m in _searchMatches) if (m.regionIndex == 0) m]
+        : const <_Match>[];
+    if (links.isEmpty && matches.isEmpty) {
+      return [TextSpan(text: text)];
     }
-    if (last < text.length) {
-      spans.add(TextSpan(text: text.substring(last)));
+    final current = _currentMatch;
+    final points = <int>{0, text.length};
+    for (final r in links) {
+      points.add(r.start);
+      points.add(r.end);
+    }
+    for (final m in matches) {
+      points.add(m.start);
+      points.add(m.end);
+    }
+    final sorted = points.where((p) => p >= 0 && p <= text.length).toList()
+      ..sort();
+    final spans = <InlineSpan>[];
+    for (var i = 0; i < sorted.length - 1; i++) {
+      final start = sorted[i];
+      final end = sorted[i + 1];
+      if (end <= start) continue;
+      final isLink = links.any((r) => r.start <= start && end <= r.end);
+      _Match? match;
+      for (final m in matches) {
+        if (m.start <= start && end <= m.end) {
+          match = m;
+          break;
+        }
+      }
+      TextStyle? style = isLink ? linkStyle : null;
+      if (match != null) {
+        final isCurrent = current != null &&
+            current.regionIndex == match.regionIndex &&
+            current.start == match.start &&
+            current.end == match.end;
+        style = (style ?? const TextStyle()).copyWith(
+          backgroundColor: isCurrent ? _kSearchCurrentTint : _kSearchMatchTint,
+        );
+      }
+      spans.add(TextSpan(text: text.substring(start, end), style: style));
     }
     return spans;
   }
@@ -1748,6 +1962,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
 
     return LayoutBuilder(
       builder: (viewportContext, viewport) => SingleChildScrollView(
+        controller: _textScrollController,
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: viewport.maxHeight),
           child: Stack(
@@ -1791,6 +2006,7 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                   children: [
                     IgnorePointer(
                       child: Text.rich(
+                        key: _bodyTextKey,
                         TextSpan(
                           style: bodyStyle,
                           children: _bodySpans(text, linkStyle),
