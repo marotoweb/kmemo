@@ -7,6 +7,11 @@ the `[Android]` and `[All]` entries only, never from `[Desktop]` or `[CI]`.
 
 Sections before 0.3.0 predate the tags and are kept as they were released.
 
+## Unreleased
+
+### 🐛 Fixes
+- [All] **Typing in the note search keeps the keyboard composition:** the editor search jumped to the first match on every keystroke and moved the focus to the note, which finalised the first character and made the field unusable for languages that need conversion, such as Japanese. The matches are now searched after a short pause, never while the keyboard is still composing, and the jump happens on Enter or with the arrows.
+
 ## 0.3.2
 
 ### 🐛 Fixes

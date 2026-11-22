@@ -1,5 +1,6 @@
 // lib/ui/screens/memo_detail_screen.dart
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -88,6 +89,10 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
 
   // Inline search state
   final TextEditingController _searchQueryController = TextEditingController();
+  // Typing is debounced and ignored while the IME is composing: searching on
+  // every keystroke jumped to the result, took the focus out of the field and
+  // broke the composition (reported for Japanese input).
+  Timer? _searchDebounce;
   int _searchMatchIndex = -1;
   List<_Match> _searchMatches = [];
 
@@ -242,6 +247,7 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     _textNoteController.dispose();
     _textFocusNode.dispose();
     _searchFocusNode.dispose();
+    _searchDebounce?.cancel();
     _searchQueryController.dispose();
     _clearListControllers();
     super.dispose();
@@ -927,14 +933,24 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     }
   }
 
+  /// Updates the match list without moving the caret.
+  ///
+  /// Jumping to the first match here moved the focus to the note body on every
+  /// keystroke, which ended the IME composition on the first character and
+  /// made the search unusable for languages that need conversion. The jump is
+  /// explicit now: Enter or the arrows.
   void _performSearch(String query) {
     setState(() {
       _searchMatches = _findMatches(query);
       _searchMatchIndex = _searchMatches.isNotEmpty ? 0 : -1;
-      if (_searchMatchIndex != -1) {
-        _jumpToMatch(_searchMatches[_searchMatchIndex]);
-      }
     });
+  }
+
+  void _jumpToCurrentMatch() {
+    if (_searchMatchIndex < 0 || _searchMatchIndex >= _searchMatches.length) {
+      return;
+    }
+    _jumpToMatch(_searchMatches[_searchMatchIndex]);
   }
 
   // ---------- Options menu (three dots) ----------
@@ -1475,14 +1491,16 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
                     : null,
               ),
               onChanged: (value) {
-                _performSearch(value);
-                // Restore focus after rebuild to avoid cursor jumping
-                Future.delayed(Duration.zero, () {
-                  if (mounted && _isSearchActive) {
-                    _searchFocusNode.requestFocus();
-                  }
+                // Leave the composing text alone: an IME that is converting a
+                // word must finish before the matches are recomputed.
+                if (_searchQueryController.value.composing.isValid) return;
+                _searchDebounce?.cancel();
+                _searchDebounce = Timer(const Duration(milliseconds: 250), () {
+                  if (!mounted) return;
+                  _performSearch(value);
                 });
               },
+              onSubmitted: (_) => _jumpToCurrentMatch(),
             ),
           ),
           if (_searchMatches.isNotEmpty) ...[
