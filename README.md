@@ -29,17 +29,20 @@
 - **Text sharing:** Receives text shared from other apps (Share Plus) and automatically creates a new note, or shares your notes with external apps.
 - **Empty note rejection:** Notes created but left empty are automatically deleted on exit, avoiding the accumulation of empty notes.
 - **Remote sync (kDrive or WebDAV):** Upload and download notes to kDrive (Infomaniak) or to any WebDAV server, with optional client-side AES encryption.
+- **Pull to sync and last sync:** pulling the note list down runs a manual sync; while the list is held, a card shows the date and time of the last sync. It can be turned off in Settings, next to the sync log.
 - **Home Screen Widget integration:** Automatic synchronization with a native system widget for quick viewing of the latest notes and quick editing directly from the device desktop.
 - **APP link:** Support for opening notes via APP link *kmemo://*
 - **Editor options:** automatic line wrapping in titles and list items, and optional strikethrough for checked checklist items (configurable in Settings). The home screen widget respects these options in the preview.
 - **List reordering:** drag checklist items to reorder, with automatic persistence.
 - **Home sorting and search:** sort notes by last modification, creation date or a custom order (ascending/descending for dates), and search by title and content from the app bar.
+- **Find in note:** the editor has its own search. Every match is highlighted while you type (the one in focus in a stronger colour), the caret stays in the field, and Enter or the arrows move between matches and scroll them into view. It also works with keyboards that need conversion, such as Japanese.
 - **Pinned notes:** pin notes to keep them at the top of the home list and the widget; pinning is synced across devices.
 - **Custom home order:** in custom-order mode, select a single note and drag it vertically to reorder the list.
 - **Link previews:** URLs in the note body are underlined; tapping a link opens a menu to preview (thumbnail, title, domain), open or edit the URL. Previews are only fetched on user action (no automatic requests), are cached locally, can be removed with an "Undo" option, and are also shown at the bottom of the home card.
 - **Export to the configured backend:** from the note options menu, the export entry follows the backend sync is set to ("Copy to kDrive" or "Copy to WebDAV") and generates a .docx file with the note title and content, uploaded to the same remote folder the notes use. With no backend configured it reads "Copy to the cloud" and opens the sync Settings. The exported .docx is **not encrypted**, even when note encryption is enabled: encryption protects the note payload, while the document is a plain file. The confirmation message says so when encryption is on, and the note title is turned into a safe file name (no `/`, `\` or other path characters).
 - **Share and export (single or multiple notes):** in the editor, "Send" shares the note via Share Plus. On the home screen, with multiple notes selected, the top bar menu allows "Send" (grouped text) and the same backend-aware export (a single .docx with all notes). If no remote storage is configured, a warning is shown with a shortcut to the sync Settings.
 - **In-app update check:** Settings → "Check for updates" queries the latest GitHub release and notifies the user if a newer version is available, downloading the APK matching the device architecture.
+- **Danger zone:** at the end of the Settings page, two destructive actions, each behind a confirmation that explains what it does. "Delete all notes" removes every note from this device (archive and trash included) and leaves the server untouched, so notes already synced come back on the next sync. "Delete all app data" clears the notes, the sync configuration and the caches, and puts every setting back to a fresh install.
 
 ---
 
