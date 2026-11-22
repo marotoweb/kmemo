@@ -279,5 +279,7 @@
   "deleteAllDataConfirmTitle": "Delete all app data?",
   "deleteAllDataConfirmBody": "This removes every note, the app settings, the sync configuration (token and passphrase) and the local caches from this device. Notes already synced stay on the server. This cannot be undone.",
   "deleteAllDataConfirmAction": "Delete everything",
-  "allDataDeleted": "Application data deleted."
+  "allDataDeleted": "Application data deleted.",
+  "showLastSyncHint": "Show the last sync while pulling",
+  "showLastSyncHintSubtitle": "Shows the date and time of the last sync when you pull the list down."
 }

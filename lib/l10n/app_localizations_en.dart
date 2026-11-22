@@ -848,4 +848,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get allDataDeleted => 'Application data deleted.';
+
+  @override
+  String get showLastSyncHint => 'Show the last sync while pulling';
+
+  @override
+  String get showLastSyncHintSubtitle =>
+      'Shows the date and time of the last sync when you pull the list down.';
 }

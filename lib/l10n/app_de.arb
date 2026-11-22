@@ -279,5 +279,7 @@
   "deleteAllDataConfirmTitle": "Alle App-Daten löschen?",
   "deleteAllDataConfirmBody": "Dies entfernt alle Notizen, die App-Einstellungen, die Synchronisierungskonfiguration (Token und Passphrase) und die lokalen Caches von diesem Gerät. Bereits synchronisierte Notizen bleiben auf dem Server. Das lässt sich nicht rückgängig machen.",
   "deleteAllDataConfirmAction": "Alles löschen",
-  "allDataDeleted": "App-Daten gelöscht."
+  "allDataDeleted": "App-Daten gelöscht.",
+  "showLastSyncHint": "Letzte Synchronisierung beim Ziehen anzeigen",
+  "showLastSyncHintSubtitle": "Zeigt Datum und Uhrzeit der letzten Synchronisierung, während du die Liste nach unten ziehst."
 }

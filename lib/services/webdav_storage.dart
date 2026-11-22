@@ -94,6 +94,7 @@ class WebDAVStorage extends StorageRepository {
   bool get hasPassword => _password != null && _password!.isNotEmpty;
 
   /// Last completed sync.
+  @override
   DateTime? get lastSync => _lastSync;
 
   // ---------------------------------------------------------------------

@@ -373,6 +373,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   trailing: Icon(Icons.copy, size: 18, color: Colors.grey),
                   onTap: _copySyncLog,
                 ),
+                Divider(height: 1),
+                SwitchListTile(
+                  title: Text(
+                    AppLocalizations.of(context)!.showLastSyncHint,
+                  ),
+                  subtitle: Text(
+                    AppLocalizations.of(context)!.showLastSyncHintSubtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  value: themeProvider.showLastSyncHint,
+                  onChanged: (value) =>
+                      themeProvider.setShowLastSyncHint(value),
+                ),
               ],
             ),
           ),

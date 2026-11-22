@@ -279,5 +279,7 @@
   "deleteAllDataConfirmTitle": "Eliminare tutti i dati dell'app?",
   "deleteAllDataConfirmBody": "Rimuove tutte le note, le impostazioni dell'app, la configurazione della sincronizzazione (token e passphrase) e le cache locali da questo dispositivo. Le note già sincronizzate restano sul server. Non può essere annullata.",
   "deleteAllDataConfirmAction": "Elimina tutto",
-  "allDataDeleted": "Dati dell'app eliminati."
+  "allDataDeleted": "Dati dell'app eliminati.",
+  "showLastSyncHint": "Mostra l'ultima sincronizzazione trascinando",
+  "showLastSyncHintSubtitle": "Mostra data e ora dell'ultima sincronizzazione mentre trascini la lista verso il basso."
 }

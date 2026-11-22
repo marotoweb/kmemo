@@ -14,6 +14,7 @@ import '../widgets/sync_progress_bar.dart';
 import '../widgets/app_snackbar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
+import '../sync_date_format.dart';
 
 class SyncSettingsScreen extends StatefulWidget {
   const SyncSettingsScreen({super.key});
@@ -299,20 +300,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
 
   String _formatWebdavLastSync() => _formatSyncDate(_webdav.lastSync);
 
-  String _formatSyncDate(DateTime? last) {
-    if (last == null) return AppLocalizations.of(context)!.lastSyncNever;
-    final now = DateTime.now();
-    final diff = now.difference(last);
-    if (diff.inMinutes < 1) {
-      return AppLocalizations.of(context)!.lastSyncJustNow;
-    } else if (diff.inHours < 1) {
-      return AppLocalizations.of(context)!.lastSyncMinutesAgo('${diff.inMinutes}');
-    } else if (diff.inDays < 1) {
-      return AppLocalizations.of(context)!.lastSyncHoursAgo('${diff.inHours}');
-    } else {
-      return '${last.day}/${last.month}/${last.year} ${last.hour}:${last.minute.toString().padLeft(2, '0')}';
-    }
-  }
+  String _formatSyncDate(DateTime? last) => formatSyncDate(context, last);
 
   /// Manual sync (push + pull) triggered by the user.
   Future<void> _syncNow() async {

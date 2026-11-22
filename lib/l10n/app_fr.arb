@@ -279,5 +279,7 @@
   "deleteAllDataConfirmTitle": "Supprimer toutes les données ?",
   "deleteAllDataConfirmBody": "Cela supprime toutes les notes, les réglages de l'application, la configuration de synchronisation (jeton et phrase secrète) et les caches de cet appareil. Les notes déjà synchronisées restent sur le serveur. Cette action est irréversible.",
   "deleteAllDataConfirmAction": "Tout supprimer",
-  "allDataDeleted": "Données de l'application supprimées."
+  "allDataDeleted": "Données de l'application supprimées.",
+  "showLastSyncHint": "Afficher la dernière synchro en tirant",
+  "showLastSyncHintSubtitle": "Affiche la date et l'heure de la dernière synchronisation lorsque vous tirez la liste vers le bas."
 }

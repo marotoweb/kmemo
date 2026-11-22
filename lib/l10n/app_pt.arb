@@ -488,5 +488,7 @@
   "deleteAllDataConfirmTitle": "Eliminar todos os dados?",
   "deleteAllDataConfirmBody": "Remove todas as notas, as definições da aplicação, a configuração de sincronização (token e frase-passe) e as caches deste dispositivo. As notas já sincronizadas ficam no servidor. Isto não pode ser anulado.",
   "deleteAllDataConfirmAction": "Eliminar tudo",
-  "allDataDeleted": "Dados da aplicação eliminados."
+  "allDataDeleted": "Dados da aplicação eliminados.",
+  "showLastSyncHint": "Mostrar a última sincronização ao puxar",
+  "showLastSyncHintSubtitle": "Mostra a data e hora da última sincronização quando puxa a lista para baixo."
 }

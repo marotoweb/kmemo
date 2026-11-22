@@ -1599,6 +1599,18 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Dados da aplicação eliminados.'**
   String get allDataDeleted;
+
+  /// No description provided for @showLastSyncHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mostrar a última sincronização ao puxar'**
+  String get showLastSyncHint;
+
+  /// No description provided for @showLastSyncHintSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mostra a data e hora da última sincronização quando puxa a lista para baixo.'**
+  String get showLastSyncHintSubtitle;
 }
 
 class _AppLocalizationsDelegate

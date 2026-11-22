@@ -10,6 +10,7 @@ Sections before 0.3.0 predate the tags and are kept as they were released.
 ## Unreleased
 
 ### ✨ New
+- [All] **The last sync date and time on the home screen:** pulling the list down now shows, while it is held, when the last sync ran. The card goes away when the list is released or while a sync is running, and can be turned off in Settings, next to the sync log.
 - [All] **Danger zone in the settings:** the end of the settings page now has two destructive actions, marked in red and confirmed with an explanation of what each one does. "Delete all notes" removes every note from this device, including the archive and the trash, without touching the server: notes that were already synced stay there and come back on the next sync. "Delete all app data" clears the notes, the sync configuration and the local caches and puts every setting back to a fresh install.
 
 ### 🐛 Fixes

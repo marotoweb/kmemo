@@ -79,6 +79,7 @@ class KDriveStorage extends StorageRepository {
   bool get supportsVersionHistory => true;
 
   /// Last full sync date/time.
+  @override
   DateTime? get lastSync => _lastSync;
 
   /// Loads the saved configuration.
