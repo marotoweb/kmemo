@@ -6,7 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../services/encryption_service.dart';
+import '../../services/kdrive_storage.dart';
+import '../../services/webdav_storage.dart';
 import '../../providers/memo_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/update_service.dart';
@@ -175,6 +179,110 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  /// Confirmation shared by the two destructive actions: the consequence is
+  /// spelled out, the safe choice is Cancel and the action itself is red.
+  Future<bool> _confirmDestructive({
+    required String title,
+    required String body,
+    required String action,
+  }) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(
+          Icons.warning_amber_rounded,
+          color: Colors.red,
+          size: 32,
+        ),
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(AppLocalizations.of(ctx)!.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(action),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
+  /// Removes every note from this device (active, archived and in the trash).
+  /// The server is not touched.
+  Future<void> _deleteAllNotes() async {
+    final l10n = AppLocalizations.of(context)!;
+    final provider = Provider.of<MemoProvider>(context, listen: false);
+    final confirmed = await _confirmDestructive(
+      title: l10n.deleteAllNotesConfirmTitle,
+      body: l10n.deleteAllNotesConfirmBody,
+      action: l10n.deleteAllNotesConfirmAction,
+    );
+    if (!confirmed) return;
+    await provider.deleteAllNotesLocally();
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      buildAppSnackBar(context, message: l10n.allNotesDeleted),
+    );
+  }
+
+  /// Factory reset of this device: notes, settings, sync configuration and
+  /// caches. The copies already uploaded stay on the server.
+  Future<void> _deleteAllAppData() async {
+    final l10n = AppLocalizations.of(context)!;
+    final provider = Provider.of<MemoProvider>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    // The storages are captured before the first await: they are the instances
+    // the app is using, so clearing them also clears their in-memory state.
+    KDriveStorage? kdrive;
+    WebDAVStorage? webdav;
+    try {
+      kdrive = Provider.of<KDriveStorage>(context, listen: false);
+    } catch (_) {
+      // Not registered (tests).
+    }
+    try {
+      webdav = Provider.of<WebDAVStorage>(context, listen: false);
+    } catch (_) {
+      // Not registered (tests).
+    }
+
+    final confirmed = await _confirmDestructive(
+      title: l10n.deleteAllDataConfirmTitle,
+      body: l10n.deleteAllDataConfirmBody,
+      action: l10n.deleteAllDataConfirmAction,
+    );
+    if (!confirmed) return;
+
+    await provider.wipeAllData();
+    await (kdrive ?? KDriveStorage()).clearConfiguration();
+    await (webdav ?? WebDAVStorage()).clearConfiguration();
+    EncryptionService.instance.disable();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+
+    // Every setting goes back to what a fresh install has. The reset does not
+    // write the defaults back, so the stored state stays empty and the next
+    // start reads the same defaults.
+    themeProvider.resetToDefaults();
+    provider.refreshWidget();
+
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      buildAppSnackBar(context, message: l10n.allDataDeleted),
+    );
+  }
+
   /// Copies the sync log (counts and decisions, no content) to the clipboard.
   Future<void> _copySyncLog() async {
     final log = await SyncDebugLog.read();
@@ -264,6 +372,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   trailing: Icon(Icons.copy, size: 18, color: Colors.grey),
                   onTap: _copySyncLog,
+                ),
+                Divider(height: 1),
+                SwitchListTile(
+                  title: Text(
+                    AppLocalizations.of(context)!.showLastSyncHint,
+                  ),
+                  subtitle: Text(
+                    AppLocalizations.of(context)!.showLastSyncHintSubtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  value: themeProvider.showLastSyncHint,
+                  onChanged: (value) =>
+                      themeProvider.setShowLastSyncHint(value),
                 ),
               ],
             ),
@@ -608,6 +729,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _appVersion,
                     style: TextStyle(color: Colors.grey),
                   ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 24),
+
+          // SECTION: DANGER ZONE
+          // Deliberately last: neither action can be undone, so they sit as
+          // far as possible from the settings used every day.
+          Text(
+            AppLocalizations.of(context)!.dangerZone,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
+          ),
+          SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: isDarkMode
+                  ? Color(0xFF1E1E1E)
+                  : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.red.withValues(alpha: 0.6)),
+            ),
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(
+                    Icons.delete_forever_outlined,
+                    color: Colors.red,
+                  ),
+                  title: Text(
+                    AppLocalizations.of(context)!.deleteAllNotes,
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  subtitle: Text(
+                    AppLocalizations.of(context)!.deleteAllNotesSubtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  trailing: Icon(Icons.chevron_right, color: Colors.red),
+                  onTap: _deleteAllNotes,
+                ),
+                Divider(
+                  height: 1,
+                  color: isDarkMode
+                      ? Colors.grey.shade800
+                      : Colors.grey.shade300,
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.warning_amber_rounded,
+                    color: Colors.red,
+                  ),
+                  title: Text(
+                    AppLocalizations.of(context)!.deleteAllData,
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  subtitle: Text(
+                    AppLocalizations.of(context)!.deleteAllDataSubtitle,
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  trailing: Icon(Icons.chevron_right, color: Colors.red),
+                  onTap: _deleteAllAppData,
                 ),
               ],
             ),

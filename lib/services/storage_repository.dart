@@ -99,6 +99,10 @@ abstract class StorageRepository {
   /// which is display text and may be translated.
   String get backendId;
 
+  /// When the last successful sync ended, for the UI. A backend that does not
+  /// report it leaves it null.
+  DateTime? get lastSync => null;
+
   /// Whether the notes must be encrypted before leaving the device.
   ///
   /// When this is true and [EncryptionService] has no passphrase loaded, the

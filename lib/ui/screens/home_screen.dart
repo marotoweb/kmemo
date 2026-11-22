@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:flutter/services.dart';
 
 import 'package:provider/provider.dart';
@@ -14,6 +15,7 @@ import '../../models/home_sort.dart';
 import '../../models/note_palette.dart';
 import '../../models/shared_text.dart';
 import '../../providers/memo_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../widgets/memo_card.dart';
 import '../widgets/app_snackbar.dart';
 import '../widgets/sync_prompts.dart';
@@ -27,6 +29,7 @@ import 'archive_screen.dart';
 import 'trash_screen.dart';
 import 'settings_screen.dart';
 import 'sync_settings_screen.dart';
+import '../sync_date_format.dart';
 import '../cloud_export.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
@@ -56,6 +59,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // Bottom progress card while the confirmed replacement of remote copies
   // runs, identical to the one in the sync settings page.
   bool _isSyncing = false;
+  /// True while the list is being pulled down: the last-sync hint is shown.
+  bool _showLastSync = false;
   int _syncDone = 0;
   int _syncTotal = 0;
   // The warnings float at the top and the list reserves their height: at rest
@@ -1176,6 +1181,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
 
+  /// Shows the last sync while the list is being pulled down.
+  ///
+  /// The hint appears with the first overscroll at the top and goes away when
+  /// the finger is released (the refresh indicator takes over) or when a sync
+  /// is already running. It never reserves height: moving the notes during the
+  /// gesture would fight the pull.
+  bool _handleScrollNotification(
+    ScrollNotification notification,
+    MemoProvider provider,
+  ) {
+    if (notification is OverscrollNotification &&
+        // Negative: the list is being dragged past its top edge.
+        notification.overscroll < 0 &&
+        notification.metrics.extentBefore == 0) {
+      if (_showLastSync) return false;
+      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+      final storage = provider.storage;
+      if (!themeProvider.showLastSyncHint) return false;
+      if (storage == null || !storage.isConfigured) return false;
+      if (_isSyncing || provider.syncPhase != SyncPhase.idle) return false;
+      setState(() => _showLastSync = true);
+    } else if (notification is ScrollEndNotification ||
+        (notification is UserScrollNotification &&
+            notification.direction == ScrollDirection.idle)) {
+      if (_showLastSync) setState(() => _showLastSync = false);
+    }
+    return false;
+  }
+
+  /// When the last sync ran, shown while the user pulls the list down.
+  Widget _buildLastSyncHint(MemoProvider provider) {
+    final l10n = AppLocalizations.of(context)!;
+    final last = provider.storage?.lastSync;
+    final value = last == null ? l10n.lastSyncNever : formatSyncAbsolute(last);
+    return _buildSyncBanner(
+      icon: Icons.schedule,
+      message: '${l10n.lastSync}: $value',
+    );
+  }
+
   Widget _buildBody(
     MemoProvider provider,
     List<Memo> items,
@@ -1835,11 +1880,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             Column(
               children: [
                 Expanded(
-                  child: _buildBody(
-                    provider,
-                    activeMemos,
-                    isDarkMode,
-                    isSelectionMode,
+                  // The hint is driven by the list scroll, so the listener
+                  // sits above the body (and above the refresh indicator).
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: (notification) =>
+                        _handleScrollNotification(notification, provider),
+                    child: _buildBody(
+                      provider,
+                      activeMemos,
+                      isDarkMode,
+                      isSelectionMode,
+                    ),
                   ),
                 ),
               ],
@@ -1873,6 +1924,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ],
               ),
             ),
+            // Hint shown while the list is pulled down. It is not part of the
+            // measured banner strip: it only lives during the gesture and must
+            // not move the notes under the finger.
+            if (_showLastSync)
+              Positioned(
+                top: _bannerHeight,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(child: _buildLastSyncHint(provider)),
+              ),
             // The "+" is not a Scaffold floating button on purpose: the
             // framework lifts that one when a SnackBar appears, and the button
             // has to stay put. The fixed offset leaves room for the progress

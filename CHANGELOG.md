@@ -7,6 +7,18 @@ the `[Android]` and `[All]` entries only, never from `[Desktop]` or `[CI]`.
 
 Sections before 0.3.0 predate the tags and are kept as they were released.
 
+## 0.3.3
+
+### ✨ New
+- [All] **The last sync date and time on the home screen:** pulling the list down now shows, while it is held, when the last sync ran. The card goes away when the list is released or while a sync is running, and can be turned off in Settings, next to the sync log.
+- [All] **Danger zone in the settings:** the end of the settings page now has two destructive actions, marked in red and confirmed with an explanation of what each one does. "Delete all notes" removes every note from this device, including the archive and the trash, without touching the server: notes that were already synced stay there and come back on the next sync. "Delete all app data" clears the notes, the sync configuration and the local caches and puts every setting back to a fresh install.
+
+### 🐛 Fixes
+- [All] **The sync progress card floats over the page in the sync settings:** it used to sit in the Scaffold's bottom bar, on an empty strip, so the translucent card read as a flat rectangle and the list changed height when it appeared. It now floats over the list, exactly like the one on the home screen.
+- [All] **The caret no longer skips a word at the end of a line:** the note body is drawn twice (the visible underlined text and the transparent field that holds the caret), and the field keeps a few pixels for the caret itself. A word that fit exactly in those pixels was wrapped in the field but not in the visible text, so moving the caret jumped to the next line while the word was still drawn on the previous one. The visible layer now reserves the same space, so both wrap on the same words.
+- [All] **The note search marks every match while you type:** typing in "Find in note" only moved the caret to the first result, so the body showed nothing and the counter was the only clue. Every occurrence is now tinted as the query is typed, the one the arrows are on in a stronger colour, the caret stays in the search field, and Enter or the arrows move between matches without taking the focus out of the field. A word committed by the keyboard is searched too, so the marks always belong to the word in the field.
+- [All] **Typing in the note search keeps the keyboard composition:** the editor search jumped to the first match on every keystroke and moved the focus to the note, which finalised the first character and made the field unusable for languages that need conversion, such as Japanese. The matches are now searched after a short pause, never while the keyboard is still composing, and the jump happens on Enter or with the arrows. Reported with Japanese input in [issue #2](https://github.com/marotoweb/kmemo/issues/2).
+
 ## 0.3.2
 
 ### 🐛 Fixes

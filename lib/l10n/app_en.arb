@@ -266,5 +266,20 @@
   "webdavConfigurationSaved": "Configuration saved",
   "webdavRemoveConfiguration": "Remove configuration",
   "webdavMissingFields": "Fill in the URL, the username and the password.",
-  "save": "Save"
+  "save": "Save",
+  "dangerZone": "DANGER ZONE",
+  "deleteAllNotes": "Delete all notes",
+  "deleteAllNotesSubtitle": "Permanently removes every note from this device. Nothing is deleted on the server.",
+  "deleteAllNotesConfirmTitle": "Delete all notes?",
+  "deleteAllNotesConfirmBody": "Every note on this device is removed, including archived notes and the trash. Nothing is sent to the server: notes that were already synced stay there and come back on the next sync. This cannot be undone.",
+  "deleteAllNotesConfirmAction": "Delete all",
+  "allNotesDeleted": "All notes were deleted.",
+  "deleteAllData": "Delete all app data",
+  "deleteAllDataSubtitle": "Removes the notes, settings, sync configuration and caches from this device.",
+  "deleteAllDataConfirmTitle": "Delete all app data?",
+  "deleteAllDataConfirmBody": "This removes every note, the app settings, the sync configuration (token and passphrase) and the local caches from this device. Notes already synced stay on the server. This cannot be undone.",
+  "deleteAllDataConfirmAction": "Delete everything",
+  "allDataDeleted": "Application data deleted.",
+  "showLastSyncHint": "Show the last sync while pulling",
+  "showLastSyncHintSubtitle": "Shows the date and time of the last sync when you pull the list down."
 }

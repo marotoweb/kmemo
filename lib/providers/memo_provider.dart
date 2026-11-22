@@ -1330,6 +1330,48 @@ class MemoProvider extends ChangeNotifier {
     _scheduleSync();
   }
 
+  /// Removes every note from this device (active, archived and in the trash)
+  /// without touching the server.
+  ///
+  /// Nothing is published: no tombstone is recorded and no sync is scheduled,
+  /// so the notes are simply forgotten here, as if this device had never read
+  /// them. Notes that are still on the server are downloaded again by the next
+  /// sync. Used by the "delete all notes" action.
+  ///
+  /// Returns the number of notes that were removed.
+  Future<int> deleteAllNotesLocally() async {
+    final count = _memos.length;
+    if (count == 0) return 0;
+    _syncDebounce?.cancel();
+    _blocksByMemo.clear();
+    await _db.wipeNotes();
+    // The stream emits the empty list right after the wipe; clearing it here
+    // keeps the screen from showing the old notes for a frame.
+    _memos = [];
+    _updateWidgetData();
+    notifyListeners();
+    return count;
+  }
+
+  /// Wipes every note, block and tombstone from this device.
+  ///
+  /// The remote copies are not touched: this is the local half of the
+  /// "delete all application data" action (the caller also clears the sync
+  /// configuration, the settings and the caches).
+  Future<void> wipeAllData() async {
+    // Detach the backend first so no scheduled sync writes to a device that is
+    // being emptied.
+    useStorage(null);
+    _syncDebounce?.cancel();
+    _blocksByMemo.clear();
+    await _db.wipeAllData();
+    _memos = [];
+    _sortMode = HomeSortMode.updated;
+    _sortAscending = false;
+    _updateWidgetData();
+    notifyListeners();
+  }
+
   Future<void> deleteMultiple(List<String> uuids) async {
     await softDeleteMultiple(uuids);
   }

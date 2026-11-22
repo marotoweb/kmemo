@@ -266,5 +266,20 @@
   "webdavConfigurationSaved": "Konfiguration gespeichert",
   "webdavRemoveConfiguration": "Konfiguration entfernen",
   "webdavMissingFields": "Füllen Sie URL, Benutzername und Passwort aus.",
-  "save": "Speichern"
+  "save": "Speichern",
+  "dangerZone": "GEFAHRENZONE",
+  "deleteAllNotes": "Alle Notizen löschen",
+  "deleteAllNotesSubtitle": "Löscht endgültig alle Notizen von diesem Gerät. Auf dem Server wird nichts gelöscht.",
+  "deleteAllNotesConfirmTitle": "Alle Notizen löschen?",
+  "deleteAllNotesConfirmBody": "Alle Notizen auf diesem Gerät werden gelöscht, auch archivierte Notizen und der Papierkorb. Es wird nichts an den Server gesendet: bereits synchronisierte Notizen bleiben dort und kommen bei der nächsten Synchronisierung zurück. Das lässt sich nicht rückgängig machen.",
+  "deleteAllNotesConfirmAction": "Alle löschen",
+  "allNotesDeleted": "Alle Notizen wurden gelöscht.",
+  "deleteAllData": "Alle App-Daten löschen",
+  "deleteAllDataSubtitle": "Entfernt die Notizen, Einstellungen, Synchronisierungskonfiguration und Caches von diesem Gerät.",
+  "deleteAllDataConfirmTitle": "Alle App-Daten löschen?",
+  "deleteAllDataConfirmBody": "Dies entfernt alle Notizen, die App-Einstellungen, die Synchronisierungskonfiguration (Token und Passphrase) und die lokalen Caches von diesem Gerät. Bereits synchronisierte Notizen bleiben auf dem Server. Das lässt sich nicht rückgängig machen.",
+  "deleteAllDataConfirmAction": "Alles löschen",
+  "allDataDeleted": "App-Daten gelöscht.",
+  "showLastSyncHint": "Letzte Synchronisierung beim Ziehen anzeigen",
+  "showLastSyncHintSubtitle": "Zeigt Datum und Uhrzeit der letzten Synchronisierung, während du die Liste nach unten ziehst."
 }

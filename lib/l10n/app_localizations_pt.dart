@@ -808,4 +808,54 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get save => 'Guardar';
+
+  @override
+  String get dangerZone => 'ZONA DE PERIGO';
+
+  @override
+  String get deleteAllNotes => 'Eliminar todas as notas';
+
+  @override
+  String get deleteAllNotesSubtitle =>
+      'Remove definitivamente todas as notas deste dispositivo. Nada é eliminado no servidor.';
+
+  @override
+  String get deleteAllNotesConfirmTitle => 'Eliminar todas as notas?';
+
+  @override
+  String get deleteAllNotesConfirmBody =>
+      'Todas as notas deste dispositivo são removidas, incluindo as arquivadas e as da lixeira. Nada é enviado para o servidor: as notas já sincronizadas ficam lá e voltam na próxima sincronização. Isto não pode ser anulado.';
+
+  @override
+  String get deleteAllNotesConfirmAction => 'Eliminar todas';
+
+  @override
+  String get allNotesDeleted => 'Todas as notas foram eliminadas.';
+
+  @override
+  String get deleteAllData => 'Eliminar todos os dados da aplicação';
+
+  @override
+  String get deleteAllDataSubtitle =>
+      'Remove as notas, as definições, a configuração de sincronização e as caches deste dispositivo.';
+
+  @override
+  String get deleteAllDataConfirmTitle => 'Eliminar todos os dados?';
+
+  @override
+  String get deleteAllDataConfirmBody =>
+      'Remove todas as notas, as definições da aplicação, a configuração de sincronização (token e frase-passe) e as caches deste dispositivo. As notas já sincronizadas ficam no servidor. Isto não pode ser anulado.';
+
+  @override
+  String get deleteAllDataConfirmAction => 'Eliminar tudo';
+
+  @override
+  String get allDataDeleted => 'Dados da aplicação eliminados.';
+
+  @override
+  String get showLastSyncHint => 'Mostrar a última sincronização ao puxar';
+
+  @override
+  String get showLastSyncHintSubtitle =>
+      'Mostra a data e hora da última sincronização quando puxa a lista para baixo.';
 }

@@ -266,5 +266,20 @@
   "webdavConfigurationSaved": "Configuración guardada",
   "webdavRemoveConfiguration": "Eliminar configuración",
   "webdavMissingFields": "Rellena la URL, el usuario y la contraseña.",
-  "save": "Guardar"
+  "save": "Guardar",
+  "dangerZone": "ZONA DE PELIGRO",
+  "deleteAllNotes": "Eliminar todas las notas",
+  "deleteAllNotesSubtitle": "Elimina definitivamente todas las notas de este dispositivo. En el servidor no se elimina nada.",
+  "deleteAllNotesConfirmTitle": "¿Eliminar todas las notas?",
+  "deleteAllNotesConfirmBody": "Todas las notas de este dispositivo se eliminan, incluidas las archivadas y las de la papelera. No se envía nada al servidor: las notas ya sincronizadas permanecen allí y vuelven en la próxima sincronización. No se puede deshacer.",
+  "deleteAllNotesConfirmAction": "Eliminar todas",
+  "allNotesDeleted": "Se eliminaron todas las notas.",
+  "deleteAllData": "Eliminar todos los datos de la aplicación",
+  "deleteAllDataSubtitle": "Elimina las notas, los ajustes, la configuración de sincronización y las cachés de este dispositivo.",
+  "deleteAllDataConfirmTitle": "¿Eliminar todos los datos?",
+  "deleteAllDataConfirmBody": "Esto elimina todas las notas, los ajustes de la aplicación, la configuración de sincronización (token y frase de contraseña) y las cachés locales de este dispositivo. Las notas ya sincronizadas permanecen en el servidor. No se puede deshacer.",
+  "deleteAllDataConfirmAction": "Eliminar todo",
+  "allDataDeleted": "Datos de la aplicación eliminados.",
+  "showLastSyncHint": "Mostrar la última sincronización al deslizar",
+  "showLastSyncHintSubtitle": "Muestra la fecha y la hora de la última sincronización mientras deslizas la lista hacia abajo."
 }

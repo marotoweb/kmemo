@@ -1,0 +1,6 @@
+Search and sync polish.
+- The note search marks every match while you type, keeps the caret in the field and works with keyboards that need conversion, such as Japanese.
+- Pull the note list down to see when the last sync ran (can be turned off in Settings).
+- The caret no longer skips a word at the end of a line.
+- New danger zone in Settings: delete all notes from this device, or delete all app data and start fresh.
+- The sync progress card floats over the page in the settings.

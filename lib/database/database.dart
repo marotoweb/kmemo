@@ -305,6 +305,30 @@ class AppDatabase extends _$AppDatabase {
     });
   }
 
+  /// Removes every note and block from this device.
+  ///
+  /// Tombstones are kept: they describe deletions this device still has to
+  /// publish, and they are not notes. The remote copies are not touched.
+  Future<void> wipeNotes() async {
+    await transaction(() async {
+      await delete(blocks).go();
+      await delete(memos).go();
+    });
+  }
+
+  /// Removes every note, block and tombstone from this device.
+  ///
+  /// Used by the "delete all application data" action. The remote copies are
+  /// deliberately not touched: the action clears this device, and the user is
+  /// told that notes already synced stay on the server.
+  Future<void> wipeAllData() async {
+    await transaction(() async {
+      await delete(syncTombstones).go();
+      await delete(blocks).go();
+      await delete(memos).go();
+    });
+  }
+
   /// Every permanent deletion this device still has to publish.
   Future<List<SyncTombstone>> getTombstones() => select(syncTombstones).get();
 

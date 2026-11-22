@@ -1521,6 +1521,96 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Guardar'**
   String get save;
+
+  /// No description provided for @dangerZone.
+  ///
+  /// In pt, this message translates to:
+  /// **'ZONA DE PERIGO'**
+  String get dangerZone;
+
+  /// No description provided for @deleteAllNotes.
+  ///
+  /// In pt, this message translates to:
+  /// **'Eliminar todas as notas'**
+  String get deleteAllNotes;
+
+  /// No description provided for @deleteAllNotesSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Remove definitivamente todas as notas deste dispositivo. Nada é eliminado no servidor.'**
+  String get deleteAllNotesSubtitle;
+
+  /// No description provided for @deleteAllNotesConfirmTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Eliminar todas as notas?'**
+  String get deleteAllNotesConfirmTitle;
+
+  /// No description provided for @deleteAllNotesConfirmBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Todas as notas deste dispositivo são removidas, incluindo as arquivadas e as da lixeira. Nada é enviado para o servidor: as notas já sincronizadas ficam lá e voltam na próxima sincronização. Isto não pode ser anulado.'**
+  String get deleteAllNotesConfirmBody;
+
+  /// No description provided for @deleteAllNotesConfirmAction.
+  ///
+  /// In pt, this message translates to:
+  /// **'Eliminar todas'**
+  String get deleteAllNotesConfirmAction;
+
+  /// No description provided for @allNotesDeleted.
+  ///
+  /// In pt, this message translates to:
+  /// **'Todas as notas foram eliminadas.'**
+  String get allNotesDeleted;
+
+  /// No description provided for @deleteAllData.
+  ///
+  /// In pt, this message translates to:
+  /// **'Eliminar todos os dados da aplicação'**
+  String get deleteAllData;
+
+  /// No description provided for @deleteAllDataSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Remove as notas, as definições, a configuração de sincronização e as caches deste dispositivo.'**
+  String get deleteAllDataSubtitle;
+
+  /// No description provided for @deleteAllDataConfirmTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Eliminar todos os dados?'**
+  String get deleteAllDataConfirmTitle;
+
+  /// No description provided for @deleteAllDataConfirmBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Remove todas as notas, as definições da aplicação, a configuração de sincronização (token e frase-passe) e as caches deste dispositivo. As notas já sincronizadas ficam no servidor. Isto não pode ser anulado.'**
+  String get deleteAllDataConfirmBody;
+
+  /// No description provided for @deleteAllDataConfirmAction.
+  ///
+  /// In pt, this message translates to:
+  /// **'Eliminar tudo'**
+  String get deleteAllDataConfirmAction;
+
+  /// No description provided for @allDataDeleted.
+  ///
+  /// In pt, this message translates to:
+  /// **'Dados da aplicação eliminados.'**
+  String get allDataDeleted;
+
+  /// No description provided for @showLastSyncHint.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mostrar a última sincronização ao puxar'**
+  String get showLastSyncHint;
+
+  /// No description provided for @showLastSyncHintSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Mostra a data e hora da última sincronização quando puxa a lista para baixo.'**
+  String get showLastSyncHintSubtitle;
 }
 
 class _AppLocalizationsDelegate

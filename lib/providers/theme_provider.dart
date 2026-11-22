@@ -10,6 +10,7 @@ class ThemeProvider extends ChangeNotifier {
   bool _showLinkPreviews = true;
   double _widgetBgOpacity = 1.0;
   double _widgetCardOpacity = 1.0;
+  bool _showLastSyncHint = true;
 
 
   ThemeMode get themeMode => _themeMode;
@@ -19,6 +20,7 @@ class ThemeProvider extends ChangeNotifier {
   bool get showLinkPreviews => _showLinkPreviews;
   double get widgetBgOpacity => _widgetBgOpacity;
   double get widgetCardOpacity => _widgetCardOpacity;
+  bool get showLastSyncHint => _showLastSyncHint;
 
   ThemeProvider() {
     _loadThemePreference();
@@ -33,6 +35,7 @@ class ThemeProvider extends ChangeNotifier {
     _showLinkPreviews = prefs.getBool('show_link_previews') ?? true;
     _widgetBgOpacity = prefs.getDouble('widget_bg_opacity') ?? 1.0;
     _widgetCardOpacity = prefs.getDouble('widget_card_opacity') ?? 1.0;
+    _showLastSyncHint = prefs.getBool('show_last_sync_hint') ?? true;
     if (lang != null && lang.isNotEmpty) {
       _locale = Locale(lang);
     }
@@ -43,6 +46,23 @@ class ThemeProvider extends ChangeNotifier {
     } else {
       _themeMode = ThemeMode.system;
     }
+    notifyListeners();
+  }
+
+  /// Puts every setting back to the value of a fresh install.
+  ///
+  /// The caller clears the stored preferences (the "delete all app data"
+  /// action); this only resets the in-memory state and writes nothing back, so
+  /// the stored state stays empty like on a new install.
+  void resetToDefaults() {
+    _themeMode = ThemeMode.system;
+    _locale = null;
+    _autoWrap = true;
+    _strikethroughChecked = true;
+    _showLinkPreviews = true;
+    _widgetBgOpacity = 1.0;
+    _widgetCardOpacity = 1.0;
+    _showLastSyncHint = true;
     notifyListeners();
   }
 
@@ -93,6 +113,13 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('widget_bg_opacity', _widgetBgOpacity);
+  }
+
+  Future<void> setShowLastSyncHint(bool value) async {
+    _showLastSyncHint = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('show_last_sync_hint', value);
   }
 
   Future<void> setWidgetCardOpacity(double value) async {
