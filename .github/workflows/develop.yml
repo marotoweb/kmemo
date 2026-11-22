@@ -11,7 +11,10 @@ name: Build develop artifacts
 on:
   push:
     branches:
+      # The private working branch, and the curated public one (it has a
+      # different name on purpose: it is not the same history).
       - develop
+      - development
     paths:
       - 'lib/**'
       - 'linux/**'
