@@ -1007,7 +1007,14 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
           ? SyncProgressBar(
               title: _isClearingVersions
                   ? AppLocalizations.of(context)!.clearingVersions
-                  : AppLocalizations.of(context)!.syncingNow,
+                  : switch (Provider.of<MemoProvider>(context).syncPhase) {
+                      SyncPhase.reading =>
+                        AppLocalizations.of(context)!.syncPhaseReading,
+                      SyncPhase.uploading =>
+                        AppLocalizations.of(context)!.syncPhaseUploading,
+                      SyncPhase.idle =>
+                        AppLocalizations.of(context)!.syncingNow,
+                    },
               done: _syncDone,
               total: _syncTotal,
             )

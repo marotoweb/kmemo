@@ -338,6 +338,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get remoteOverwriteConfirm => 'Ersetzen';
 
   @override
+  String get syncPhaseReading => 'Notizen werden gelesen';
+
+  @override
+  String get syncPhaseUploading => 'Notizen werden gesendet';
+
+  @override
   String syncUndecryptableNotes(int count) {
     return 'Einige Notizen konnten nicht entschlüsselt werden ($count). Prüfe die Passphrase in den Synchronisierungseinstellungen.';
   }

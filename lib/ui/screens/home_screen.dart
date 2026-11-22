@@ -58,6 +58,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isSyncing = false;
   int _syncDone = 0;
   int _syncTotal = 0;
+  // The warnings float at the top and the list reserves their height: at rest
+  // the first note starts below them, and scrolling moves it under them.
+  final GlobalKey _bannerKey = GlobalKey();
+  double _bannerHeight = 0;
 
   // AppBar search (pill field replacing the title).
   final TextEditingController _searchController = TextEditingController();
@@ -1007,10 +1011,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
-          color: isDarkMode ? const Color(0xFF3B2E1E) : Colors.amber.shade100,
-          child: Row(
+        // The button paints its ink on the nearest Material, so without this
+        // transparent Material inside the clip the ripple covers the rounded
+        // corners as a rectangle.
+        child: Material(
+          type: MaterialType.transparency,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+            decoration: BoxDecoration(
+              // Opaque card on purpose: the strip has its own space at the top
+              // of the list, and this is the only filled surface in it.
+              color: isDarkMode
+                  ? const Color(0xFF3B2E1E)
+                  : Colors.amber.shade100,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: foreground.withValues(alpha: 0.25),
+              ),
+            ),
+            child: Row(
             children: [
               Icon(icon, size: 18, color: foreground),
               const SizedBox(width: 8),
@@ -1028,7 +1047,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     style: TextStyle(color: foreground),
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1203,7 +1223,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
             child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 220.0),
+              padding: EdgeInsets.only(top: _bannerHeight, bottom: 220.0),
               itemCount: items.length,
               itemBuilder: (context, index) => _buildMemoItem(
                 provider,
@@ -1228,7 +1248,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             // The list must accept a downward drag even when the notes fit on
             // screen, otherwise the pull gesture has nothing to move.
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.only(bottom: 220.0),
+            padding: EdgeInsets.only(top: _bannerHeight, bottom: 220.0),
             buildDefaultDragHandles: false,
           itemCount: items.length,
           onReorder: (oldIndex, newIndex) =>
@@ -1288,6 +1308,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   /// touched, an up-to-date message when nothing changed, or the error. Without
   /// a configured backend the gesture still answers, instead of silently
   /// doing nothing.
+  /// Reads the height of the warning strip so the list can reserve it.
+  void _measureBanner() {
+    if (!mounted) return;
+    final box = _bannerKey.currentContext?.findRenderObject() as RenderBox?;
+    final height = (box != null && box.hasSize) ? box.size.height : 0.0;
+    if ((height - _bannerHeight).abs() < 0.5) return;
+    setState(() => _bannerHeight = height);
+  }
+
   void _startSyncProgress() {
     setState(() {
       _isSyncing = true;
@@ -1512,6 +1541,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final allSelectedPinned =
         selectedMemos.isNotEmpty && selectedMemos.every((m) => m.isPinned);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // The warnings float over the list: read their height after layout so the
+    // list reserves exactly that much (and gives it back when they go).
+    final hasBanner =
+        provider.syncBlockedNoPassphrase ||
+        provider.undecryptableNotes > 0 ||
+        (provider.overwritePending > 0 && !_isSyncing);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (hasBanner) {
+        _measureBanner();
+      } else if (_bannerHeight != 0) {
+        setState(() => _bannerHeight = 0);
+      }
+    });
 
     return PopScope(
       // The system back button closes the search instead of leaving the app.
@@ -1790,22 +1834,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             Column(
               children: [
-                if (provider.syncBlockedNoPassphrase)
-                  _buildSyncBlockedBanner(isDarkMode),
-                if (provider.undecryptableNotes > 0)
-                  _buildUndecryptableBanner(
-                    provider.undecryptableNotes,
-                    isDarkMode,
-                  ),
-                // Hidden while the replacement runs: the progress card already
-                // says what is happening, and a second "Substituir" would
-                // start another pass on the same notes.
-                if (provider.overwritePending > 0 && !_isSyncing)
-                  _buildOverwriteBanner(
-                    provider.overwritePending,
-                    isDarkMode,
-                    provider,
-                  ),
                 Expanded(
                   child: _buildBody(
                     provider,
@@ -1815,6 +1843,35 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                 ),
               ],
+            ),
+            // The warnings float over the list: the list reserves their
+            // height, so at rest the first note starts below them and scrolling
+            // moves it under the opaque card. The replacement one is hidden
+            // while it runs: the progress card already says what is happening,
+            // and a second "Substituir" would start another pass.
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Column(
+                key: _bannerKey,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (provider.syncBlockedNoPassphrase)
+                    _buildSyncBlockedBanner(isDarkMode),
+                  if (provider.undecryptableNotes > 0)
+                    _buildUndecryptableBanner(
+                      provider.undecryptableNotes,
+                      isDarkMode,
+                    ),
+                  if (provider.overwritePending > 0 && !_isSyncing)
+                    _buildOverwriteBanner(
+                      provider.overwritePending,
+                      isDarkMode,
+                      provider,
+                    ),
+                ],
+              ),
             ),
             // The "+" is not a Scaffold floating button on purpose: the
             // framework lifts that one when a SnackBar appears, and the button
@@ -1853,7 +1910,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 right: 0,
                 bottom: 0,
                 child: SyncProgressBar(
-                  title: AppLocalizations.of(context)!.syncingNow,
+                  title: switch (provider.syncPhase) {
+                    SyncPhase.reading =>
+                      AppLocalizations.of(context)!.syncPhaseReading,
+                    SyncPhase.uploading =>
+                      AppLocalizations.of(context)!.syncPhaseUploading,
+                    SyncPhase.idle => AppLocalizations.of(context)!.syncingNow,
+                  },
                   done: _syncDone,
                   total: _syncTotal,
                 ),

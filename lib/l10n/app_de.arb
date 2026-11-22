@@ -111,6 +111,8 @@
   "remoteOverwriteTitle": "Notizen im Zielordner ersetzen?",
   "remoteOverwriteBody": "Dieses Gerät hat {count} Notiz(en) im Zielordner nie gelesen. Beim Ersetzen wird die Version dieses Geräts über diese Kopien hochgeladen; bei kDrive bleiben die vorherigen im Dateiverlauf. Sind die entfernten Kopien verschlüsselt, fragt kMemo zuerst nach der Passphrase und lädt weiter verschlüsselt hoch.",
   "remoteOverwriteConfirm": "Ersetzen",
+  "syncPhaseReading": "Notizen werden gelesen",
+  "syncPhaseUploading": "Notizen werden gesendet",
   "syncUndecryptableNotes": "Einige Notizen konnten nicht entschlüsselt werden ({count}). Prüfe die Passphrase in den Synchronisierungseinstellungen.",
   "secretStoreUnavailable": "Das Passwort konnte nicht im Systemschlüsselbund gespeichert werden. Entsperre gnome-keyring oder KWallet und versuche es erneut.",
   "syncBlockedNoPassphrase": "Die Synchronisierung ist blockiert: Die Verschlüsselung ist aktiv, aber die Passphrase fehlt. Neue Notizen bleiben nur auf diesem Gerät.",

@@ -111,6 +111,8 @@
   "remoteOverwriteTitle": "Replace the notes in the destination folder?",
   "remoteOverwriteBody": "This device has never read {count} note(s) in the destination folder. Replacing them uploads this device's version over those copies; on kDrive the previous ones stay in the file history. If the remote copies are encrypted, kMemo asks for the passphrase first and keeps uploading encrypted.",
   "remoteOverwriteConfirm": "Replace them",
+  "syncPhaseReading": "Reading the notes",
+  "syncPhaseUploading": "Uploading the notes",
   "syncUndecryptableNotes": "Some notes could not be decrypted ({count}). Check the passphrase in the sync settings.",
   "secretStoreUnavailable": "Could not save the password in the system keyring. Unlock gnome-keyring or KWallet and try again.",
   "syncBlockedNoPassphrase": "Sync is blocked: encryption is on but the passphrase is missing. New notes stay on this device only.",

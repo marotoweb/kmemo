@@ -730,6 +730,18 @@ abstract class AppLocalizations {
   /// **'Substituir'**
   String get remoteOverwriteConfirm;
 
+  /// No description provided for @syncPhaseReading.
+  ///
+  /// In pt, this message translates to:
+  /// **'A ler as notas'**
+  String get syncPhaseReading;
+
+  /// No description provided for @syncPhaseUploading.
+  ///
+  /// In pt, this message translates to:
+  /// **'A enviar as notas'**
+  String get syncPhaseUploading;
+
   /// No description provided for @syncUndecryptableNotes.
   ///
   /// In pt, this message translates to:

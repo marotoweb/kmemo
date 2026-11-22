@@ -338,6 +338,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get remoteOverwriteConfirm => 'Sostituisci';
 
   @override
+  String get syncPhaseReading => 'Lettura delle note';
+
+  @override
+  String get syncPhaseUploading => 'Invio delle note';
+
+  @override
   String syncUndecryptableNotes(int count) {
     return 'Alcune note non sono state decifrate ($count). Controlla la passphrase nelle impostazioni di sincronizzazione.';
   }

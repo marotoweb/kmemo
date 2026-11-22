@@ -73,6 +73,10 @@ class MemoProvider extends ChangeNotifier {
   int _overwritePending = 0;
   int get overwritePending => _overwritePending;
 
+  /// Phase of the cycle that is running, so the progress card can name it.
+  SyncPhase _syncPhase = SyncPhase.idle;
+  SyncPhase get syncPhase => _syncPhase;
+
   MemoProvider(this._db, {StorageRepository? storage}) : _storage = storage {
     _loadSortPreferences();
     _listenToMemos();
@@ -698,6 +702,7 @@ class MemoProvider extends ChangeNotifier {
     // Downloads run before uploads so a conflict copy is uploaded in the
     // same cycle.
     // ---------------------------------------------------------------
+    _syncPhase = SyncPhase.reading;
     final session = _PassphraseSession(await storage.getEncryptionPassphrase());
     final justUploaded = <String>{};
     final publishedTombstones = <String>{};
@@ -925,10 +930,14 @@ class MemoProvider extends ChangeNotifier {
     // ---------------------------------------------------------------
     // PUSH: upload local changes and the conflict copies.
     // ---------------------------------------------------------------
-    // The reads above can add notes to the push (the confirmed overwrite, a
-    // download that has to be re-encoded, a conflict copy). Include them in the
-    // total so the bar does not sit at 100% while the uploads run.
-    total = processed + toUpload.length;
+    // The push gets its own phase and its own total: reusing the read progress
+    // made the bar jump from 12 / 12 to 12 / 24 and then sit at 100% while the
+    // uploads ran. The reads above can add notes to the push (the confirmed
+    // overwrite, a download that has to be re-encoded, a conflict copy).
+    _syncPhase = SyncPhase.uploading;
+    processed = 0;
+    total = toUpload.length;
+    reportProgress();
     _syncLog(
       '[MemoProvider] plan: ${toUpload.length} upload, '
       '${toInspect.length} inspect, ${remoteOnly.length} remote-only, '
@@ -1026,6 +1035,7 @@ class MemoProvider extends ChangeNotifier {
       notifyListeners();
     }
 
+    _syncPhase = SyncPhase.idle;
     onProgress?.call(total, total);
     storage.markSyncedNow();
     lastSyncNoteCount = touched.length;
@@ -1150,6 +1160,10 @@ class MemoProvider extends ChangeNotifier {
   ) async {
     if (storage.encryptionEnabled) return;
     final stored = await storage.adoptEncryption(passphrase);
+    // The folder is encrypted from now on: mark the tombstones for rewriting
+    // too, so one written while the backend had no passphrase is replaced by
+    // an encrypted copy on the next cycle (same rule as the settings change).
+    await _db.customStatement('UPDATE sync_tombstones SET is_uploaded = 0');
     _syncLog(
       '[MemoProvider] encryption adopted: the remote notes are encrypted '
       '(passphrase ${stored ? 'stored' : 'NOT stored'})',
@@ -1562,3 +1576,6 @@ class _PassphraseSession {
 
   _PassphraseSession(this.generalPass);
 }
+
+/// Which part of a cycle is running, for the progress card.
+enum SyncPhase { idle, reading, uploading }
