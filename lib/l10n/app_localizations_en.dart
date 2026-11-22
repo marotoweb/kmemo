@@ -805,4 +805,47 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get save => 'Save';
+
+  @override
+  String get dangerZone => 'DANGER ZONE';
+
+  @override
+  String get deleteAllNotes => 'Delete all notes';
+
+  @override
+  String get deleteAllNotesSubtitle =>
+      'Permanently removes every note from this device. Nothing is deleted on the server.';
+
+  @override
+  String get deleteAllNotesConfirmTitle => 'Delete all notes?';
+
+  @override
+  String get deleteAllNotesConfirmBody =>
+      'Every note on this device is removed, including archived notes and the trash. Nothing is sent to the server: notes that were already synced stay there and come back on the next sync. This cannot be undone.';
+
+  @override
+  String get deleteAllNotesConfirmAction => 'Delete all';
+
+  @override
+  String get allNotesDeleted => 'All notes were deleted.';
+
+  @override
+  String get deleteAllData => 'Delete all app data';
+
+  @override
+  String get deleteAllDataSubtitle =>
+      'Removes the notes, settings, sync configuration and caches from this device.';
+
+  @override
+  String get deleteAllDataConfirmTitle => 'Delete all app data?';
+
+  @override
+  String get deleteAllDataConfirmBody =>
+      'This removes every note, the app settings, the sync configuration (token and passphrase) and the local caches from this device. Notes already synced stay on the server. This cannot be undone.';
+
+  @override
+  String get deleteAllDataConfirmAction => 'Delete everything';
+
+  @override
+  String get allDataDeleted => 'Application data deleted.';
 }

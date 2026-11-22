@@ -809,4 +809,47 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get save => 'Speichern';
+
+  @override
+  String get dangerZone => 'GEFAHRENZONE';
+
+  @override
+  String get deleteAllNotes => 'Alle Notizen löschen';
+
+  @override
+  String get deleteAllNotesSubtitle =>
+      'Löscht endgültig alle Notizen von diesem Gerät. Auf dem Server wird nichts gelöscht.';
+
+  @override
+  String get deleteAllNotesConfirmTitle => 'Alle Notizen löschen?';
+
+  @override
+  String get deleteAllNotesConfirmBody =>
+      'Alle Notizen auf diesem Gerät werden gelöscht, auch archivierte Notizen und der Papierkorb. Es wird nichts an den Server gesendet: bereits synchronisierte Notizen bleiben dort und kommen bei der nächsten Synchronisierung zurück. Das lässt sich nicht rückgängig machen.';
+
+  @override
+  String get deleteAllNotesConfirmAction => 'Alle löschen';
+
+  @override
+  String get allNotesDeleted => 'Alle Notizen wurden gelöscht.';
+
+  @override
+  String get deleteAllData => 'Alle App-Daten löschen';
+
+  @override
+  String get deleteAllDataSubtitle =>
+      'Entfernt die Notizen, Einstellungen, Synchronisierungskonfiguration und Caches von diesem Gerät.';
+
+  @override
+  String get deleteAllDataConfirmTitle => 'Alle App-Daten löschen?';
+
+  @override
+  String get deleteAllDataConfirmBody =>
+      'Dies entfernt alle Notizen, die App-Einstellungen, die Synchronisierungskonfiguration (Token und Passphrase) und die lokalen Caches von diesem Gerät. Bereits synchronisierte Notizen bleiben auf dem Server. Das lässt sich nicht rückgängig machen.';
+
+  @override
+  String get deleteAllDataConfirmAction => 'Alles löschen';
+
+  @override
+  String get allDataDeleted => 'App-Daten gelöscht.';
 }

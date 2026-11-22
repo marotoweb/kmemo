@@ -808,4 +808,47 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get save => 'Enregistrer';
+
+  @override
+  String get dangerZone => 'ZONE DE DANGER';
+
+  @override
+  String get deleteAllNotes => 'Supprimer toutes les notes';
+
+  @override
+  String get deleteAllNotesSubtitle =>
+      'Supprime définitivement toutes les notes de cet appareil. Rien n\'est supprimé sur le serveur.';
+
+  @override
+  String get deleteAllNotesConfirmTitle => 'Supprimer toutes les notes ?';
+
+  @override
+  String get deleteAllNotesConfirmBody =>
+      'Toutes les notes de cet appareil sont supprimées, y compris les notes archivées et celles de la corbeille. Rien n\'est envoyé au serveur : les notes déjà synchronisées y restent et reviennent à la prochaine synchronisation. Cette action est irréversible.';
+
+  @override
+  String get deleteAllNotesConfirmAction => 'Tout supprimer';
+
+  @override
+  String get allNotesDeleted => 'Toutes les notes ont été supprimées.';
+
+  @override
+  String get deleteAllData => 'Supprimer toutes les données de l\'application';
+
+  @override
+  String get deleteAllDataSubtitle =>
+      'Supprime les notes, les réglages, la configuration de synchronisation et les caches de cet appareil.';
+
+  @override
+  String get deleteAllDataConfirmTitle => 'Supprimer toutes les données ?';
+
+  @override
+  String get deleteAllDataConfirmBody =>
+      'Cela supprime toutes les notes, les réglages de l\'application, la configuration de synchronisation (jeton et phrase secrète) et les caches de cet appareil. Les notes déjà synchronisées restent sur le serveur. Cette action est irréversible.';
+
+  @override
+  String get deleteAllDataConfirmAction => 'Tout supprimer';
+
+  @override
+  String get allDataDeleted => 'Données de l\'application supprimées.';
 }

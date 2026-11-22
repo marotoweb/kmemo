@@ -266,5 +266,18 @@
   "webdavConfigurationSaved": "Configuration enregistrée",
   "webdavRemoveConfiguration": "Supprimer la configuration",
   "webdavMissingFields": "Renseignez l'URL, le nom d'utilisateur et le mot de passe.",
-  "save": "Enregistrer"
+  "save": "Enregistrer",
+  "dangerZone": "ZONE DE DANGER",
+  "deleteAllNotes": "Supprimer toutes les notes",
+  "deleteAllNotesSubtitle": "Supprime définitivement toutes les notes de cet appareil. Rien n'est supprimé sur le serveur.",
+  "deleteAllNotesConfirmTitle": "Supprimer toutes les notes ?",
+  "deleteAllNotesConfirmBody": "Toutes les notes de cet appareil sont supprimées, y compris les notes archivées et celles de la corbeille. Rien n'est envoyé au serveur : les notes déjà synchronisées y restent et reviennent à la prochaine synchronisation. Cette action est irréversible.",
+  "deleteAllNotesConfirmAction": "Tout supprimer",
+  "allNotesDeleted": "Toutes les notes ont été supprimées.",
+  "deleteAllData": "Supprimer toutes les données de l'application",
+  "deleteAllDataSubtitle": "Supprime les notes, les réglages, la configuration de synchronisation et les caches de cet appareil.",
+  "deleteAllDataConfirmTitle": "Supprimer toutes les données ?",
+  "deleteAllDataConfirmBody": "Cela supprime toutes les notes, les réglages de l'application, la configuration de synchronisation (jeton et phrase secrète) et les caches de cet appareil. Les notes déjà synchronisées restent sur le serveur. Cette action est irréversible.",
+  "deleteAllDataConfirmAction": "Tout supprimer",
+  "allDataDeleted": "Données de l'application supprimées."
 }

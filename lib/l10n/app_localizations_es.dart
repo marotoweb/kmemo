@@ -810,4 +810,47 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get save => 'Guardar';
+
+  @override
+  String get dangerZone => 'ZONA DE PELIGRO';
+
+  @override
+  String get deleteAllNotes => 'Eliminar todas las notas';
+
+  @override
+  String get deleteAllNotesSubtitle =>
+      'Elimina definitivamente todas las notas de este dispositivo. En el servidor no se elimina nada.';
+
+  @override
+  String get deleteAllNotesConfirmTitle => '¿Eliminar todas las notas?';
+
+  @override
+  String get deleteAllNotesConfirmBody =>
+      'Todas las notas de este dispositivo se eliminan, incluidas las archivadas y las de la papelera. No se envía nada al servidor: las notas ya sincronizadas permanecen allí y vuelven en la próxima sincronización. No se puede deshacer.';
+
+  @override
+  String get deleteAllNotesConfirmAction => 'Eliminar todas';
+
+  @override
+  String get allNotesDeleted => 'Se eliminaron todas las notas.';
+
+  @override
+  String get deleteAllData => 'Eliminar todos los datos de la aplicación';
+
+  @override
+  String get deleteAllDataSubtitle =>
+      'Elimina las notas, los ajustes, la configuración de sincronización y las cachés de este dispositivo.';
+
+  @override
+  String get deleteAllDataConfirmTitle => '¿Eliminar todos los datos?';
+
+  @override
+  String get deleteAllDataConfirmBody =>
+      'Esto elimina todas las notas, los ajustes de la aplicación, la configuración de sincronización (token y frase de contraseña) y las cachés locales de este dispositivo. Las notas ya sincronizadas permanecen en el servidor. No se puede deshacer.';
+
+  @override
+  String get deleteAllDataConfirmAction => 'Eliminar todo';
+
+  @override
+  String get allDataDeleted => 'Datos de la aplicación eliminados.';
 }
