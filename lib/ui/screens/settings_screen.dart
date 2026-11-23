@@ -20,6 +20,7 @@ import '../widgets/simple_markdown.dart';
 import '../../services/widget_service.dart';
 import '../../services/sync_debug_log.dart';
 import 'sync_settings_screen.dart';
+import 'notes_settings_screen.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -519,16 +520,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           SizedBox(height: 24),
 
-          // SECTION: EDITOR
-          Text(
-            AppLocalizations.of(context)!.editor,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-            ),
-          ),
-          SizedBox(height: 8),
+          // SECTION: NOTES
+          // Editor and image options live on their own page: this screen stays
+          // a list of destinations.
           Container(
             decoration: BoxDecoration(
               color: isDarkMode
@@ -539,47 +533,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: isDarkMode ? Colors.grey.shade800 : Colors.grey.shade300,
               ),
             ),
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: Text(AppLocalizations.of(context)!.autoWrapLines),
-                  subtitle: Text(
-                    AppLocalizations.of(context)!.autoWrapLinesSubtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  value: themeProvider.autoWrap,
-                  onChanged: (value) {
-                    themeProvider.setAutoWrap(value);
-                    Provider.of<MemoProvider>(context, listen: false).refreshWidget();
-                  },
-                ),
-                Divider(height: 1),
-                SwitchListTile(
-                  title: Text(AppLocalizations.of(context)!.strikethroughChecked),
-                  subtitle: Text(
-                    AppLocalizations.of(context)!.strikethroughCheckedSubtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  value: themeProvider.strikethroughChecked,
-                  onChanged: (value) {
-                    themeProvider.setStrikethroughChecked(value);
-                    Provider.of<MemoProvider>(context, listen: false).refreshWidget();
-                  },
-                ),
-                Divider(height: 1),
-                SwitchListTile(
-                  title: Text(AppLocalizations.of(context)!.showLinkPreviews),
-                  subtitle: Text(
-                    AppLocalizations.of(context)!.showLinkPreviewsSubtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  value: themeProvider.showLinkPreviews,
-                  onChanged: (value) {
-                    themeProvider.setShowLinkPreviews(value);
-                    Provider.of<MemoProvider>(context, listen: false).refreshWidget();
-                  },
-                ),
-              ],
+            child: ListTile(
+              leading: Icon(Icons.edit_note),
+              title: Text(AppLocalizations.of(context)!.notesSettings),
+              subtitle: Text(
+                AppLocalizations.of(context)!.notesSettingsSubtitle,
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              trailing: Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => NotesSettingsScreen()),
+              ),
             ),
           ),
           SizedBox(height: 24),

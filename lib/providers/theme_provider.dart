@@ -2,6 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// What to do with a photo that is larger than the configured maximum.
+enum ImageResizeMode { ask, always, never }
+
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
   Locale? _locale;
@@ -11,6 +14,8 @@ class ThemeProvider extends ChangeNotifier {
   double _widgetBgOpacity = 1.0;
   double _widgetCardOpacity = 1.0;
   bool _showLastSyncHint = true;
+  int _imageMaxSide = 1920;
+  ImageResizeMode _imageResizeMode = ImageResizeMode.ask;
 
 
   ThemeMode get themeMode => _themeMode;
@@ -21,6 +26,8 @@ class ThemeProvider extends ChangeNotifier {
   double get widgetBgOpacity => _widgetBgOpacity;
   double get widgetCardOpacity => _widgetCardOpacity;
   bool get showLastSyncHint => _showLastSyncHint;
+  int get imageMaxSide => _imageMaxSide;
+  ImageResizeMode get imageResizeMode => _imageResizeMode;
 
   ThemeProvider() {
     _loadThemePreference();
@@ -36,6 +43,11 @@ class ThemeProvider extends ChangeNotifier {
     _widgetBgOpacity = prefs.getDouble('widget_bg_opacity') ?? 1.0;
     _widgetCardOpacity = prefs.getDouble('widget_card_opacity') ?? 1.0;
     _showLastSyncHint = prefs.getBool('show_last_sync_hint') ?? true;
+    _imageMaxSide = prefs.getInt('image_max_side') ?? 1920;
+    _imageResizeMode = ImageResizeMode.values.firstWhere(
+      (mode) => mode.name == prefs.getString('image_resize_mode'),
+      orElse: () => ImageResizeMode.ask,
+    );
     if (lang != null && lang.isNotEmpty) {
       _locale = Locale(lang);
     }
@@ -63,6 +75,8 @@ class ThemeProvider extends ChangeNotifier {
     _widgetBgOpacity = 1.0;
     _widgetCardOpacity = 1.0;
     _showLastSyncHint = true;
+    _imageMaxSide = 1920;
+    _imageResizeMode = ImageResizeMode.ask;
     notifyListeners();
   }
 
@@ -113,6 +127,20 @@ class ThemeProvider extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('widget_bg_opacity', _widgetBgOpacity);
+  }
+
+  Future<void> setImageMaxSide(int value) async {
+    _imageMaxSide = value == 1280 ? 1280 : 1920;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('image_max_side', _imageMaxSide);
+  }
+
+  Future<void> setImageResizeMode(ImageResizeMode value) async {
+    _imageResizeMode = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('image_resize_mode', value.name);
   }
 
   Future<void> setShowLastSyncHint(bool value) async {

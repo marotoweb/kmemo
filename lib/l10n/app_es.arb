@@ -281,5 +281,15 @@
   "deleteAllDataConfirmAction": "Eliminar todo",
   "allDataDeleted": "Datos de la aplicación eliminados.",
   "showLastSyncHint": "Mostrar la última sincronización al deslizar",
-  "showLastSyncHintSubtitle": "Muestra la fecha y la hora de la última sincronización mientras deslizas la lista hacia abajo."
+  "showLastSyncHintSubtitle": "Muestra la fecha y la hora de la última sincronización mientras deslizas la lista hacia abajo.",
+  "notesSettings": "Notas",
+  "notesSettingsSubtitle": "Editor e imágenes",
+  "images": "IMÁGENES",
+  "imageMaxSize": "Tamaño máximo",
+  "imageMaxSizeSubtitle": "Las fotos más grandes se reducen antes de adjuntarlas.",
+  "imageResizeMode": "Fotos grandes",
+  "imageResizeModeSubtitle": "Preguntar muestra el diálogo antes de reducir.",
+  "imageResizeAsk": "Preguntar",
+  "imageResizeAlways": "Reducir siempre",
+  "imageResizeNever": "No reducir nunca"
 }

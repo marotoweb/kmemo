@@ -216,8 +216,10 @@ void main() {
       await provider.createNewMemo();
     });
     addTearDown(db.close);
-    // Start from a non-default setting so the reset is visible.
+    // Start from non-default settings so the reset is visible.
     await themeProvider.setAutoWrap(false);
+    await themeProvider.setImageMaxSide(1280);
+    await themeProvider.setImageResizeMode(ImageResizeMode.never);
 
     await tester.pumpWidget(
       _settingsApp(db, provider, themeProvider: themeProvider),
@@ -249,6 +251,8 @@ void main() {
     expect(themeProvider.widgetCardOpacity, 1.0);
     expect(themeProvider.themeMode, ThemeMode.system);
     expect(themeProvider.locale, isNull);
+    expect(themeProvider.imageMaxSide, 1920);
+    expect(themeProvider.imageResizeMode, ImageResizeMode.ask);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getKeys(), isEmpty);
 

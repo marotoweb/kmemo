@@ -858,4 +858,36 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get showLastSyncHintSubtitle =>
       'Mostra data e ora dell\'ultima sincronizzazione mentre trascini la lista verso il basso.';
+
+  @override
+  String get notesSettings => 'Note';
+
+  @override
+  String get notesSettingsSubtitle => 'Editor e immagini';
+
+  @override
+  String get images => 'IMMAGINI';
+
+  @override
+  String get imageMaxSize => 'Dimensione massima';
+
+  @override
+  String get imageMaxSizeSubtitle =>
+      'Le foto più grandi vengono ridimensionate prima di essere allegate.';
+
+  @override
+  String get imageResizeMode => 'Foto grandi';
+
+  @override
+  String get imageResizeModeSubtitle =>
+      'Chiedi mostra il dialogo prima di ridurre.';
+
+  @override
+  String get imageResizeAsk => 'Chiedi';
+
+  @override
+  String get imageResizeAlways => 'Riduci sempre';
+
+  @override
+  String get imageResizeNever => 'Non ridurre mai';
 }

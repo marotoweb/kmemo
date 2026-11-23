@@ -281,5 +281,15 @@
   "deleteAllDataConfirmAction": "Delete everything",
   "allDataDeleted": "Application data deleted.",
   "showLastSyncHint": "Show the last sync while pulling",
-  "showLastSyncHintSubtitle": "Shows the date and time of the last sync when you pull the list down."
+  "showLastSyncHintSubtitle": "Shows the date and time of the last sync when you pull the list down.",
+  "notesSettings": "Notes",
+  "notesSettingsSubtitle": "Editor and images",
+  "images": "IMAGES",
+  "imageMaxSize": "Maximum size",
+  "imageMaxSizeSubtitle": "Larger photos are scaled down before they are attached.",
+  "imageResizeMode": "Large photos",
+  "imageResizeModeSubtitle": "Ask shows the dialog before scaling down.",
+  "imageResizeAsk": "Ask",
+  "imageResizeAlways": "Always resize",
+  "imageResizeNever": "Never resize"
 }

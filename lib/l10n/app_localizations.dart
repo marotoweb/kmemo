@@ -1611,6 +1611,66 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Mostra a data e hora da última sincronização quando puxa a lista para baixo.'**
   String get showLastSyncHintSubtitle;
+
+  /// No description provided for @notesSettings.
+  ///
+  /// In pt, this message translates to:
+  /// **'Notas'**
+  String get notesSettings;
+
+  /// No description provided for @notesSettingsSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Editor e imagens'**
+  String get notesSettingsSubtitle;
+
+  /// No description provided for @images.
+  ///
+  /// In pt, this message translates to:
+  /// **'IMAGENS'**
+  String get images;
+
+  /// No description provided for @imageMaxSize.
+  ///
+  /// In pt, this message translates to:
+  /// **'Tamanho máximo'**
+  String get imageMaxSize;
+
+  /// No description provided for @imageMaxSizeSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'As fotos maiores são reduzidas antes de serem anexadas.'**
+  String get imageMaxSizeSubtitle;
+
+  /// No description provided for @imageResizeMode.
+  ///
+  /// In pt, this message translates to:
+  /// **'Fotos grandes'**
+  String get imageResizeMode;
+
+  /// No description provided for @imageResizeModeSubtitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Perguntar mostra o diálogo antes de reduzir.'**
+  String get imageResizeModeSubtitle;
+
+  /// No description provided for @imageResizeAsk.
+  ///
+  /// In pt, this message translates to:
+  /// **'Perguntar'**
+  String get imageResizeAsk;
+
+  /// No description provided for @imageResizeAlways.
+  ///
+  /// In pt, this message translates to:
+  /// **'Reduzir sempre'**
+  String get imageResizeAlways;
+
+  /// No description provided for @imageResizeNever.
+  ///
+  /// In pt, this message translates to:
+  /// **'Nunca reduzir'**
+  String get imageResizeNever;
 }
 
 class _AppLocalizationsDelegate
