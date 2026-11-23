@@ -16,6 +16,7 @@ import '../../providers/theme_provider.dart';
 import '../../services/update_service.dart';
 import '../../services/widget_debug_log.dart';
 import '../widgets/app_snackbar.dart';
+import '../widgets/simple_markdown.dart';
 import '../../services/widget_service.dart';
 import '../../services/sync_debug_log.dart';
 import 'sync_settings_screen.dart';
@@ -97,28 +98,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
+          // The release notes are prose: the default dialog width turned them
+          // into a narrow column. They now use almost the whole screen, with a
+          // readable cap on wide windows.
+          insetPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 24),
+          contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
           title: Text(AppLocalizations.of(ctx)!.newVersionAvailable),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  AppLocalizations.of(ctx)!.newVersionMessage(
-                    info.latestVersion,
-                    info.currentVersion,
-                  ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: SizedBox(
+              width: double.maxFinite,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      AppLocalizations.of(ctx)!.newVersionMessage(
+                        info.latestVersion,
+                        info.currentVersion,
+                      ),
+                    ),
+                    if (info.releaseNotes.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        AppLocalizations.of(ctx)!.releaseNotes,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      SimpleMarkdown(info.releaseNotes),
+                    ],
+                  ],
                 ),
-                if (info.releaseNotes.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    AppLocalizations.of(ctx)!.releaseNotes,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(info.releaseNotes),
-                ],
-              ],
+              ),
             ),
           ),
           actions: [
