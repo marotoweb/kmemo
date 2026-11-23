@@ -33,6 +33,7 @@
 - **Home Screen Widget integration:** Automatic synchronization with a native system widget for quick viewing of the latest notes and quick editing directly from the device desktop.
 - **APP link:** Support for opening notes via APP link *kmemo://*
 - **Editor options:** automatic line wrapping in titles and list items, and optional strikethrough for checked checklist items (configurable in Settings). The home screen widget respects these options in the preview.
+- **Photos:** attach a photo from the camera or the gallery. A large photo asks whether to resize it to 1280 or 1920 pixels, and the size and the ask/always/never behaviour live in Settings → Notes. Every imported photo is re-encoded to remove its metadata, stored inside the app with a thumbnail, and can be viewed full screen or removed.
 - **List reordering:** drag checklist items to reorder, with automatic persistence.
 - **Home sorting and search:** sort notes by last modification, creation date or a custom order (ascending/descending for dates), and search by title and content from the app bar.
 - **Find in note:** the editor has its own search. Every match is highlighted while you type (the one in focus in a stronger colour), the caret stays in the field, and Enter or the arrows move between matches and scroll them into view. It also works with keyboards that need conversion, such as Japanese.
