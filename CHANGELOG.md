@@ -14,7 +14,7 @@ Sections before 0.3.0 predate the tags and are kept as they were released.
 
 ### 🐛 Fixes
 - [All] **Delete all app data also removes the diagnostics:** the sync log and the widget debug log stayed on the device after a full reset, although the action promises a fresh install. Both are deleted now.
-- [All] **The update dialog renders the release notes:** the notes come from the GitHub release body, so the dialog used to show their Markdown markers (`###`, `**`, `[...](...)`). Headings, bullets, bold and links are rendered now, a link opens in the browser, and the dialog uses almost the full width of the screen.
+- [All] **The update dialog renders the release notes:** the notes come from the GitHub release body, so the dialog used to show their Markdown markers (`###`, `**`, `[...](...)`). Headings, bullets, bold and links are rendered now, a link opens in the browser, and the dialog uses almost the full width of the screen. The platform tags (`[All]`, `[Android]`, `[Desktop]`, `[CI]`) are hidden, since they only decide what reaches the store releases.
 
 ## 0.3.3
 

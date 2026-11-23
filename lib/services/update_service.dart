@@ -110,6 +110,22 @@ class UpdateService {
     }
   }
 
+  /// Removes the platform tags from the release notes.
+  ///
+  /// `CHANGELOG.md` tags every entry with `[All]`, `[Android]`, `[Desktop]` or
+  /// `[CI]` to decide what reaches the store releases, and those tags travel in
+  /// the GitHub release body. They mean nothing to a user reading the update
+  /// dialog, so they are hidden there. The tag is only removed at the start of
+  /// a line (with or without the bullet marker).
+  static String withoutPlatformTags(String notes) {
+    final pattern = RegExp(
+      r'^(\s*(?:[-*+]\s+)?)\[(?:All|Android|Desktop|CI)\]\s*',
+      multiLine: true,
+      caseSensitive: false,
+    );
+    return notes.replaceAllMapped(pattern, (match) => match.group(1) ?? '');
+  }
+
   /// Returns negative if [a] < [b], 0 if equal, positive if [a] > [b].
   static int compareVersions(String a, String b) {
     final pa = _parse(a);

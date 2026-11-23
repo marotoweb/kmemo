@@ -126,7 +126,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
-                      SimpleMarkdown(info.releaseNotes),
+                      SimpleMarkdown(
+                        UpdateService.withoutPlatformTags(info.releaseNotes),
+                      ),
                     ],
                   ],
                 ),
