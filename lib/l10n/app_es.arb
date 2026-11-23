@@ -291,5 +291,12 @@
   "imageResizeModeSubtitle": "Preguntar muestra el diálogo antes de reducir.",
   "imageResizeAsk": "Preguntar",
   "imageResizeAlways": "Reducir siempre",
-  "imageResizeNever": "No reducir nunca"
+  "imageResizeNever": "No reducir nunca",
+  "resizeImageTitle": "Imagen grande",
+  "resizeImageBody": "Estás a punto de adjuntar una imagen grande ({width}x{height} píxeles). ¿Quieres reducirla a {max} píxeles antes de adjuntarla?",
+  "resizeImageConfirm": "Reducir",
+  "resizeImageKeep": "Mantener original",
+  "imageAttachFailed": "No se pudo adjuntar la imagen.",
+  "imageUnsupported": "Formato de imagen no compatible.",
+  "imageTooLarge": "La imagen es demasiado grande."
 }

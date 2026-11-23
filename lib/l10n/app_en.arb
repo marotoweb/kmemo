@@ -291,5 +291,12 @@
   "imageResizeModeSubtitle": "Ask shows the dialog before scaling down.",
   "imageResizeAsk": "Ask",
   "imageResizeAlways": "Always resize",
-  "imageResizeNever": "Never resize"
+  "imageResizeNever": "Never resize",
+  "resizeImageTitle": "Large image",
+  "resizeImageBody": "You are about to attach a large image ({width}x{height} pixels). Would you like to resize it to {max} pixels before attaching it?",
+  "resizeImageConfirm": "Resize",
+  "resizeImageKeep": "Keep original",
+  "imageAttachFailed": "Could not attach the image.",
+  "imageUnsupported": "Unsupported image format.",
+  "imageTooLarge": "Image is too large."
 }

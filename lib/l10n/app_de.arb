@@ -291,5 +291,12 @@
   "imageResizeModeSubtitle": "Fragen zeigt den Dialog vor dem Verkleinern.",
   "imageResizeAsk": "Fragen",
   "imageResizeAlways": "Immer verkleinern",
-  "imageResizeNever": "Nie verkleinern"
+  "imageResizeNever": "Nie verkleinern",
+  "resizeImageTitle": "Großes Bild",
+  "resizeImageBody": "Du bist dabei, ein großes Bild anzuhängen ({width}x{height} Pixel). Möchtest du es vor dem Anhängen auf {max} Pixel verkleinern?",
+  "resizeImageConfirm": "Verkleinern",
+  "resizeImageKeep": "Original behalten",
+  "imageAttachFailed": "Das Bild konnte nicht angehängt werden.",
+  "imageUnsupported": "Nicht unterstütztes Bildformat.",
+  "imageTooLarge": "Das Bild ist zu groß."
 }

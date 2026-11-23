@@ -15,7 +15,9 @@ import '../../models/background_images.dart';
 import '../../models/note_palette.dart';
 import '../../providers/memo_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/image_attachment_service.dart';
 import '../../services/link_preview_service.dart';
+import '../../services/media_picker.dart';
 import 'package:kmemo/l10n/app_localizations.dart';
 import '../cloud_export.dart';
 import '../widgets/app_snackbar.dart';
@@ -148,7 +150,17 @@ class MemoDetailScreen extends StatefulWidget {
   final Memo memo;
   final bool isNew;
 
-  const MemoDetailScreen({super.key, required this.memo, this.isNew = false});
+  /// Injected by tests; the app uses the platform implementations.
+  final MediaPicker? mediaPicker;
+  final ImageAttachmentService? imageAttachmentService;
+
+  const MemoDetailScreen({
+    super.key,
+    required this.memo,
+    this.isNew = false,
+    this.mediaPicker,
+    this.imageAttachmentService,
+  });
 
   @override
   State<MemoDetailScreen> createState() => _MemoDetailScreenState();
@@ -160,7 +172,11 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   bool _isChecklistMode = false;
   bool _isLoading = true;
   bool _isRestoring = false;
+  bool _isImportingImage = false;
   bool _isSearchActive = false;
+
+  late final MediaPicker _mediaPicker;
+  late final ImageAttachmentService _imageAttachmentService;
 
   // Focus of the text field (running note mode)
   late FocusNode _textFocusNode;
@@ -321,6 +337,9 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
   void initState() {
     super.initState();
     _currentMemo = widget.memo;
+    _mediaPicker = widget.mediaPicker ?? MediaPicker();
+    _imageAttachmentService =
+        widget.imageAttachmentService ?? ImageAttachmentService();
     _titleController = TextEditingController(text: _currentMemo.title);
     _textNoteController = TextEditingController();
     _textFocusNode = FocusNode();
@@ -376,6 +395,14 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
     // ignore: use_build_context_synchronously
     final provider = context.read<MemoProvider>();
     final blocks = await provider.loadBlocks(_currentMemo.uuid);
+    // The attachment paths are relative; resolve them before the first frame.
+    // Tests, and any platform without a path provider, still show the legacy
+    // absolute paths.
+    try {
+      await _imageAttachmentService.ensureBaseDir();
+    } catch (_) {
+      // Keep going: there is nothing to resolve.
+    }
 
     setState(() {
       try {
@@ -768,18 +795,23 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // TODO: implement photo capture (Take photo)
-              // ListTile(
-              //   leading: Icon(Icons.camera_alt_outlined),
-              //   title: Text(AppLocalizations.of(context)!.takePhoto),
-              //   onTap: () => Navigator.pop(ctx),
-              // ),
-              // TODO: implement gallery image selection (Add image from gallery)
-              // ListTile(
-              //   leading: Icon(Icons.image_outlined),
-              //   title: Text(AppLocalizations.of(context)!.addImageFromGallery),
-              //   onTap: () => Navigator.pop(ctx),
-              // ),
+              if (_mediaPicker.supportsCamera)
+                ListTile(
+                  leading: Icon(Icons.camera_alt_outlined),
+                  title: Text(AppLocalizations.of(context)!.takePhoto),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickImage(ImageSourceKind.camera);
+                  },
+                ),
+              ListTile(
+                leading: Icon(Icons.image_outlined),
+                title: Text(AppLocalizations.of(context)!.addImageFromGallery),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSourceKind.gallery);
+                },
+              ),
               // TODO: implement audio recording (Record audio note)
               // ListTile(
               //   leading: Icon(Icons.mic_none_outlined),
@@ -806,6 +838,121 @@ class _MemoDetailScreenState extends State<MemoDetailScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// Imports one photo picked from the camera or the gallery.
+  ///
+  /// The photo is validated and re-encoded by [ImageAttachmentService]; the
+  /// resize decision comes from the image settings, and "ask" shows the
+  /// confirmation dialog only for a photo larger than the maximum side.
+  Future<void> _pickImage(ImageSourceKind source) async {
+    if (_isImportingImage) return;
+    final l10n = AppLocalizations.of(context)!;
+    final themeProvider = context.read<ThemeProvider>();
+
+    String? picked;
+    try {
+      picked = await _mediaPicker.pick(source);
+    } catch (_) {
+      if (mounted) _showImageError(l10n.imageAttachFailed);
+      return;
+    }
+    if (picked == null || !mounted) return;
+
+    setState(() => _isImportingImage = true);
+    try {
+      final probe = await _imageAttachmentService.probe(picked);
+      final maxSide = themeProvider.imageMaxSide;
+      final tooBig = probe.width > maxSide || probe.height > maxSide;
+      var resize = false;
+
+      if (tooBig) {
+        switch (themeProvider.imageResizeMode) {
+          case ImageResizeMode.always:
+            resize = true;
+          case ImageResizeMode.never:
+            resize = false;
+          case ImageResizeMode.ask:
+            final answer = await _askResize(probe, maxSide);
+            if (answer == null) return;
+            resize = answer;
+        }
+      }
+
+      final imported = await _imageAttachmentService.import(
+        sourcePath: picked,
+        memoUuid: _currentMemo.uuid,
+        maxSide: maxSide,
+        resize: resize,
+      );
+      if (!mounted) return;
+      setState(() => _imageAttachments.add(imported.relativePath));
+      await _persistData();
+    } on ImageAttachmentException catch (error) {
+      if (!mounted) return;
+      _showImageError(switch (error.error) {
+        ImageAttachmentError.tooLarge => l10n.imageTooLarge,
+        ImageAttachmentError.unsupported => l10n.imageUnsupported,
+        ImageAttachmentError.unreadable => l10n.imageAttachFailed,
+      });
+    } catch (_) {
+      if (mounted) _showImageError(l10n.imageAttachFailed);
+    } finally {
+      if (mounted) setState(() => _isImportingImage = false);
+    }
+  }
+
+  /// True resizes, false keeps the resolution, null cancels the import.
+  Future<bool?> _askResize(ImageProbe probe, int maxSide) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
+        return AlertDialog(
+          title: Text(l10n.resizeImageTitle),
+          content: Text(
+            l10n.resizeImageBody(
+              '${probe.width}',
+              '${probe.height}',
+              '$maxSide',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.resizeImageKeep),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.resizeImageConfirm),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showImageError(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(buildAppSnackBar(context, message: message));
+  }
+
+  void _openImage(String stored) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(8),
+        child: InteractiveViewer(
+          child: Image.file(File(_imageAttachmentService.resolve(stored))),
+        ),
+      ),
     );
   }
 
@@ -1476,6 +1623,8 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
         ),
         body: Column(
           children: [
+            if (_isImportingImage)
+              const LinearProgressIndicator(minHeight: 2),
             if (_imageAttachments.isNotEmpty) _buildImagesPreview(),
             if (_linksValues.isNotEmpty || _audioAttachments.isNotEmpty)
               _buildMetadataWidgets(),
@@ -2318,26 +2467,41 @@ ${_isChecklistMode ? _listControllers.map((c) => '${_listCheckStates[_listContro
         itemCount: _imageAttachments.length,
         // ignore: use_build_context_synchronously
         itemBuilder: (context, index) {
+          final stored = _imageAttachments[index];
+          final thumb = _imageAttachmentService.thumbnailPath(stored);
+          final full = _imageAttachmentService.resolve(stored);
+          final preview = File(thumb).existsSync() ? thumb : full;
           return Padding(
             padding: EdgeInsets.only(right: 8.0),
             child: Stack(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    File(_imageAttachments[index]),
-                    height: 90,
-                    width: 90,
-                    fit: BoxFit.cover,
+                GestureDetector(
+                  onTap: () => _openImage(stored),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.file(
+                      File(preview),
+                      height: 90,
+                      width: 90,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        height: 90,
+                        width: 90,
+                        color: Colors.black26,
+                        child: Icon(Icons.broken_image_outlined),
+                      ),
+                    ),
                   ),
                 ),
                 Positioned(
                   top: 2,
                   right: 2,
                   child: GestureDetector(
-                    onTap: () {
+                    onTap: () async {
+                      final removed = stored;
                       setState(() => _imageAttachments.removeAt(index));
-                      _persistData();
+                      await _persistData();
+                      await _imageAttachmentService.delete(removed);
                     },
                     child: Container(
                       decoration: BoxDecoration(

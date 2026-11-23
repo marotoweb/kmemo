@@ -890,4 +890,27 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get imageResizeNever => 'Ne jamais réduire';
+
+  @override
+  String get resizeImageTitle => 'Image volumineuse';
+
+  @override
+  String resizeImageBody(String width, String height, String max) {
+    return 'Vous êtes sur le point de joindre une image volumineuse (${width}x$height pixels). Voulez-vous la réduire à $max pixels avant de la joindre ?';
+  }
+
+  @override
+  String get resizeImageConfirm => 'Réduire';
+
+  @override
+  String get resizeImageKeep => 'Garder l\'original';
+
+  @override
+  String get imageAttachFailed => 'Impossible de joindre l\'image.';
+
+  @override
+  String get imageUnsupported => 'Format d\'image non pris en charge.';
+
+  @override
+  String get imageTooLarge => 'L\'image est trop volumineuse.';
 }

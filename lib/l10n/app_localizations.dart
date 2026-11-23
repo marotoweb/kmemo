@@ -1671,6 +1671,48 @@ abstract class AppLocalizations {
   /// In pt, this message translates to:
   /// **'Nunca reduzir'**
   String get imageResizeNever;
+
+  /// No description provided for @resizeImageTitle.
+  ///
+  /// In pt, this message translates to:
+  /// **'Imagem grande'**
+  String get resizeImageTitle;
+
+  /// No description provided for @resizeImageBody.
+  ///
+  /// In pt, this message translates to:
+  /// **'Está prestes a anexar uma imagem grande ({width}x{height} pixels). Quer reduzi-la para {max} pixels antes de anexar?'**
+  String resizeImageBody(String width, String height, String max);
+
+  /// No description provided for @resizeImageConfirm.
+  ///
+  /// In pt, this message translates to:
+  /// **'Reduzir'**
+  String get resizeImageConfirm;
+
+  /// No description provided for @resizeImageKeep.
+  ///
+  /// In pt, this message translates to:
+  /// **'Manter original'**
+  String get resizeImageKeep;
+
+  /// No description provided for @imageAttachFailed.
+  ///
+  /// In pt, this message translates to:
+  /// **'Não foi possível anexar a imagem.'**
+  String get imageAttachFailed;
+
+  /// No description provided for @imageUnsupported.
+  ///
+  /// In pt, this message translates to:
+  /// **'Formato de imagem não suportado.'**
+  String get imageUnsupported;
+
+  /// No description provided for @imageTooLarge.
+  ///
+  /// In pt, this message translates to:
+  /// **'Imagem demasiado grande.'**
+  String get imageTooLarge;
 }
 
 class _AppLocalizationsDelegate

@@ -197,6 +197,12 @@ void main() {
       logsDir = await Directory.systemTemp.createTemp('kmemo_danger_zone');
       await File('${logsDir.path}/sync.log').writeAsString('sync');
       await File('${logsDir.path}/widget_debug.log').writeAsString('widget');
+      await Directory(
+        '${logsDir.path}/attachments/memo-1',
+      ).create(recursive: true);
+      await File(
+        '${logsDir.path}/attachments/memo-1/photo.jpg',
+      ).writeAsString('photo');
     });
     addTearDown(() => logsDir.delete(recursive: true));
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -264,5 +270,9 @@ void main() {
       ],
     );
     expect(logsExist, [false, false]);
+    final attachmentsExist = await tester.runAsync(
+      () => Directory('${logsDir.path}/attachments').exists(),
+    );
+    expect(attachmentsExist, isFalse);
   });
 }

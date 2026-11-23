@@ -50,6 +50,9 @@ dependencies:
   xml: ^6.6.1
   package_info_plus: ^8.0.0
   archive: ^3.6.1
+  image_picker: ^1.2.3
+  file_selector: ^1.1.0
+  image: ^4.3.0
 
 dev_dependencies:
   flutter_test:

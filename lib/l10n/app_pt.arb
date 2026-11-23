@@ -500,5 +500,13 @@
   "imageResizeModeSubtitle": "Perguntar mostra o diálogo antes de reduzir.",
   "imageResizeAsk": "Perguntar",
   "imageResizeAlways": "Reduzir sempre",
-  "imageResizeNever": "Nunca reduzir"
+  "imageResizeNever": "Nunca reduzir",
+  "resizeImageTitle": "Imagem grande",
+  "resizeImageBody": "Está prestes a anexar uma imagem grande ({width}x{height} pixels). Quer reduzi-la para {max} pixels antes de anexar?",
+  "@resizeImageBody": {"placeholders": {"width": {"type": "String"}, "height": {"type": "String"}, "max": {"type": "String"}}},
+  "resizeImageConfirm": "Reduzir",
+  "resizeImageKeep": "Manter original",
+  "imageAttachFailed": "Não foi possível anexar a imagem.",
+  "imageUnsupported": "Formato de imagem não suportado.",
+  "imageTooLarge": "Imagem demasiado grande."
 }

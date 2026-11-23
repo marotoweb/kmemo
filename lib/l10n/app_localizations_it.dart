@@ -890,4 +890,27 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get imageResizeNever => 'Non ridurre mai';
+
+  @override
+  String get resizeImageTitle => 'Immagine grande';
+
+  @override
+  String resizeImageBody(String width, String height, String max) {
+    return 'Stai per allegare un\'immagine grande (${width}x$height pixel). Vuoi ridurla a $max pixel prima di allegarla?';
+  }
+
+  @override
+  String get resizeImageConfirm => 'Riduci';
+
+  @override
+  String get resizeImageKeep => 'Mantieni originale';
+
+  @override
+  String get imageAttachFailed => 'Impossibile allegare l\'immagine.';
+
+  @override
+  String get imageUnsupported => 'Formato immagine non supportato.';
+
+  @override
+  String get imageTooLarge => 'L\'immagine è troppo grande.';
 }

@@ -887,4 +887,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get imageResizeNever => 'Never resize';
+
+  @override
+  String get resizeImageTitle => 'Large image';
+
+  @override
+  String resizeImageBody(String width, String height, String max) {
+    return 'You are about to attach a large image (${width}x$height pixels). Would you like to resize it to $max pixels before attaching it?';
+  }
+
+  @override
+  String get resizeImageConfirm => 'Resize';
+
+  @override
+  String get resizeImageKeep => 'Keep original';
+
+  @override
+  String get imageAttachFailed => 'Could not attach the image.';
+
+  @override
+  String get imageUnsupported => 'Unsupported image format.';
+
+  @override
+  String get imageTooLarge => 'Image is too large.';
 }

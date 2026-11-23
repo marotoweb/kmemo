@@ -291,5 +291,12 @@
   "imageResizeModeSubtitle": "Demander affiche le dialogue avant de réduire.",
   "imageResizeAsk": "Demander",
   "imageResizeAlways": "Toujours réduire",
-  "imageResizeNever": "Ne jamais réduire"
+  "imageResizeNever": "Ne jamais réduire",
+  "resizeImageTitle": "Image volumineuse",
+  "resizeImageBody": "Vous êtes sur le point de joindre une image volumineuse ({width}x{height} pixels). Voulez-vous la réduire à {max} pixels avant de la joindre ?",
+  "resizeImageConfirm": "Réduire",
+  "resizeImageKeep": "Garder l'original",
+  "imageAttachFailed": "Impossible de joindre l'image.",
+  "imageUnsupported": "Format d'image non pris en charge.",
+  "imageTooLarge": "L'image est trop volumineuse."
 }

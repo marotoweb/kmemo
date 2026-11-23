@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/encryption_service.dart';
+import '../../services/image_attachment_service.dart';
 import '../../services/kdrive_storage.dart';
 import '../../services/webdav_storage.dart';
 import '../../providers/memo_provider.dart';
@@ -242,6 +243,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (!confirmed) return;
     await provider.deleteAllNotesLocally();
+    // Every local note is gone, so their files are orphaned: remove them.
+    await ImageAttachmentService().clearAll();
     if (!mounted) return;
     setState(() {});
     ScaffoldMessenger.of(context).showSnackBar(
@@ -291,6 +294,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // or fail it.
     unawaited(SyncDebugLog.clear());
     unawaited(WidgetDebugLog.clear());
+    unawaited(ImageAttachmentService().clearAll());
 
     // Every setting goes back to what a fresh install has. The reset does not
     // write the defaults back, so the stored state stays empty and the next
