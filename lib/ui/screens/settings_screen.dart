@@ -270,6 +270,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
 
+    // The diagnostics belong to the local data as well: a fresh install has no
+    // sync log and no widget log, and the action promises exactly that. They
+    // are removed in the background: deleting a log must never delay the reset
+    // or fail it.
+    unawaited(SyncDebugLog.clear());
+    unawaited(WidgetDebugLog.clear());
+
     // Every setting goes back to what a fresh install has. The reset does not
     // write the defaults back, so the stored state stays empty and the next
     // start reads the same defaults.

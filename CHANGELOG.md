@@ -12,6 +12,9 @@ Sections before 0.3.0 predate the tags and are kept as they were released.
 ### ✨ New
 - [All] **A sync button on the home screen:** the pull gesture follows a drag, so a touchscreen finger or a two-finger trackpad scroll starts it, while a mouse cannot drag the list. With only a mouse there was no manual sync. The top bar now has a cloud button that runs the same manual pass and reports how many notes were synced, or that everything is up to date.
 
+### 🐛 Fixes
+- [All] **Delete all app data also removes the diagnostics:** the sync log and the widget debug log stayed on the device after a full reset, although the action promises a fresh install. Both are deleted now.
+
 ## 0.3.3
 
 ### ✨ New

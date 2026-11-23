@@ -2,7 +2,9 @@
 
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:kmemo/database/database.dart';
@@ -187,6 +189,23 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
+    // The logs live in the app directories: point path_provider at a temporary
+    // folder so the reset can be checked without touching the real ones.
+    const pathChannel = MethodChannel('plugins.flutter.io/path_provider');
+    late Directory logsDir;
+    await tester.runAsync(() async {
+      logsDir = await Directory.systemTemp.createTemp('kmemo_danger_zone');
+      await File('${logsDir.path}/sync.log').writeAsString('sync');
+      await File('${logsDir.path}/widget_debug.log').writeAsString('widget');
+    });
+    addTearDown(() => logsDir.delete(recursive: true));
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(pathChannel, (call) async => logsDir.path);
+    addTearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(pathChannel, null),
+    );
+
     late AppDatabase db;
     late MemoProvider provider;
     late ThemeProvider themeProvider;
@@ -232,5 +251,14 @@ void main() {
     expect(themeProvider.locale, isNull);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getKeys(), isEmpty);
+
+    // A fresh install has no diagnostics either.
+    final logsExist = await tester.runAsync(
+      () async => [
+        await File('${logsDir.path}/sync.log').exists(),
+        await File('${logsDir.path}/widget_debug.log').exists(),
+      ],
+    );
+    expect(logsExist, [false, false]);
   });
 }

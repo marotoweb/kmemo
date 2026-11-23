@@ -60,6 +60,20 @@ class SyncDebugLog {
     }
   }
 
+  /// Removes the log.
+  ///
+  /// Used by the "delete all app data" action: a fresh install starts with no
+  /// sync log. A failure here must never make the reset itself fail.
+  static Future<void> clear() async {
+    try {
+      final dir = await getApplicationSupportDirectory();
+      final file = File(p.join(dir.path, fileName));
+      if (await file.exists()) await file.delete();
+    } catch (_) {
+      // Ignore.
+    }
+  }
+
   static Future<String> path() async {
     final dir = await getApplicationSupportDirectory();
     return p.join(dir.path, fileName);
